@@ -2,6 +2,7 @@ console.log("\n %c HeoMusic 开源静态音乐播放器 %c https://github.com/zh
 var local = false;
 var isScrolling = false; // 添加全局变量 isScrolling，默认为 false
 var scrollTimer = null; // 添加定时器变量
+var animationFrameId = null; // 添加变量用于跟踪动画帧ID
 
 if (typeof userId === 'undefined') {
   var userId = "8152976493"; // 替换为实际的默认值
@@ -81,6 +82,12 @@ var heo = {
     
     // 只有当在目标区域内时才改变 isScrolling
     if (isInTargetArea) {
+      // 取消任何正在进行的动画
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      
       // 设置isScrolling为true
       isScrolling = true;
       
@@ -133,17 +140,31 @@ var heo = {
       }
 
       function animateScroll(currentTime) {
+        // 如果用户正在手动滚动，停止动画
+        if (isScrolling) {
+          animationFrameId = null;
+          return;
+        }
+        
         if (startTime === null) startTime = currentTime;
         let timeElapsed = currentTime - startTime;
         let progress = Math.min(timeElapsed / duration, 1);
         let easeProgress = window.innerWidth < 768 ? progress : easeOutQuad(progress);
         lrcContent.scrollTop = startScrollTop + (distance * easeProgress);
+        
         if (timeElapsed < duration) {
-          requestAnimationFrame(animateScroll);
+          animationFrameId = requestAnimationFrame(animateScroll);
+        } else {
+          animationFrameId = null;
         }
       }
 
-      requestAnimationFrame(animateScroll);
+      // 取消任何正在进行的动画
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      
+      animationFrameId = requestAnimationFrame(animateScroll);
     }
   },
 
@@ -206,6 +227,9 @@ var heo = {
               if (player.lrc.current[i]) {
                 const time = player.lrc.current[i][0];
                 player.seek(time);
+                // 点击歌词后不再等待4s，立即跳转
+                isScrolling = false;
+                clearTimeout(scrollTimer);
                 // 如果当前是暂停状态,则恢复播放
                 if (player.paused) {
                   player.play();
@@ -228,7 +252,7 @@ var heo = {
     if ('mediaSession' in navigator) {
       if (isSongPlaying && currentLrcContent) {
         songName = currentLrcContent;
-        songArtist = `${audio.artist}/${audio.name}`;
+        songArtist = `${audio.artist} / ${audio.name}`;
       } else {
         songName = audio.name;
         songArtist = audio.artist;
@@ -293,12 +317,14 @@ var heo = {
       aplayer.on('play', () => {
         if ('mediaSession' in navigator) {
           navigator.mediaSession.playbackState = 'playing';
+          heo.setMediaMetadata(aplayer, true);
         }
       });
 
       aplayer.on('pause', () => {
         if ('mediaSession' in navigator) {
           navigator.mediaSession.playbackState = 'paused';
+          heo.setMediaMetadata(aplayer, false);
         }
       });
 
@@ -403,3 +429,4 @@ window.addEventListener('resize', function() {
 
 // 调用初始化
 heo.init();
+
