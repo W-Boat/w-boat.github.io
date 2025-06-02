@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown 文章生成器</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsA+9sfkMzPuGoiFeKb OnfYTDyeNCVCwjsyLkfovbZM முறையாகv6iqmlOiTbeZPzNtS7PcNzZmN" crossorigin="anonymous">
+    <!-- Marked.js & KaTeX JS -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-zvXTj8ntmnn/sJpww+d4+h3oGjH0LzTf7sDk/a+H3oGjH0LzTf7sDk/a+I0P4U6i9P7zP2C7r+B8r5t/P5y" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+QR4s5hOxxI/sZJRn4nK4wFhQz4aP+wP+f4j/z/Rj/r5t/P5z" crossorigin="anonymous"></script>
+
+    <style>
+        /* --- SHARED STYLES --- */
+        :root {
+            --brand-color: #d4a373; /* Brownish accent */
+            --bg-main: #fcfaf5;
+            --bg-container: #fff;
+            --bg-input: #f8f5ef;
+            --bg-textarea: #f5f5f5;
+            --bg-button: #f0e7d8;
+            --bg-button-hover: #e0d8c8;
+            --text-primary: #333;
+            --text-secondary: #555;
+            --text-muted: #888;
+            --border-color-light: #e0d8c8;
+            --border-color-medium: #d0c5b2;
+            --border-color-dark: #b0a592;
+            --typewriter-highlight-bg: rgba(212, 163, 115, 0.15);
+            --typewriter-dim-text-color: rgba(51, 51, 51, 0.55);
+
+            --code-bg: #eee;
+            --table-border-color: #ddd;
+            --table-header-bg: #f2f2f2;
+            --preview-link-color: var(--brand-color);
+            --hr-color: #ccc;
+        }
+
+        body.dark-mode {
+            --bg-main: #1e1e1e;
+            --bg-container: #252526;
+            --bg-input: #2d2d2d;
+            --bg-textarea: #2d2d2d;
+            --bg-button: #3e3e3e;
+            --bg-button-hover: #4f4f4f;
+            --text-primary: #d4d4d4;
+            --text-secondary: #a0a0a0;
+            --text-muted: #777;
+            --border-color-light: #454545;
+            --border-color-medium: #555555;
+            --border-color-dark: #656565;
+            --typewriter-highlight-bg: rgba(212, 163, 115, 0.25);
+            --typewriter-dim-text-color: rgba(212, 212, 212, 0.55);
+
+            --code-bg: #333;
+            --table-border-color: #444;
+            --table-header-bg: #3a3a3a;
+            --preview-link-color: #e6bf89; /* Lighter brand for dark bg */
+            --hr-color: #444;
+        }
+
+
+        body {
+            font-family: 'Noto Serif SC', Georgia, "Times New Roman", Times, serif;
+            line-height: 1.8;
+            margin: 0;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            font-size: 1.05em; 
+            min-height: 100vh;
+            box-sizing: border-box;
+            padding: 25px; /* Optimized whitespace */
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1280px; /* Slightly wider for better use of space */
+            margin: 0 auto;
+            background-color: var(--bg-container);
+            padding: 25px; /* Optimized whitespace */
+            border-radius: 8px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-height: calc(100vh - 50px); /* Adjust if body padding changes */
+            gap: 25px; /* Optimized gap */
+            transition: background-color 0.3s ease;
+        }
+
+        h1 {
+            text-align: left;
+            margin: 0 0 5px 0;
+            padding: 0;
+            font-family: 'Playfair Display', 'Noto Serif SC', serif;
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--text-primary); /* Use variable for dark mode */
+            width: 100%;
+        }
+
+        .header-info {
+            width: 100%;
+            text-align: left;
+            margin-bottom: 20px; /* Optimized */
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .settings-button {
+            position: absolute;
+            top: 25px; right: 25px; /* Adjusted for container padding */
+            cursor: pointer; z-index: 1010; opacity: 0.8;
+            transition: opacity 0.2s ease;
+        }
+        .settings-button:hover { opacity: 1; }
+        .settings-button svg { display: block; stroke: var(--text-secondary); }
+
+        .config-section {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5); /* Darker overlay for better focus */
+            backdrop-filter: blur(5px);
+            display: flex; justify-content: center; align-items: center; z-index: 1000;
+            padding: 20px; box-sizing: border-box; overflow: auto;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        body.dark-mode .config-section { background-color: rgba(20, 20, 20, 0.7); }
+
+        .config-section.visible { opacity: 1; visibility: visible; }
+        .config-content {
+            background-color: var(--bg-container); padding: 30px; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); max-width: 500px; width: 100%; text-align: center;
+        }
+        .config-content h2 { margin-top: 0; margin-bottom: 20px; font-size: 1.5em; color: var(--text-primary); }
+        .config-content .input-group { margin-bottom: 20px; text-align: left; }
+        .config-content label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--text-secondary); }
+        
+        /* Optimized Dialog Buttons */
+        .config-content button {
+            padding: 10px 20px; color: var(--text-primary); background-color: var(--bg-button);
+            border: none; border-radius: 3px; cursor: pointer; font-size: 1em;
+            transition: background-color 0.2s, transform 0.1s, box-shadow 0.1s;
+            min-width: 120px; /* Adjusted for dialog context */
+            text-align: center; font-family: 'Noto Serif SC', serif;
+            box-shadow: inset 0 0 0 1px var(--border-color-medium), inset 0 0 0 2px var(--border-color-dark), 0 2px 5px rgba(0,0,0,0.15);
+            margin-top: 10px;
+        }
+        .config-content button:hover { background-color: var(--bg-button-hover); }
+        .config-content button:active { background-color: var(--border-color-medium); transform: translateY(1px); box-shadow: inset 0 0 0 1px var(--border-color-dark), inset 0 0 0 2px var(--border-color-medium), 0 1px 3px rgba(0,0,0,0.1); }
+        .config-content button#closeConfigButton { background-color: #6c757d; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+        .config-content button#closeConfigButton:hover { background-color: #5a6268; }
+        body.dark-mode .config-content button#closeConfigButton { background-color: #5a6268; }
+        body.dark-mode .config-content button#closeConfigButton:hover { background-color: #495057; }
+
+
+        .content-wrapper {
+            display: flex;
+            width: 100%; 
+            flex-grow: 1; 
+            min-height: 0; 
+            overflow: hidden; 
+        }
+
+        .page-section {
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            overflow-y: auto;
+            padding: 20px; /* Optimized whitespace */
+            gap: 15px; /* Optimized gap */
+            border: 1px solid var(--border-color-light);
+            border-radius: 5px;
+            background-color: var(--bg-container); /* Use container for consistency */
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.03);
+            flex-shrink: 0;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        .page-section label { font-weight: bold; margin-bottom: -5px; font-size: 0.9em; color: var(--text-secondary); }
+
+        .input-group { margin-bottom: 0; }
+
+        input[type="text"], input[type="date"], input[type="url"], textarea {
+            width: 100%; padding: 12px; /* Increased padding */
+            border: 1px solid var(--border-color-medium); /* Slightly darker border */
+            border-radius: 4px; box-sizing: border-box;
+            font-size: 1em; font-family: inherit;
+            background-color: var(--bg-input); color: var(--text-primary);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+        }
+        input[type="text"]:focus, input[type="date"]:focus, input[type="url"]:focus, textarea:focus {
+            border-color: var(--brand-color);
+            box-shadow: 0 0 0 2px rgba(212, 163, 115, 0.3); /* Adjusted focus shadow */
+            outline: none;
+        }
+        textarea {
+            font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+            line-height: 1.6; 
+            resize: vertical;
+            min-height: 200px; 
+            flex-grow: 1; 
+            background-color: var(--bg-textarea);
+            caret-color: var(--brand-color);
+            padding-right: 70px; 
+            position: relative; 
+            z-index: 1;
+        }
+
+        .editor-section { position: relative; }
+        #typewriterLineHighlight {
+            position: absolute;
+            background-color: var(--typewriter-highlight-bg);
+            z-index: 0; 
+            pointer-events: none;
+            border-radius: 3px;
+            display: none; 
+            transition: top 0.05s linear, background-color 0.3s ease;
+        }
+        body.dark-mode #typewriterLineHighlight { background-color: var(--typewriter-highlight-bg-dark); }
+
+        textarea.typewriter-mode-active {
+            color: var(--typewriter-dim-text-color);
+            background-color: transparent !important; 
+        }
+        body.dark-mode textarea.typewriter-mode-active { color: var(--typewriter-dim-text-color-dark); }
+
+        .editor-section.typewriter-bg-active {
+             background-color: var(--bg-textarea); 
+        }
+
+
+        .markdown-toolbar {
+            padding: 8px 10px; /* Slightly more padding */
+            background-color: var(--bg-input); /* Consistent with input fields */
+            border: 1px solid var(--border-color-medium);
+            border-bottom: none; /* Attach to textarea */
+            border-radius: 4px 4px 0 0;
+            display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        /* Adjust textarea border when toolbar is present */
+        .markdown-toolbar + textarea { border-top-left-radius: 0; border-top-right-radius: 0; border-top-color: var(--border-color-light); }
+
+        .markdown-toolbar button {
+            padding: 6px 10px; /* Adjusted padding */
+            font-size: 0.9em; background-color: var(--bg-button); color: var(--text-secondary);
+            border: 1px solid var(--border-color-light); border-radius: 3px; box-shadow: none; line-height: 1.2; height: auto;
+            display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+            font-family: inherit; transition: background-color 0.1s, border-color 0.1s, transform 0.05s, color 0.1s;
+        }
+        .markdown-toolbar button:hover { background-color: var(--border-color-light); border-color: var(--border-color-medium); color: var(--text-primary); }
+        .markdown-toolbar button:active { background-color: var(--border-color-medium); transform: translateY(1px); }
+        .markdown-toolbar button.typewriter-toggle.active { background-color: var(--brand-color); color: white; border-color: var(--border-color-dark); }
+        .markdown-toolbar button mark { background-color: var(--brand-color); color: white; padding: 0 2px; border-radius: 2px;}
+
+        /* Optimized Count Stats */
+        .count-stats {
+            position: absolute;
+            bottom: 12px; right: 12px;
+            font-size: 0.7em;
+            color: var(--text-muted);
+            background-color: color-mix(in srgb, var(--bg-textarea) 70%, transparent); /* More subtle background */
+            padding: 4px 8px;
+            border-radius: 10px; /* Pill shape */
+            z-index: 2;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            pointer-events: none;
+            letter-spacing: 0.5px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .markdown-preview {
+            flex-grow: 1; width: 100%; padding: 20px; border-radius: 5px;
+            min-height: 200px; overflow-y: auto; overflow-wrap: break-word;
+            font-family: 'Noto Serif SC', Georgia, serif; line-height: 1.8;
+            text-align: justify; hyphens: auto;
+            border: 1px solid var(--border-color-light);
+            background: var(--bg-container); /* Simplified background */
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.04); color: var(--text-primary);
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+        }
+        .markdown-preview p { margin-bottom: 1.2em; text-indent: 2em; }
+        .markdown-preview h1, .markdown-preview h2, .markdown-preview h3, .markdown-preview h4, .markdown-preview h5, .markdown-preview h6 {
+            margin-top: 1.5em; margin-bottom: 0.8em; font-family: 'Noto Serif SC', Georgia, serif;
+            line-height: 1.3; text-align: left; text-indent: 0; font-weight: bold;
+            color: var(--text-primary); /* Ensure headers also change color */
+        }
+        .markdown-preview h1 { font-size: 1.8em; border-bottom: 1px solid var(--border-color-light); padding-bottom: 8px; }
+        .markdown-preview h2 { font-size: 1.5em; border-bottom: 1px solid var(--border-color-light); padding-bottom: 6px; }
+        .markdown-preview h3 { font-size: 1.2em; }
+        .markdown-preview ul, .markdown-preview ol { margin-bottom: 1em; padding-left: 35px; text-indent: 0; }
+        .markdown-preview li { margin-bottom: 0.6em; }
+        .markdown-preview a { color: var(--preview-link-color); text-decoration: none; border-bottom: 1px dotted var(--preview-link-color); }
+        .markdown-preview a:hover { border-bottom-style: solid; }
+        .markdown-preview code { font-family: Consolas, Monaco, monospace; background-color: var(--code-bg); padding: 3px 6px; border-radius: 4px; font-size: 0.9em; word-break: break-word; color: var(--text-primary); }
+        .markdown-preview pre { background-color: var(--code-bg); padding: 12px; border-radius: 4px; overflow-x: auto; margin: 1.2em 0; font-size: 0.9em; text-indent: 0; border: 1px solid var(--border-color-light); }
+        .markdown-preview pre code { background-color: transparent; padding: 0; border: none; }
+        .markdown-preview blockquote { border-left: 5px solid var(--brand-color); padding-left: 20px; color: var(--text-secondary); margin: 1.5em 0; font-style: italic; text-indent: 0; background-color: color-mix(in srgb, var(--brand-color) 5%, var(--bg-container));}
+        /* Optimized Table Preview */
+        .markdown-preview table {
+            border-collapse: separate; /* Allows for border-radius on cells if needed */
+            border-spacing: 0;
+            margin: 1.5em auto;
+            width: auto; 
+            max-width: 100%;
+            border: 1px solid var(--table-border-color);
+            text-indent: 0;
+            display: block;
+            overflow-x: auto; /* For responsive tables */
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .markdown-preview th, .markdown-preview td {
+            border-bottom: 1px solid var(--table-border-color);
+            padding: 10px 12px; /* Increased padding */
+            text-align: left;
+        }
+        .markdown-preview th {
+            background-color: var(--table-header-bg);
+            font-weight: bold;
+            border-bottom-width: 2px; /* Thicker border for header */
+        }
+        .markdown-preview tr:last-child td { border-bottom: none; } /* Remove bottom border from last row cells */
+        .markdown-preview td:not(:last-child), .markdown-preview th:not(:last-child) { border-right: 1px solid var(--table-border-color); }
+
+
+        .markdown-preview img { max-width: 100%; height: auto; display: block; margin: 1.2em auto; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .markdown-preview hr { border: 0; height: 1px; background: var(--hr-color); margin: 2em 0; }
+        /* Optimized KaTeX Preview */
+        .markdown-preview .katex { font-size: 1.05em; color: var(--text-primary); }
+        .markdown-preview .katex-display { margin: 1em 0; padding: 0.5em 0; overflow-x: auto; text-indent: 0; text-align: center; }
+        .markdown-preview .katex-display > .katex { display: inline-block; text-align: initial; } /* For centering long equations */
+
+
+        .button-group {
+            display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap;
+            width: 100%; justify-content: center;
+        }
+        .button-group button { 
+            padding: 10px 20px; color: var(--text-primary); background-color: var(--bg-button);
+            border: none; border-radius: 3px; cursor: pointer; font-size: 1em;
+            transition: background-color 0.2s, transform 0.1s, box-shadow 0.1s;
+            min-width: 160px; text-align: center; font-family: 'Noto Serif SC', serif;
+            box-shadow: inset 0 0 0 1px var(--border-color-medium), inset 0 0 0 2px var(--border-color-dark), 0 2px 5px rgba(0,0,0,0.15);
+        }
+        .button-group button:hover { background-color: var(--bg-button-hover); }
+        .button-group button:active { background-color: var(--border-color-medium); transform: translateY(1px); box-shadow: inset 0 0 0 1px var(--border-color-dark), inset 0 0 0 2px var(--border-color-medium), 0 1px 3px rgba(0,0,0,0.1); }
+        .button-group button:disabled { opacity: 0.6; cursor: not-allowed; background-color: #eee; box-shadow: none; transform: none; }
+        body.dark-mode .button-group button:disabled { background-color: #4a4a4a; color: #888; }
+
+
+        .status {
+            margin-top: 20px; color: var(--text-secondary); text-align: center; min-height: 1.2em;
+            width: 100%; font-size: 0.9em; padding-top: 15px; border-top: 1px solid var(--border-color-light);
+            transition: border-color 0.3s ease, color 0.3s ease;
+        }
+        .status.success { color: #28a745; } .status.error { color: #dc3545; } .status.warning { color: #fd7e14; }
+        body.dark-mode .status.success { color: #34c759; } body.dark-mode .status.error { color: #ff453a; } body.dark-mode .status.warning { color: #ff9f0a; }
+
+
+        .svg-example {
+            margin-top: 20px; text-align: center; color: var(--text-muted); font-size: 0.9em;
+            display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            transition: color 0.3s ease;
+        }
+        .svg-example svg path, .svg-example svg polyline, .svg-example svg line { stroke: var(--text-muted); transition: stroke 0.3s ease; }
+
+        .mobile-nav { display: none; }
+
+
+        /* --- PC STYLES --- */
+        .content-wrapper.pc-mode {
+            display: flex;
+            flex-direction: row; 
+            flex-wrap: wrap; 
+            gap: 20px;
+            align-items: stretch; 
+        }
+        .content-wrapper.pc-mode #inputSection {
+            flex: 0 0 280px; 
+            min-width: 220px;
+            order: 1; 
+        }
+        .content-wrapper.pc-mode #editorSection {
+            flex: 1 1 0%; 
+            min-width: 350px;
+            order: 2; 
+        }
+        .content-wrapper.pc-mode #previewSectionContainer {
+            flex: 1 1 100%; 
+            order: 3; 
+            min-height: 300px; 
+        }
+        .content-wrapper.pc-mode #previewSectionContainer .markdown-preview {
+             height: 100%; 
+        }
+
+
+        /* --- MOBILE STYLES --- */
+        @media (max-width: 768px) {
+            body { padding: 10px; padding-bottom: 80px; font-size: 1em; }
+            .container {
+                padding: 10px; gap: 15px;
+                box-shadow: none; background-color: transparent; 
+                min-height: auto;
+            }
+            h1 { font-size: 1.8em; margin-bottom: 5px;}
+            .header-info { margin-bottom: 10px; font-size: 0.8em; }
+            .settings-button { top: 10px; right: 10px; }
+
+            .content-wrapper.mobile-mode {
+                display: flex;
+                flex-direction: row; 
+                width: 300%; 
+                transform: translateX(0%);
+                transition: transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1); 
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); 
+                border-radius: 8px;
+                background-color: var(--bg-container); 
+                border: 1px solid var(--border-color-light);
+            }
+            .content-wrapper.mobile-mode > .page-section {
+                width: calc(100% / 3); 
+                flex-shrink: 0;
+                border: none; 
+                background-color: transparent; 
+                box-shadow: none;
+                min-height: calc(100vh - 200px); 
+                max-height: calc(100vh - 180px); 
+                padding: 12px; 
+            }
+             .content-wrapper.mobile-mode #editorSection textarea,
+             .content-wrapper.mobile-mode #previewSectionContainer .markdown-preview {
+                min-height: 150px;
+                flex-grow: 1;
+            }
+            .content-wrapper.mobile-mode #previewSectionContainer {
+                 background-color: var(--bg-main); 
+            }
+
+
+            .button-group { flex-direction: column; gap: 10px; }
+            .button-group button { width: 100%; min-width: auto; padding: 12px; }
+
+            .count-stats { font-size: 0.7em; bottom: 8px; right: 8px; padding: 3px 6px; }
+            textarea { padding-right: 60px; } 
+
+            .markdown-preview { text-align: left; } 
+            .markdown-preview p { text-indent: 1.5em; }
+            .markdown-preview ul, .markdown-preview ol { padding-left: 25px; }
+
+            .mobile-nav {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                position: fixed; 
+                bottom: 0; left: 0; right: 0;
+                background-color: var(--bg-button); /* Use var */
+                border-top: 1px solid var(--border-color-medium); /* Use var */
+                padding: 10px 15px;
+                z-index: 900;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+                transition: background-color 0.3s ease, border-color 0.3s ease;
+            }
+            .mobile-nav button {
+                background-color: var(--bg-container); /* Use var */
+                color: var(--text-primary);
+                border: 1px solid var(--border-color-medium); border-radius: 4px;
+                padding: 8px 12px; font-size: 0.9em;
+                min-width: 80px;
+                box-shadow: none;
+                transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+            }
+            .mobile-nav button:active { background-color: var(--bg-button-hover); transform: translateY(1px); }
+            .mobile-nav button:disabled { background-color: var(--bg-input); color: var(--text-muted); border-color: var(--border-color-light); } /* Use vars */
+
+
+            .page-indicator { display: flex; gap: 8px; }
+            .indicator-dot {
+                width: 10px; height: 10px; background-color: var(--border-color-medium); /* Use var */
+                border-radius: 50%; transition: background-color 0.3s;
+            }
+            .indicator-dot.active { background-color: var(--brand-color); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="appContainer">
+        <h1>Markdown 文章生成器</h1>
+        <div class="header-info"><span id="currentTime"></span></div>
+
+        <div class="settings-button" id="settingsButton" title="配置目标网站URL">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l-.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </div>
+
+        <div class="config-section" id="configSection">
+            <div class="config-content">
+                <h2>配置目标网站 URL</h2>
+                <div class="input-group">
+                    <label for="targetUrlInput">目标 URL:</label>
+                    <input type="url" id="targetUrlInput" placeholder="如: https://yourwebsite.com/post">
+                </div>
+                <button id="saveUrlButton">保存 URL</button>
+                 <button id="closeConfigButton" style="margin-left: 10px;">关闭</button>
+            </div>
+        </div>
+
+        <div class="content-wrapper" id="contentWrapper">
+            <div class="page-section input-section" id="inputSection">
+                <div class="input-group">
+                    <label for="title">标题:</label>
+                    <input type="text" id="title" placeholder="请输入文章标题">
+                </div>
+                <div class="input-group">
+                    <label for="pubDate">发布日期:</label>
+                    <input type="date" id="pubDate">
+                </div>
+                <div class="input-group">
+                    <label for="categories">分类 (逗号分隔):</label>
+                    <input type="text" id="categories" placeholder="如: 日志, 技术">
+                </div>
+                <div class="input-group">
+                    <label for="description">描述:</label>
+                    <input type="text" id="description" placeholder="请输入简要描述">
+                </div>
+            </div>
+
+            <div class="page-section editor-section" id="editorSection">
+                <label for="markdownContent" style="display: block; margin-bottom: 5px;">Markdown 内容:</label>
+                <div class="markdown-toolbar">
+                    <button type="button" title="粗体" data-syntax="bold"><strong>B</strong></button>
+                    <button type="button" title="斜体" data-syntax="italic"><em>I</em></button>
+                    <button type="button" title="删除线" data-syntax="strikethrough"><s>S</s></button>
+                    <button type="button" title="下划线" data-syntax="underline"><u>U</u></button>
+                    <button type="button" title="高亮" data-syntax="highlight"><mark>H</mark></button>
+                    <button type="button" title="标题 2" data-syntax="heading2">H₂</button>
+                    <button type="button" title="无序列表" data-syntax="ulist">UL</button>
+                    <button type="button" title="有序列表" data-syntax="olist">OL</button>
+                    <button type="button" title="复选框" data-syntax="checkbox">[]</button>
+                    <button type="button" title="完成框" data-syntax="donebox">[x]</button>
+                    <button type="button" title="引用" data-syntax="blockquote">＂</button>
+                    <button type="button" title="行内代码" data-syntax="inlinecode">`</button>
+                    <button type="button" title="代码块" data-syntax="codeblock">{}</button>
+                    <button type="button" title="链接" data-syntax="link">Link</button>
+                    <button type="button" title="图片" data-syntax="image">Image</button>
+                    <button type="button" title="表格" data-syntax="table">Table</button>
+                    <button type="button" title="水平分割线" data-syntax="hr">HR</button>
+                    <button type="button" title="脚注" data-syntax="footnote">FN</button>
+                    <button type="button" title="行内数学" data-syntax="inlineMath">$</button> <!-- Changed from "inline math" to avoid space -->
+                    <button type="button" title="块级数学" data-syntax="blockMath">$$</button> <!-- Changed from "block math" to avoid space -->
+                    <button type="button" title="拼音" data-syntax="pinyin">[拼]</button>
+                    <button type="button" title="日单引号" data-syntax="jp_single_quotes">「」</button>
+                    <button type="button" title="日双引号" data-syntax="jp_double_quotes">『』</button>
+                    <button type="button" title="打字机模式" id="typewriterToggleBtn" class="typewriter-toggle">T</button>
+                </div>
+                <textarea id="markdownContent" placeholder="在此输入你的 Markdown 内容..."></textarea>
+                <div id="typewriterLineHighlight"></div>
+                <div id="countStats" class="count-stats"></div>
+            </div>
+
+            <div class="page-section preview-section" id="previewSectionContainer">
+                <label style="display: block; margin-bottom: 5px;">预览:</label>
+                <div id="markdownPreview" class="markdown-preview">
+                    <p>在此查看 Markdown 预览。</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="copyButton">复制 Markdown</button>
+            <button id="openUrlButton">打开目标网页</button>
+        </div>
+        <p id="statusMessage" class="status"></p>
+        <div class="svg-example">
+           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="10" y2="9"></line></svg>
+           Markdown Helper
+        </div>
+
+        <div class="mobile-nav" id="mobileNav">
+            <button id="prevPageButton">信息</button>
+            <div id="pageIndicator" class="page-indicator">
+                <span class="indicator-dot" data-page="0"></span>
+                <span class="indicator-dot" data-page="1"></span>
+                <span class="indicator-dot" data-page="2"></span>
+            </div>
+            <button id="nextPageButton">编辑</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Constants ---
+        const TARGET_URL_STORAGE_KEY = 'markdownGeneratorTargetUrl';
+        const MARKDOWN_CONTENT_STORAGE_KEY = 'markdownContent';
+        const TITLE_STORAGE_KEY = 'articleTitle';
+        const PUBDATE_STORAGE_KEY = 'articlePubDate';
+        const CATEGORIES_STORAGE_KEY = 'articleCategories';
+        const DESCRIPTION_STORAGE_KEY = 'articleDescription';
+        const TYPEWRITER_MODE_STORAGE_KEY = 'typewriterMode';
+        const MOBILE_BREAKPOINT = 768;
+
+        // --- DOM Elements (cache after DOMContentLoaded) ---
+        let titleInput, pubDateInput, categoriesInput, descriptionInput,
+            markdownContentTextarea, markdownPreviewDiv, countStatsDiv,
+            copyButton, openUrlButton, saveUrlButton, settingsButton, closeConfigButton,
+            configSection, targetUrlInput, statusMessage, currentTimeSpan,
+            contentWrapper, appContainer, mobileNav, prevPageButton, nextPageButton,
+            indicatorDots, typewriterToggleBtn, typewriterLineHighlight, editorSection;
+
+        // --- App State ---
+        let statusTimeoutId = null;
+        let isSyncingScrollActive = false; 
+        let currentPageIndex = 0; 
+        const totalPages = 3;
+
+        // --- Utility Functions ---
+        const isMobile = () => window.innerWidth <= MOBILE_BREAKPOINT;
+
+        // --- Night Mode ---
+        function applyThemePreference() {
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (prefersDark) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+        }
+
+
+        // --- Data Storage ---
+        function saveAppData(data) {
+            try {
+                localStorage.setItem(MARKDOWN_CONTENT_STORAGE_KEY, data.markdown || '');
+                localStorage.setItem(TITLE_STORAGE_KEY, data.title || '');
+                localStorage.setItem(PUBDATE_STORAGE_KEY, data.pubDate || '');
+                localStorage.setItem(CATEGORIES_STORAGE_KEY, data.categories || '');
+                localStorage.setItem(DESCRIPTION_STORAGE_KEY, data.description || '');
+            } catch (e) { console.error("Failed to save data:", e); }
+        }
+        function loadAppData() {
+            try {
+                return {
+                    markdown: localStorage.getItem(MARKDOWN_CONTENT_STORAGE_KEY) || '',
+                    title: localStorage.getItem(TITLE_STORAGE_KEY) || '',
+                    pubDate: localStorage.getItem(PUBDATE_STORAGE_KEY) || '',
+                    categories: localStorage.getItem(CATEGORIES_STORAGE_KEY) || '',
+                    description: localStorage.getItem(DESCRIPTION_STORAGE_KEY) || ''
+                };
+            } catch (e) {
+                console.error("Failed to load data:", e);
+                return { markdown: '', title: '', pubDate: '', categories: '', description: '' };
+            }
+        }
+        function getTargetUrl() { return localStorage.getItem(TARGET_URL_STORAGE_KEY); }
+        function setTargetUrl(url) { localStorage.setItem(TARGET_URL_STORAGE_KEY, url.trim()); }
+        function isTypewriterModeEnabled() { return localStorage.getItem(TYPEWRITER_MODE_STORAGE_KEY) === 'true'; }
+        function setTypewriterMode(enabled) {
+            localStorage.setItem(TYPEWRITER_MODE_STORAGE_KEY, enabled);
+            updateTypewriterVisuals();
+        }
+
+        // --- UI Updates ---
+        function showStatus(message, duration = 3000, type = '') {
+            if (!statusMessage) return;
+            statusMessage.textContent = message;
+            statusMessage.className = 'status ' + type;
+            if (statusTimeoutId) clearTimeout(statusTimeoutId);
+            statusTimeoutId = setTimeout(() => {
+                statusMessage.textContent = '';
+                statusMessage.className = 'status';
+            }, duration);
+        }
+
+        function updateClock() {
+            if (!currentTimeSpan) return;
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+            currentTimeSpan.textContent = `当前时间: ${now.toLocaleString('zh-CN', options)}`;
+        }
+
+        function updateUIWithLoadedData(data) {
+            if (!titleInput || !markdownContentTextarea) return; 
+            titleInput.value = data.title;
+            pubDateInput.value = data.pubDate;
+            categoriesInput.value = data.categories;
+            descriptionInput.value = data.description;
+            markdownContentTextarea.value = data.markdown;
+
+            updatePreview();
+            updateCounts();
+            updateTypewriterVisuals(); 
+        }
+
+        function setDefaultPubDate() {
+            if (!pubDateInput.value) {
+                const today = new Date();
+                pubDateInput.value = today.toISOString().split('T')[0];
+            }
+        }
+
+        // --- Config Overlay ---
+        function showConfigSection() {
+            if (!configSection || !targetUrlInput) return;
+            targetUrlInput.value = getTargetUrl() || '';
+            configSection.classList.add('visible');
+            if (copyButton) copyButton.disabled = true;
+            if (openUrlButton) openUrlButton.disabled = true;
+            if (isMobile() && prevPageButton) {
+                 prevPageButton.disabled = true;
+                 nextPageButton.disabled = true;
+            }
+        }
+        function hideConfigSection() {
+            if (!configSection) return;
+            configSection.classList.remove('visible');
+            if (copyButton) copyButton.disabled = false;
+            if (openUrlButton) openUrlButton.disabled = false;
+            if (isMobile()) updateMobileNavButtons(); 
+        }
+
+        // --- Markdown Generation & Preview ---
+        function generateMarkdownContent() {
+            const data = loadAppData(); 
+            const titleValue = data.title || '未命名标题';
+            const pubDateValue = data.pubDate || '';
+            const categoriesArray = (data.categories || '').split(',').map(cat => cat.trim()).filter(cat => cat);
+            const categoriesFormatted = categoriesArray.length > 0 ? "['" + categoriesArray.join("','") + "']" : "[]";
+            const escapedDescription = (data.description || '无描述').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const frontMatter = `---\ntitle: ${titleValue}\npubDate: ${pubDateValue}\ncategories: ${categoriesFormatted}\ndescription: '${escapedDescription}'\n---`;
+            return frontMatter + '\n\n' + (data.markdown || '').trimStart();
+        }
+
+        function convertQuotesInElement(element) {
+            if (!element) return;
+            const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+                acceptNode: function(node) {
+                    let parent = node.parentNode;
+                    while (parent && parent !== element) { 
+                        if (['PRE', 'CODE', 'SCRIPT', 'STYLE'].includes(parent.tagName) || parent.classList.contains('katex') || parent.classList.contains('katex-display')) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        parent = parent.parentNode;
+                    }
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            });
+            let node;
+            while ((node = walker.nextNode())) {
+                let text = node.nodeValue;
+                text = text.replace(/“([^”]*)”/g, '『$1』').replace(/‘([^’]*)’/g, '「$1」');
+                text = text.replace(/"([^"]*)"/g, '『$1』').replace(/'([^']*)'/g, '「$1」');
+                if (text !== node.nodeValue) node.nodeValue = text;
+            }
+        }
+
+        function updatePreview() {
+            if (!markdownContentTextarea || !markdownPreviewDiv) return;
+            const fullText = markdownContentTextarea.value;
+            const parts = fullText.split('---');
+            let markdownToParse = (parts.length >= 3) ? parts.slice(2).join('---').trimStart() : fullText;
+
+            marked.setOptions({ gfm: true, breaks: false, smartypants: true }); // Added smartypants
+            let htmlContent = '';
+            try { htmlContent = marked.parse(markdownToParse); }
+            catch (e) {
+                console.error("Markdown parsing error:", e);
+                htmlContent = `<p style="color: red;">Markdown解析错误: ${e.message}</p>`;
+            }
+            markdownPreviewDiv.innerHTML = htmlContent;
+            convertQuotesInElement(markdownPreviewDiv);
+            if (typeof renderMathInElement === 'function') {
+                try {
+                    renderMathInElement(markdownPreviewDiv, {
+                        delimiters: [ {left: '$$', right: '$$', display: true}, {left: '\\[', right: '\\]', display: true}, {left: '$', right: '$', display: false}, {left: '\\(', right: '\\)', display: false}],
+                        throwOnError: false
+                    });
+                } catch(e) { console.error("KaTeX error:", e); }
+            }
+        }
+
+        function updateCounts() {
+            if (!markdownContentTextarea || !countStatsDiv) return;
+            const text = markdownContentTextarea.value;
+            const charCount = text.length;
+            const lineCount = text ? text.split(/\r\n|\r|\n/).length : 0;
+            const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+            const wordCount = text.trim() ? words.length : 0;
+            countStatsDiv.textContent = `行:${lineCount} 字:${charCount} 词:${wordCount}`;
+        }
+
+        // --- Markdown Toolbar Syntax Insertion ---
+        function insertSyntax(prefix, suffix, placeholder = '', selectPlaceholder = false, ensureNewLine = false) {
+            if (isMobile() && currentPageIndex !== 1) {
+                showStatus("请先切换到编辑页面", 2000, 'warning');
+                return;
+            }
+            const ta = markdownContentTextarea;
+            let start = ta.selectionStart, end = ta.selectionEnd;
+            const selectedText = ta.value.substring(start, end);
+            let textToInsert, newCursorStart, newCursorEnd;
+
+            let actualPrefix = prefix;
+            if (ensureNewLine) {
+                // Add a newline before the prefix if not already at the start of a line or start of textarea
+                if (start > 0 && ta.value[start - 1] !== '\n') {
+                    actualPrefix = '\n' + prefix;
+                }
+            }
+
+
+            if (selectedText) {
+                textToInsert = actualPrefix + selectedText + suffix;
+                newCursorStart = start + actualPrefix.length;
+                newCursorEnd = newCursorStart + selectedText.length;
+            } else {
+                textToInsert = actualPrefix + placeholder + suffix;
+                newCursorStart = start + actualPrefix.length;
+                newCursorEnd = selectPlaceholder ? (newCursorStart + placeholder.length) : newCursorStart;
+            }
+            ta.value = ta.value.substring(0, start) + textToInsert + ta.value.substring(end);
+            ta.selectionStart = newCursorStart;
+            ta.selectionEnd = newCursorEnd;
+            ta.focus();
+            ta.dispatchEvent(new Event('input'));
+        }
+        function insertTableTemplate() {
+            const template = "| Header | Header |\n|---|---|\n| Cell | Cell |\n";
+            insertSyntax('', template, '', false, true); // Insert at cursor, ensure new line
+        }
+
+        // --- Typewriter Mode (Highlight Line) ---
+        function updateTypewriterVisuals() {
+            if (!typewriterToggleBtn || !markdownContentTextarea || !typewriterLineHighlight || !editorSection) return;
+            const enabled = isTypewriterModeEnabled();
+            typewriterToggleBtn.classList.toggle('active', enabled);
+            markdownContentTextarea.classList.toggle('typewriter-mode-active', enabled);
+            editorSection.classList.toggle('typewriter-bg-active', enabled); 
+
+            if (enabled) {
+                typewriterLineHighlight.style.display = 'block';
+                markdownContentTextarea.style.backgroundColor = 'transparent'; 
+                positionTypewriterHighlight();
+            } else {
+                typewriterLineHighlight.style.display = 'none';
+                markdownContentTextarea.style.backgroundColor = ''; 
+            }
+        }
+
+        function positionTypewriterHighlight() {
+            if (!isTypewriterModeEnabled() || !markdownContentTextarea || !typewriterLineHighlight) return;
+
+            const taStyle = getComputedStyle(markdownContentTextarea);
+            const lineHeight = parseFloat(taStyle.lineHeight);
+            const paddingTop = parseFloat(taStyle.paddingTop);
+            const paddingLeft = parseFloat(taStyle.paddingLeft); 
+
+            const textUpToCaret = markdownContentTextarea.value.substring(0, markdownContentTextarea.selectionStart);
+            const currentLineNumber = textUpToCaret.split('\n').length - 1;
+
+            const highlightTop = (currentLineNumber * lineHeight) + paddingTop - markdownContentTextarea.scrollTop;
+
+            typewriterLineHighlight.style.top = `${markdownContentTextarea.offsetTop + highlightTop}px`;
+            typewriterLineHighlight.style.left = `${markdownContentTextarea.offsetLeft + paddingLeft}px`;
+            typewriterLineHighlight.style.width = `${markdownContentTextarea.clientWidth - paddingLeft - parseFloat(taStyle.paddingRight)}px`;
+            typewriterLineHighlight.style.height = `${lineHeight}px`;
+        }
+
+
+        // --- Layout Management (PC/Mobile) ---
+        function setupLayout() {
+            if (!contentWrapper || !appContainer) return;
+            if (isMobile()) {
+                contentWrapper.className = 'content-wrapper mobile-mode'; 
+                appContainer.classList.add('mobile-active');
+                mobileNav.style.display = 'flex';
+                goToPage(currentPageIndex, true); 
+                updateMobileNavButtons();
+            } else {
+                contentWrapper.className = 'content-wrapper pc-mode'; 
+                appContainer.classList.remove('mobile-active');
+                mobileNav.style.display = 'none';
+                contentWrapper.style.transform = ''; 
+            }
+            updateTypewriterVisuals(); 
+        }
+
+        // --- PC Specific ---
+        function syncScroll(source, target) {
+            if (isMobile() || isSyncingScrollActive || isTypewriterModeEnabled()) return;
+            isSyncingScrollActive = true;
+            const percent = source.scrollTop / (source.scrollHeight - source.clientHeight);
+            target.scrollTop = percent * (target.scrollHeight - target.clientHeight);
+            setTimeout(() => { isSyncingScrollActive = false; }, 20); 
+        }
+
+        // --- Mobile Specific ---
+        function updateMobileNavButtons() {
+            if (!prevPageButton || !nextPageButton || !indicatorDots.length) return;
+            prevPageButton.disabled = (currentPageIndex === 0);
+            nextPageButton.disabled = (currentPageIndex === totalPages - 1);
+
+            const pageNames = ["信息", "编辑", "预览"];
+            prevPageButton.textContent = currentPageIndex > 0 ? pageNames[currentPageIndex -1] : "信息";
+            nextPageButton.textContent = currentPageIndex < totalPages - 1 ? pageNames[currentPageIndex + 1] : "预览";
+
+
+            indicatorDots.forEach((dot, i) => dot.classList.toggle('active', i === currentPageIndex));
+        }
+
+        function goToPage(index, immediate = false) {
+            if (index < 0 || index >= totalPages) return;
+            saveCurrentInputData(); 
+            currentPageIndex = index;
+
+            if (immediate) { 
+                contentWrapper.style.transition = 'none';
+            }
+            contentWrapper.style.transform = `translateX(-${currentPageIndex * (100 / totalPages)}%)`;
+            if (immediate) { 
+                setTimeout(() => contentWrapper.style.transition = '', 50);
+            }
+
+            updateMobileNavButtons();
+            if (currentPageIndex === 2) updatePreview();
+            if (currentPageIndex === 1) markdownContentTextarea.focus();
+            else markdownContentTextarea.blur(); 
+
+            updateTypewriterVisuals(); 
+        }
+
+        // --- Event Handlers ---
+        function handleToolbarClick(e) {
+            const button = e.target.closest('button');
+            if (!button || !button.dataset.syntax) return;
+            const syntax = button.dataset.syntax;
+            
+            const S = (p, s, h="", sp=true, enl=false) => insertSyntax(p,s,h,sp,enl);
+            const actions = {
+                'bold': () => S('**', '**', '文字'), 'italic': () => S('*', '*', '文字'),
+                'strikethrough': () => S('~~', '~~', '文字'), 'underline': () => S('<u>', '</u>', '文字'),
+                'highlight': () => S('<mark>', '</mark>', '高亮文本'),
+                'heading2': () => S('## ', '', '标题', false, true), 
+                'ulist': () => S('- ', '', '列表项', false, true),
+                'olist': () => S('1. ', '', '列表项', false, true), 
+                'checkbox': () => S('- [ ] ', '', '任务', false, true),
+                'donebox': () => S('- [x] ', '', '任务', false, true),
+                'blockquote': () => S('> ', '', '引用', false, true),
+                'inlinecode': () => S('`', '`', '代码'), 
+                'codeblock': () => S('```\n', '\n```', '代码', true, true),
+                'link': () => S('[', '](https://)', '链接文本'), 
+                'image': () => S('![', '](https://)', '图片描述', true, true),
+                'table': insertTableTemplate, 
+                'hr': () => S('', '\n---\n', '', false, true),
+                'footnote': () => S('[^', ']', '标签'),
+                'inlineMath': () => S('$', '$', 'E=mc^2'), // Matched new data-syntax
+                'blockMath': () => S('$$\n', '\n$$', 'E=mc^2', true, true), // Matched new data-syntax
+                'pinyin': () => S('[pinyin: ', ']', 'ni hao'),
+                'jp_single_quotes': () => S('「', '」', '文字'), 
+                'jp_double_quotes': () => S('『', '』', '文字'),
+            };
+            if (actions[syntax]) actions[syntax](); else console.warn('Unknown syntax:', syntax);
+        }
+
+        function saveCurrentInputData() { 
+            saveAppData({
+                title: titleInput.value,
+                pubDate: pubDateInput.value,
+                categories: categoriesInput.value,
+                description: descriptionInput.value,
+                markdown: markdownContentTextarea.value
+            });
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Cache DOM elements
+            titleInput = document.getElementById('title');
+            pubDateInput = document.getElementById('pubDate');
+            categoriesInput = document.getElementById('categories');
+            descriptionInput = document.getElementById('description');
+            markdownContentTextarea = document.getElementById('markdownContent');
+            markdownPreviewDiv = document.getElementById('markdownPreview');
+            countStatsDiv = document.getElementById('countStats');
+            copyButton = document.getElementById('copyButton');
+            openUrlButton = document.getElementById('openUrlButton');
+            saveUrlButton = document.getElementById('saveUrlButton');
+            settingsButton = document.getElementById('settingsButton');
+            closeConfigButton = document.getElementById('closeConfigButton');
+            configSection = document.getElementById('configSection');
+            targetUrlInput = document.getElementById('targetUrlInput');
+            statusMessage = document.getElementById('statusMessage');
+            currentTimeSpan = document.getElementById('currentTime');
+            contentWrapper = document.getElementById('contentWrapper');
+            appContainer = document.getElementById('appContainer');
+            mobileNav = document.getElementById('mobileNav');
+            prevPageButton = document.getElementById('prevPageButton');
+            nextPageButton = document.getElementById('nextPageButton');
+            indicatorDots = document.querySelectorAll('.indicator-dot');
+            typewriterToggleBtn = document.getElementById('typewriterToggleBtn');
+            typewriterLineHighlight = document.getElementById('typewriterLineHighlight');
+            editorSection = document.getElementById('editorSection');
+
+            // Apply theme
+            applyThemePreference();
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyThemePreference);
+            }
+
+            const appData = loadAppData();
+            updateUIWithLoadedData(appData);
+            setDefaultPubDate();
+            updateClock();
+            setInterval(updateClock, 1000);
+            setupLayout(); 
+
+            if (!getTargetUrl()) setTimeout(showConfigSection, 100);
+
+            window.addEventListener('resize', () => {
+                setupLayout();
+                positionTypewriterHighlight(); 
+            });
+
+            [titleInput, pubDateInput, categoriesInput, descriptionInput, markdownContentTextarea].forEach(el => {
+                el.addEventListener('input', () => {
+                    saveCurrentInputData(); 
+                    if (el === markdownContentTextarea) { 
+                        updatePreview();
+                        updateCounts();
+                        if (!isMobile() && !isTypewriterModeEnabled()) { 
+                             syncScroll(markdownContentTextarea, markdownPreviewDiv);
+                        }
+                    }
+                    if (el === markdownContentTextarea && isTypewriterModeEnabled()) {
+                         positionTypewriterHighlight();
+                    }
+                });
+            });
+            
+            markdownContentTextarea.addEventListener('click', positionTypewriterHighlight);
+            markdownContentTextarea.addEventListener('keyup', positionTypewriterHighlight); 
+            markdownContentTextarea.addEventListener('scroll', positionTypewriterHighlight);
+
+
+            if (!isMobile()) { 
+                 markdownPreviewDiv.addEventListener('scroll', () => syncScroll(markdownPreviewDiv, markdownContentTextarea));
+            }
+
+            copyButton.addEventListener('click', async () => {
+                saveCurrentInputData(); 
+                const fullMarkdown = generateMarkdownContent();
+                try {
+                    await navigator.clipboard.writeText(fullMarkdown);
+                    showStatus('Markdown 已复制!', 2000, 'success');
+                } catch (err) {
+                    showStatus('复制失败!', 3000, 'error');
+                    console.error('Copy failed:', err);
+                }
+            });
+
+            openUrlButton.addEventListener('click', () => {
+                const url = getTargetUrl();
+                if (url) window.open(url, '_blank');
+                else {
+                    showStatus("目标 URL 未配置", 3000, 'warning');
+                    showConfigSection();
+                }
+            });
+
+            settingsButton.addEventListener('click', showConfigSection);
+            closeConfigButton.addEventListener('click', hideConfigSection);
+            saveUrlButton.addEventListener('click', () => {
+                let url = targetUrlInput.value.trim();
+                if (url) {
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+                    setTargetUrl(url);
+                    showStatus('URL 已保存!', 2000, 'success');
+                    hideConfigSection();
+                } else {
+                    localStorage.removeItem(TARGET_URL_STORAGE_KEY);
+                    showStatus('URL 已清除', 2000, 'warning');
+                }
+            });
+
+            document.querySelector('.markdown-toolbar').addEventListener('click', handleToolbarClick);
+            typewriterToggleBtn.addEventListener('click', () => {
+                setTypewriterMode(!isTypewriterModeEnabled());
+                showStatus(`打字机模式 ${isTypewriterModeEnabled() ? '开启' : '关闭'}`, 1500);
+            });
+
+
+            prevPageButton.addEventListener('click', () => goToPage(currentPageIndex - 1));
+            nextPageButton.addEventListener('click', () => goToPage(currentPageIndex + 1));
+            indicatorDots.forEach(dot => {
+                dot.addEventListener('click', () => goToPage(parseInt(dot.dataset.page)));
+            });
+
+            let touchStartX = 0;
+            let touchEndX = 0;
+            contentWrapper.addEventListener('touchstart', e => {
+                if (!isMobile()) return;
+                touchStartX = e.changedTouches[0].screenX;
+            }, {passive: true});
+            contentWrapper.addEventListener('touchend', e => {
+                if (!isMobile()) return;
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipeGesture();
+            }, {passive: true});
+
+            function handleSwipeGesture() {
+                if (Math.abs(touchEndX - touchStartX) < 50) return; 
+                if (touchEndX < touchStartX) nextPageButton.click(); 
+                if (touchEndX > touchStartX) prevPageButton.click(); 
+            }
+            
+            window.addEventListener('storage', (event) => {
+                 if ([MARKDOWN_CONTENT_STORAGE_KEY, TITLE_STORAGE_KEY, PUBDATE_STORAGE_KEY, CATEGORIES_STORAGE_KEY, DESCRIPTION_STORAGE_KEY, TYPEWRITER_MODE_STORAGE_KEY].includes(event.key)) {
+                     const latestData = loadAppData();
+                     updateUIWithLoadedData(latestData);
+                     if (event.key === TYPEWRITER_MODE_STORAGE_KEY) {
+                         updateTypewriterVisuals(); 
+                     }
+                     showStatus(`数据已从其他窗口同步`, 2000);
+                 }
+            });
+
+            setTimeout(updatePreview, 200);
+        });
+    </script>
+</body>
+</html>
