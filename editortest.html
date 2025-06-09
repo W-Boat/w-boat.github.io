@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>书卷 - Markdown 文章生成器</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E書%3C/text%3E%3C/svg%3E">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+    <style>
+        /* --- 1. 全局与主题样式 --- */
+        :root {
+            --bg-color: #f9f7f1; 
+            --text-color: #3a3a3a;
+            --title-color: #1a1a1a;
+            --accent-color: #b9945a;
+            --border-color: #e0d9c7;
+            --dim-text-color: #888888;
+            --dim-bg-color: #e8e4d8;
+            --modal-bg: rgba(249, 247, 241, 0.9);
+            --shadow-color: rgba(0, 0, 0, 0.08);
+            --resizer-color: #d1c7b6;
+            --resizer-hover-color: var(--accent-color);
+            --header-height: 55px; 
+            --light-theme-bg-for-export: #f9f7f1; /* Define light theme bg for consistent export */
+
+            --font-main: 'Noto Serif SC', serif;
+            --font-code: 'Menlo', 'Consolas', monospace;
+
+            --editor-pane-width: 50%;
+            --cubic-bezier-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .dark-mode {
+            --bg-color: #282c34;
+            --text-color: #d1d1d1;
+            --title-color: #ffffff;
+            --accent-color: #dcb67a;
+            --border-color: #4a4f5a;
+            --dim-text-color: #7e8896;
+            --dim-bg-color: #21252b;
+            --modal-bg: rgba(40, 44, 52, 0.95);
+            --shadow-color: rgba(0, 0, 0, 0.2);
+            --resizer-color: #3f444d;
+            --resizer-hover-color: var(--accent-color);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            height: 100%;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.4s ease, color 0.4s ease;
+            font-size: 16px;
+            overflow: hidden; /* Prevent body scroll globally */
+        }
+
+        /* --- 2. 布局与书本样式 --- */
+        #app-container { 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; /* Full viewport height */
+            overflow: hidden; /* Ensure app itself doesn't scroll */
+        }
+
+        .header {
+            flex-shrink: 0; 
+            height: var(--header-height);
+            padding: 0 20px; 
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            transition: border-color 0.4s ease; 
+            position: relative; z-index: 100;
+            background-color: var(--bg-color); 
+        }
+        /* Mobile header hidden class - functionality depends on JS scroll listening on panes */
+        .header.header-hidden-mobile {
+            transform: translateY(-100%);
+            transition: transform 0.3s var(--cubic-bezier-smooth);
+        }
+        .header-title { font-size: 1.4em; font-weight: 600; color: var(--title-color); }
+
+        .main-content { 
+            flex-grow: 1; 
+            display: flex; 
+            overflow: hidden; /* Crucial to contain panes */
+            position: relative; 
+        }
+        
+        #editor-pane, #preview-pane {
+            height: 100%; /* Take full height of main-content */
+            padding: 20px; 
+            overflow-y: auto; /* Each pane handles its own scroll */
+            transition: background-color 0.4s ease;
+            position: relative; 
+        }
+        #editor-pane { width: var(--editor-pane-width); }
+        #preview-pane { flex-grow: 1; width: calc(100% - var(--editor-pane-width) - 5px); }
+        
+        #editor-resizer {
+            width: 5px; height: 100%; background-color: var(--resizer-color);
+            cursor: col-resize; position: absolute; top: 0; right: -2.5px; 
+            z-index: 50; transition: background-color 0.2s ease;
+        }
+        #editor-resizer:hover { background-color: var(--resizer-hover-color); }
+        .main-content.resizing { user-select: none; }
+
+
+        #editor {
+            width: 100%; height: 100%; border: none; outline: none; resize: none;
+            background: transparent; color: var(--text-color);
+            font-family: var(--font-main); font-size: 1.1em; line-height: 1.8;
+            caret-color: var(--accent-color); transition: color 0.4s ease;
+        }
+
+        /* --- 3. 预览区样式 --- */
+        #preview-content { 
+            max-width: 800px; margin: 0 auto; line-height: 1.8; 
+            padding: 15px; 
+        }
+        /* Ensure specific preview content styles for export consistency */
+        .preview-content-for-export {
+            background-color: var(--light-theme-bg-for-export) !important;
+            color: #333333 !important;
+        }
+        .preview-content-for-export h1,
+        .preview-content-for-export h2,
+        .preview-content-for-export h3,
+        .preview-content-for-export table,
+        .preview-content-for-export th,
+        .preview-content-for-export td,
+        .preview-content-for-export hr {
+            border-color: #e0d9c7 !important; /* Light theme border */
+        }
+        .preview-content-for-export code {
+             background-color: #e8e4d8 !important; /* Light theme dim bg */
+             color: #3a3a3a !important;
+        }
+        .preview-content-for-export pre {
+            background-color: #e8e4d8 !important; /* Light theme dim bg */
+        }
+        .preview-content-for-export pre code {
+             background: none !important;
+             color: #3a3a3a !important;
+        }
+        .preview-content-for-export blockquote {
+            color: #888888 !important; /* Light theme dim text */
+            border-left-color: #b9945a !important; /* Light theme accent */
+        }
+        .preview-content-for-export a {
+            color: #b9945a !important; /* Light theme accent */
+        }
+
+
+        #preview-content h1, #preview-content h2, #preview-content h3 {
+            font-family: var(--font-main); font-weight: 600; color: var(--title-color);
+            margin-top: 1.5em; margin-bottom: 0.8em; padding-bottom: 0.3em;
+            border-bottom: 1px solid var(--border-color);
+        }
+        #preview-content h1 { font-size: 2.2em; } #preview-content h2 { font-size: 1.8em; } #preview-content h3 { font-size: 1.5em; }
+        #preview-content p { margin-bottom: 1.2em; }
+        #preview-content a { color: var(--accent-color); text-decoration: none; border-bottom: 1px solid transparent; transition: border-bottom 0.3s ease; }
+        #preview-content a:hover { border-bottom: 1px solid var(--accent-color); }
+        #preview-content blockquote { border-left: 3px solid var(--accent-color); padding-left: 1.5em; margin-left: 0; color: var(--dim-text-color); font-style: italic; }
+        #preview-content code { font-family: var(--font-code); background-color: var(--dim-bg-color); padding: 0.2em 0.4em; border-radius: 4px; font-size: 0.9em; }
+        #preview-content pre { background-color: var(--dim-bg-color); padding: 1em; border-radius: 6px; overflow-x: auto; line-height: 1.5; }
+        #preview-content pre code { padding: 0; background: none; }
+        #preview-content table { border-collapse: collapse; width: 100%; margin-bottom: 1.5em; border: 1px solid var(--border-color); }
+        #preview-content th, #preview-content td { border: 1px solid var(--border-color); padding: 0.8em 1em; text-align: left; }
+        #preview-content th { background-color: var(--dim-bg-color); font-weight: 600; }
+        #preview-content img { max-width: 100%; border-radius: 6px; box-shadow: 0 4px 15px var(--shadow-color); }
+        #preview-content .mermaid { text-align: center; margin: 1em 0; background-color: transparent !important; }
+        #preview-content ul, #preview-content ol { padding-left: 2em; margin-bottom: 1em;}
+        #preview-content hr { border: none; border-top: 1px solid var(--border-color); margin: 2em 0; }
+
+
+        /* --- 4. 二级菜单与工具栏 --- */
+        .header-controls { display: flex; align-items: center; gap: 10px; }
+        .menu-toggle { position: relative; }
+        .menu-toggle-btn { background: none; border: none; cursor: pointer; padding: 5px; }
+        .menu-toggle-btn svg { width: 22px; height: 22px; fill: var(--text-color); transition: fill 0.4s ease, transform 0.3s var(--cubic-bezier-smooth); }
+        .menu-toggle-btn:hover svg { fill: var(--accent-color); }
+
+        .secondary-menu {
+            position: absolute; top: calc(100% + 5px); right: 0; 
+            background-color: var(--bg-color); border: 1px solid var(--border-color);
+            border-radius: 8px; box-shadow: 0 8px 25px var(--shadow-color);
+            list-style: none; padding: 8px 0; width: 220px; z-index: 101; 
+            transform-origin: top right; transform: scale(0.95) translateY(-10px);
+            opacity: 0; visibility: hidden;
+            transition: transform 0.25s var(--cubic-bezier-smooth), opacity 0.25s ease, visibility 0.25s;
+        }
+        .secondary-menu.active { transform: scale(1) translateY(0); opacity: 1; visibility: visible; }
+        .secondary-menu li button {
+            display: flex; align-items: center; gap: 10px; width: 100%;
+            padding: 10px 15px; background: none; border: none; text-align: left;
+            font-family: var(--font-main); font-size: 0.95em; color: var(--text-color); 
+            cursor: pointer; transition: background-color 0.2s ease;
+        }
+        .secondary-menu li button.active { font-weight: 600; color: var(--accent-color); }
+        .secondary-menu li button:hover { background-color: var(--dim-bg-color); }
+        .secondary-menu li button svg { width: 16px; height: 16px; fill: currentColor; } 
+
+        #toolbar {
+            flex-shrink: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 5px;
+            padding: 8px 20px; border-bottom: 1px solid var(--border-color); 
+            background-color: var(--bg-color); transition: all 0.4s ease;
+            overflow-x: auto; 
+            max-height: 80px; 
+        }
+        .toolbar-btn {
+            background: none; border: 1px solid transparent; padding: 6px; 
+            border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .toolbar-btn svg { width: 18px; height: 18px; fill: var(--text-color); transition: fill 0.2s ease; } 
+        .toolbar-btn:hover { background-color: var(--dim-bg-color); }
+        .toolbar-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); }
+        .toolbar-btn.active svg { fill: white; }
+        .toolbar-btn.hidden { display: none !important; } 
+        .toolbar-separator { width: 1px; height: 18px; background-color: var(--border-color); margin: 0 6px; } 
+        
+        /* --- 5. Hexo 模式面板 --- */
+        #hexo-panel-wrapper {
+            background-color: var(--dim-bg-color);
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.4s ease;
+            display: none; 
+        }
+        .hexo-panel-header {
+            padding: 8px 20px 8px 18px; 
+            display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+        }
+         .hexo-panel-header h3 { font-size: 1em; font-weight: 600; color: var(--text-color); margin: 0; }
+        #hexo-panel-toggle { background: none; border: none; padding: 5px; cursor: pointer; color: var(--text-color); }
+        #hexo-panel-toggle svg { width: 16px; height: 16px; fill: currentColor; transition: transform 0.3s var(--cubic-bezier-smooth); }
+        #hexo-panel.collapsed #hexo-panel-toggle svg { transform: rotate(-90deg); }
+
+        #hexo-panel {
+            padding: 0 20px 15px 20px; 
+            max-height: 500px; overflow: hidden;
+            transition: max-height 0.35s var(--cubic-bezier-smooth), padding-top 0.35s var(--cubic-bezier-smooth), padding-bottom 0.35s var(--cubic-bezier-smooth);
+        }
+        #hexo-panel.collapsed { max-height: 0; padding-top: 0 !important; padding-bottom: 0 !important; }
+
+        .hexo-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 0.9em; margin-bottom: 5px; color: var(--dim-text-color); }
+        .form-group input {
+            padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 4px;
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: var(--font-main); outline: none; transition: all 0.2s ease;
+        }
+        .form-group input:focus { border-color: var(--accent-color); box-shadow: 0 0 0 2px rgba(185, 148, 90, 0.3); }
+        .hexo-actions { display: flex; gap: 10px; margin-top: 5px; }
+        .hexo-btn {
+            padding: 8px 15px; border: 1px solid var(--accent-color); background-color: var(--accent-color);
+            color: white; font-family: var(--font-main); font-size: 0.9em;
+            border-radius: 4px; cursor: pointer; transition: all 0.2s ease;
+        }
+        .hexo-btn:hover { opacity: 0.85; }
+        .hexo-btn.secondary { background-color: transparent; color: var(--accent-color); }
+        .hexo-btn.secondary:hover { background-color: rgba(185, 148, 90, 0.1); }
+
+        /* --- 6. 状态栏 --- */
+        #status-bar {
+            flex-shrink: 0; padding: 8px 20px; border-top: 1px solid var(--border-color); 
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.8em; color: var(--dim-text-color); transition: all 0.4s ease;
+        }
+        #stats span { margin-right: 12px; }
+
+        /* --- 7. 全屏模态框 (Hexo首次配置) --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--modal-bg); backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; opacity: 0; visibility: hidden; 
+            transition: opacity 0.3s var(--cubic-bezier-smooth), visibility 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content {
+            background-color: var(--bg-color); padding: 30px; border-radius: 12px;
+            box-shadow: 0 10px 40px var(--shadow-color); width: 90%; max-width: 450px;
+            text-align: center; transform: scale(0.95);
+            transition: transform 0.3s var(--cubic-bezier-smooth);
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-content h2 { font-size: 1.6em; font-weight: 600; color: var(--title-color); margin-bottom: 15px; }
+        .modal-content p { margin-bottom: 20px; line-height: 1.6; color: var(--dim-text-color); }
+        .modal-content .form-group { text-align: left; }
+        #hexo-url-input { width: 100%; text-align: center; }
+        #modal-error { color: #e57373; font-size: 0.9em; margin-top: 10px; height: 1.2em; }
+
+        /* --- 8. 底部消息提示 (Toast) --- */
+        #toast-container {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 2000; display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast {
+            padding: 10px 18px; background-color: var(--title-color); color: var(--bg-color);
+            border-radius: 8px; box-shadow: 0 5px 20px var(--shadow-color);
+            display: flex; align-items: center; gap: 10px;
+            opacity: 0; 
+            animation: toast-in 0.4s var(--cubic-bezier-smooth) forwards, 
+                       toast-out 0.4s var(--cubic-bezier-smooth) 2.6s forwards;
+        }
+        .toast svg { width: 16px; height: 16px; fill: currentColor; }
+        @keyframes toast-in { from { opacity: 0; transform: translateY(20px) translateX(-50%); } to { opacity: 1; transform: translateY(0) translateX(-50%); } }
+        @keyframes toast-out { from { opacity: 1; transform: translateY(0) translateX(-50%); } to { opacity: 0; transform: translateY(20px) translateX(-50%); visibility: hidden;} }
+        /* Adjusted toast keyframes to only use translateX(-50%) from container */
+        @keyframes toast-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes toast-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(20px); visibility: hidden;} }
+
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; } 
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-color); }
+
+        /* --- 9. Mobile Specific Styles --- */
+        .mobile-view-toggle { display: none; } 
+        .desktop-only { display: flex; align-items: center; gap: 10px; } 
+
+        @media (max-width: 768px) {
+            /* html, body { overflow-y: auto; } Reverted: Keep overflow:hidden to prevent body scroll */
+            /* #app-container { height: auto; min-height: 100vh; } Reverted: Keep 100vh for stricter layout */
+
+            .header {
+                padding: 0 15px; 
+                /* position: sticky; top: 0; // Sticky implies body scroll, which we are avoiding */
+            }
+            /* .header.header-hidden-mobile functionality commented out in JS as it requires pane scroll listening */
+
+            .header-title { font-size: 1.2em; }
+            .desktop-only { display: none; }
+            
+            .mobile-view-toggle {
+                display: flex; gap: 5px;
+            }
+            .mobile-view-toggle button {
+                background-color: transparent;
+                border: 1px solid var(--border-color);
+                color: var(--text-color);
+                padding: 5px 10px;
+                border-radius: 4px;
+                font-size: 0.8em;
+                cursor: pointer;
+            }
+            .mobile-view-toggle button.active {
+                background-color: var(--accent-color);
+                color: white;
+                border-color: var(--accent-color);
+            }
+
+            .main-content {
+                /* Height calculation for main-content to fit within viewport, after header/toolbar/status */
+                 height: calc(100vh - var(--header-height) - var(--toolbar-actual-height, 45px) - var(--statusbar-actual-height, 37px));
+            }
+            
+            #editor-pane, #preview-pane {
+                width: 100% !important; 
+                /* height: 100%; (already set) */
+                padding: 15px;
+            }
+            #preview-pane { display: none; } 
+            #editor-resizer { display: none; }
+
+            #toolbar {
+                padding: 8px 15px;
+                max-height: 45px; /* Visual limit, actual height used in JS for calc */
+                flex-wrap: nowrap; 
+            }
+            .toolbar-btn svg { width: 16px; height: 16px; }
+            .toolbar-btn { padding: 5px; }
+            .toolbar-separator { height: 16px; margin: 0 4px;}
+
+            #status-bar { padding: 6px 15px; font-size: 0.75em; }
+            
+            .secondary-menu { width: 180px; }
+            .secondary-menu li button { font-size: 0.9em; padding: 8px 12px;}
+            .secondary-menu li button svg { width: 14px; height: 14px; }
+        }
+
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <header class="header" id="main-header">
+            <h1 class="header-title">书卷</h1>
+            <div class="header-controls">
+                <div class="mobile-view-toggle">
+                    <button id="mobile-show-editor" class="active">编辑</button>
+                    <button id="mobile-show-preview">预览</button>
+                </div>
+                <div class="desktop-only menu-toggle">
+                    <button class="menu-toggle-btn" id="main-menu-toggle" aria-label="切换菜单" aria-expanded="false">
+                        <svg viewBox="0 0 24 24"><path d="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z"></path></svg>
+                    </button>
+                    <ul class="secondary-menu" id="main-menu">
+                        <li>
+                            <button id="toggle-hexo-mode">
+                                <svg viewBox="0 0 24 24"><path d="M12,2.5L1,9.75L12,17L23,9.75L12,2.5M5.5,10.25L12,14.33L18.5,10.25V13.8L12,17.88L5.5,13.8V10.25M12,4.6L19.5,9.75L12,14.88L4.5,9.75L12,4.6Z"></path></svg>
+                                <span>Hexo 模式</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button id="toggle-editor-mode">
+                                <svg viewBox="0 0 24 24"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"></path></svg>
+                                <span>Editor 模式</span>
+                            </button>
+                        </li>
+                        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 5px 0;">
+                        <li>
+                            <button id="export-md-btn">
+                                <svg viewBox="0 0 24 24"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M13,3.5L18.5,9H13V3.5M5,17L9.5,11L13,15.5L14.5,13.5L19,19H5Z"></path></svg> 
+                                <span>导出 Markdown</span>
+                            </button>
+                        </li>
+                        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 5px 0;">
+                        <li>
+                            <button id="toggle-theme">
+                                <svg id="theme-icon-sun" viewBox="0 0 24 24"><path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L9.9,4.1L12,6.2L14.1,4.1L12,2M19.9,4.1L17.8,6.2L19.9,8.3L22,6.2L19.9,4.1M4.1,4.1L2,6.2L4.1,8.3L6.2,6.2L4.1,4.1M12,22L14.1,19.9L12,17.8L9.9,19.9L12,22M4.1,19.9L6.2,17.8L4.1,15.7L2,17.8L4.1,19.9M17.8,17.8L19.9,15.7L22,17.8L19.9,19.9L17.8,17.8M8.3,4.1L6.2,2L4.1,4.1L6.2,6.2L8.3,4.1M15.7,19.9L17.8,22L19.9,19.9L17.8,17.8L15.7,19.9M2,12L4.1,9.9L6.2,12L4.1,14.1L2,12M22,12L19.9,14.1L17.8,12L19.9,9.9L22,12Z"></path></svg>
+                                <svg id="theme-icon-moon" style="display:none;" viewBox="0 0 24 24"><path d="M12 2A9.91 9.91 0 0 0 9 2.46A10 10 0 0 1 9 22a10 10 0 0 1-7-3.22A1 1 0 0 0 2 20a1 1 0 0 0 .18.52A10 10 0 0 0 12 22a10 10 0 0 0 10-10c0-5.52-4.5-10-10-10z"></path></svg>
+                                <span id="theme-text">切换模式</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+        
+        <div id="hexo-panel-wrapper">
+            <div class="hexo-panel-header" id="hexo-panel-header-toggle">
+                <h3>Hexo Front Matter</h3>
+                <button id="hexo-panel-toggle" aria-label="收起/展开 Hexo 面板">
+                    <svg viewBox="0 0 24 24"><path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"></path></svg>
+                </button>
+            </div>
+            <div id="hexo-panel">
+                <div class="hexo-form">
+                    <div class="form-group">
+                        <label for="hexo-title">文章标题 (title)</label>
+                        <input type="text" id="hexo-title" placeholder="如：08.04 日志">
+                    </div>
+                    <div class="form-group">
+                        <label for="hexo-date">发布日期 (date)</label>
+                        <input type="date" id="hexo-date">
+                    </div>
+                    <div class="form-group">
+                        <label for="hexo-categories">分类 (categories)</label>
+                        <input type="text" id="hexo-categories" placeholder="如：日志,技术 (用,分隔)">
+                    </div>
+                    <div class="form-group">
+                        <label for="hexo-description">描述 (description)</label>
+                        <input type="text" id="hexo-description" placeholder="如：开学喵">
+                    </div>
+                    <div class="form-group hexo-actions">
+                        <button class="hexo-btn" id="copy-hexo-md">复制全文并打开</button>
+                        <button class="hexo-btn secondary" id="copy-hexo-md-only">仅复制</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="toolbar"></div>
+
+        <main class="main-content" id="main-content-area">
+            <div id="editor-pane">
+                <textarea id="editor" spellcheck="false" placeholder="在此处书写你的 Markdown..."></textarea>
+            </div>
+            <div id="editor-resizer"></div>
+            <div id="preview-pane">
+                <div id="preview-content"></div>
+            </div>
+        </main>
+
+        <footer id="status-bar">
+            <div id="stats">
+                <span id="word-count">字数: 0</span>
+                <span id="line-count">行数: 1</span>
+            </div>
+            <div id="current-time"></div>
+        </footer>
+    </div>
+
+    <div class="modal-overlay" id="hexo-config-modal">
+        <div class="modal-content">
+            <h2>首次配置 Hexo 模式</h2>
+            <p>为了使用“复制并打开”功能，请输入您博客的新建文章页面的 URL。例如: `https://your-blog.com/admin/#/posts/editor`</p>
+            <div class="form-group">
+                <input type="text" id="hexo-url-input" placeholder="https://...">
+                <p id="modal-error"></p>
+            </div>
+            <button class="hexo-btn" id="save-hexo-url">保存并开始</button>
+        </div>
+    </div>
+    
+    <div id="toast-container"></div>
+    
+    <script>
+    (function() {
+        'use strict';
+
+        const STORAGE_PREFIX = 'shujuan_md_editor_v4_'; // Version bump
+        const state = {
+            currentMode: 'editor', 
+            isMenuOpen: false,
+            isHexoPanelCollapsed: false,
+            hexoUrl: null,
+            editorPaneWidth: '50%',
+            currentMobileView: 'editor', 
+            // lastScrollTop: 0, // Commented out with header scroll functionality
+        };
+        
+        const ICON_PLACEHOLDER = "M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z"; 
+
+        const dom = {
+            app: document.getElementById('app-container'),
+            mainHeader: document.getElementById('main-header'), 
+            editor: document.getElementById('editor'),
+            previewContent: document.getElementById('preview-content'),
+            previewPane: document.getElementById('preview-pane'),
+            editorPane: document.getElementById('editor-pane'),
+            editorResizer: document.getElementById('editor-resizer'),
+            mainContentArea: document.getElementById('main-content-area'),
+            
+            stats: document.getElementById('stats'),
+            wordCount: document.getElementById('word-count'),
+            lineCount: document.getElementById('line-count'),
+            currentTime: document.getElementById('current-time'),
+            toolbar: document.getElementById('toolbar'),
+            
+            mainMenuToggle: document.getElementById('main-menu-toggle'),
+            mainMenu: document.getElementById('main-menu'),
+            toggleHexoModeBtn: document.getElementById('toggle-hexo-mode'),
+            toggleEditorModeBtn: document.getElementById('toggle-editor-mode'),
+            exportMdBtn: document.getElementById('export-md-btn'),
+            
+            toggleThemeBtn: document.getElementById('toggle-theme'),
+            themeText: document.getElementById('theme-text'),
+            themeIconSun: document.getElementById('theme-icon-sun'),
+            themeIconMoon: document.getElementById('theme-icon-moon'),
+            
+            hexoPanelWrapper: document.getElementById('hexo-panel-wrapper'),
+            hexoPanel: document.getElementById('hexo-panel'),
+            hexoPanelHeaderToggle: document.getElementById('hexo-panel-header-toggle'),
+            hexoPanelToggleButton: document.getElementById('hexo-panel-toggle'),
+            hexoTitle: document.getElementById('hexo-title'),
+            hexoDate: document.getElementById('hexo-date'),
+            hexoCategories: document.getElementById('hexo-categories'),
+            hexoDescription: document.getElementById('hexo-description'),
+            copyHexoMdBtn: document.getElementById('copy-hexo-md'),
+            copyHexoMdOnlyBtn: document.getElementById('copy-hexo-md-only'),
+            
+            hexoConfigModal: document.getElementById('hexo-config-modal'),
+            hexoUrlInput: document.getElementById('hexo-url-input'),
+            saveHexoUrlBtn: document.getElementById('save-hexo-url'),
+            modalError: document.getElementById('modal-error'),
+            
+            toastContainer: document.getElementById('toast-container'),
+
+            mobileShowEditorBtn: document.getElementById('mobile-show-editor'),
+            mobileShowPreviewBtn: document.getElementById('mobile-show-preview'),
+        };
+
+        const toolbarActions = [
+            { id: 'undo', icon: 'M12.5,8C9.85,8 7.45,9 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,15.22C21.08,11.03 17.15,8 12.5,8Z', title: '撤销 (Ctrl+Z)' },
+            { id: 'redo', icon: 'M18.4,10.6C16.55,9 14.15,8 11.5,8C6.85,8 2.92,11.03 1.53,15.22L3.9,16C4.95,12.81 7.96,10.5 11.5,10.5C13.46,10.5 15.23,11.22 16.62,12.38L13,16H22V7L18.4,10.6Z', title: '重做 (Ctrl+Y)' },
+            { type: 'separator' },
+            { id: 'h1', icon: 'M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3M9.5,15.5H7.5V9H9.5V15.5M14.5,15.5H12.5V12.5H10.5V11H14.5V12.5H12.5V15.5M16.5,12.5H14.5V9H16.5V12.5Z', title: 'H1' },
+            { id: 'h2', icon: 'M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3M9,15.5H7V9H9V15.5M15.25,12.25L13,10V9H17V10.5L14.75,12.75L17,15.5H15L13,13V15.5H11V9H13V12L15.25,9.75L13,12.25Z', title: 'H2' },
+            { id: 'h3', icon: 'M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3M9,15.5H7V9H9V15.5M13.75,14L15,15.5H11V9H15.5V10.5H13V11.75L15.25,9.75L13,14Z', title: 'H3' },
+            { type: 'separator' },
+            { id: 'bold', icon: 'M15.6,10.79C16.57,10.11 17,9.1 17,8C17,6.14 15.36,4.5 13,4.5H7.5V17.5H13.5C15.36,17.5 17,15.86 17,14C17,12.9 16.57,11.89 15.6,11.21L15.6,10.79Z', title: '加粗' },
+            { id: 'italic', icon: 'M10,4V7H12.21L8.79,15H6V18H14V15H11.79L15.21,7H18V4H10Z', title: '斜体' },
+            { id: 'underline', icon: 'M5,21H19V19H5V21M12,17C15.31,17 18,14.31 18,11V3H15.5V11C15.5,12.93 13.93,14.5 12,14.5C10.07,14.5 8.5,12.93 8.5,11V3H6V11C6,14.31 8.69,17 12,17Z', title: '下划线' },
+            { id: 'strikethrough', icon: 'M10,14H14V11H10V14M5,4V7H19V4H5M5,18H19V15H5V18Z', title: '删除线' }, 
+            { type: 'separator' },
+            { id: 'ul', icon: 'M7,5H21V7H7V5M7,11H21V13H7V11M7,17H21V19H7V17M4,4.5A1.5,1.5 0 0,1 5.5,6A1.5,1.5 0 0,1 4,7.5A1.5,1.5 0 0,1 2.5,6A1.5,1.5 0 0,1 4,4.5M4,10.5A1.5,1.5 0 0,1 5.5,12A1.5,1.5 0 0,1 4,13.5A1.5,1.5 0 0,1 2.5,12A1.5,1.5 0 0,1 4,10.5M4,16.5A1.5,1.5 0 0,1 5.5,18A1.5,1.5 0 0,1 4,19.5A1.5,1.5 0 0,1 2.5,18A1.5,1.5 0 0,1 4,16.5Z', title: '无序列表' }, 
+            { id: 'ol', icon: 'M2,17H4.5V19H2V17M2,5.5H3V4H4.5V5.5H3V7H4.5V8.5H2V5.5M3.08,11L2,11.5V12.5L3.08,13H4V11C4,10.45 3.55,10 3,10H2V11.5L3.08,11M7,5H21V7H7V5M7,11H21V13H7V11M7,17H21V19H7V17Z', title: '有序列表' }, 
+            { id: 'checklist', icon: 'M19.3,4.7L18.6,4L15,7.6L12.4,5L11.7,5.7L15,9L19.3,4.7M11,13H3V11H11V7H3V5H11M3,19H19V17H3V19Z', title: '复选框' }, 
+            { id: 'quote', icon: 'M14,17H17L19,13V7H13V13H16M6,17H9L11,13V7H5V13H8L6,17Z', title: '引用' }, 
+            { id: 'jp-quote', icon: 'M6 17H8.5L10.5 13.5V7H4.5V13.5H7L6 17ZM13.5 17H16L18 13.5V7H12V13.5H14.5L13.5 17Z', title: '日文引号 (Ctrl+1)' },
+            { id: 'hr', icon: 'M4,11H20V13H4V11Z', title: '水平分割线' }, 
+            { type: 'separator' },
+            { id: 'link', icon: 'M3.9,12C3.9,10.29 5.29,8.9 7,8.9H11V7H7C4.24,7 2,9.24 2,12C2,14.76 4.24,17 7,17H11V15.1H7C5.29,15.1 3.9,13.71 3.9,12M8,13H16V11H8V13M17,7H13V8.9H17C18.71,8.9 20.1,10.29 20.1,12C20.1,13.71 18.71,15.1 17,15.1H13V17H17C19.76,17 22,14.76 22,12C22,9.24 19.76,7 17,7Z', title: '链接' }, 
+            { id: 'image', icon: 'M21,19V5C21,3.89 20.1,3 19,3H5C3.89,3 3,3.89 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19M8.5,13.5L11,16.5L14.5,12L19,18H5L8.5,13.5Z', title: '图片' }, 
+            { id: 'table', icon: 'M5,4H19A2,2 0 0,1 21,6V18A2,2 0 0,1 19,20H5A2,2 0 0,1 3,18V6A2,2 0 0,1 5,4M5,8V12H11V8H5M13,8V12H19V8H13M5,14V18H11V14H5M13,14V18H19V14H13Z', title: '表格' }, 
+            { id: 'code', icon: 'M9.4,16.6L4.8,12L9.4,7.4L8,6L2,12L8,18L9.4,16.6M14.6,16.6L19.2,12L14.6,7.4L16,6L22,12L16,18L14.6,16.6Z', title: '行内代码' }, 
+            { id: 'codeblock', icon: 'M20,3H4A2,2 0 0,0 2,5V19A2,2 0 0,0 4,21H20A2,2 0 0,0 22,19V5A2,2 0 0,0 20,3M8,17H6V15H8V17M12,17H10V15H12V17M16,17H14V15H16V17M10.83,11.17L9.41,12.59L6.83,10L9.41,7.41L10.83,8.83L9.66,10L10.83,11.17M17.17,11.17L14.59,8.83L13.17,7.41L14.59,6L17.17,8.58L14.34,10L17.17,11.17Z', title: '代码块' }, 
+            { type: 'separator' },
+            { id: 'pinyin', icon: 'M10.2,16.2C10.1,16.5 9.8,16.7 9.5,16.7C9.2,16.7 9,16.5 8.8,16.2L5.3,6.4L5.2,6.4L1.7,16.2C1.5,16.5 1.3,16.7 1,16.7C0.7,16.7 0.4,16.5 0.3,16.2C0.2,15.9 0.2,15.7 0.4,15.4L4.4,5.3C4.6,4.9 5,4.7 5.3,4.7H5.2C5.6,4.7 5.9,4.9 6.1,5.3L9.6,15.4C9.8,15.7 9.9,15.9 9.8,16.2H10.2M14.1,12.5H16.1L16.2,12.8C16.3,13 16.5,13.2 16.8,13.2C17,13.2 17.2,13.1 17.3,12.9L17.4,12.8L18.9,8.7C19,8.4 19,8.2 18.9,8C18.8,7.7 18.6,7.5 18.3,7.5H17.2C16.9,7.5 16.6,7.7 16.5,8L15.1,12L14.1,8.9C14,8.6 13.8,8.5 13.5,8.5C13.2,8.5 13,8.6 12.9,8.9L11.4,12.9C11.3,13.2 11.3,13.4 11.4,13.6C11.5,13.9 11.7,14.1 12,14.1H13.1C13.4,14.1 13.7,13.9 13.8,13.6L14.1,12.5M23,12.2C23,12.4 22.9,12.6 22.7,12.7C22.5,12.9 22.3,13 22,13H21.3V14.7C21.3,15 21.1,15.2 20.8,15.2C20.5,15.2 20.3,15 20.3,14.7V13H19.6C19.3,13 19.1,12.9 18.9,12.7C18.7,12.6 18.7,12.4 18.7,12.2V11.8C18.7,11.6 18.7,11.4 18.9,11.3C19.1,11.1 19.3,11 19.6,11H20.3V9.3C20.3,9 20.5,8.8 20.8,8.8C21.1,8.8 21.3,9 21.3,9.3V11H22C22.3,11 22.5,11.1 22.7,11.3C22.9,11.4 23,11.6 23,11.8V12.2Z', title: '拼音' },
+            { id: 'convertQuotes', icon: 'M10,7L8,11H11V17H5V11L7,7H10M18,7L16,11H19V17H13V11L15,7H18Z', title: '其他引号转日文引号' },
+            { type: 'separator' },
+            { id: 'exportImage', icon: 'M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M13,3.5L18.5,9H13V3.5M5,17L9.5,11L13,15.5L14.5,13.5L19,19H5Z', title: '导出为图片' }, 
+            { id: 'exportPdf', icon: 'M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M13,9H18.5L13,3.5V9M10,12.5A1.5,1.5 0 0,1 8.5,14A1.5,1.5 0 0,1 7,12.5A1.5,1.5 0 0,1 8.5,11A1.5,1.5 0 0,1 10,12.5M12,18H16V17H12V18M12,16H16V15H12V16M12,14H16V13H12V14Z', title: '导出为PDF' }, 
+        ];
+
+        function populateToolbar() {
+            toolbarActions.forEach(action => {
+                if (action.type === 'separator') {
+                    const sep = document.createElement('div');
+                    sep.className = 'toolbar-separator';
+                    dom.toolbar.appendChild(sep);
+                } else {
+                    const btn = document.createElement('button');
+                    btn.className = 'toolbar-btn';
+                    btn.id = `btn-${action.id}`;
+                    btn.title = action.title;
+                    btn.dataset.action = action.id;
+                    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="${action.icon || ICON_PLACEHOLDER}"></path></svg>`;
+                    dom.toolbar.appendChild(btn);
+                }
+            });
+        }
+        
+        function insertText(options = {}) {
+            const { 
+                pretext = '', 
+                posttext = '', 
+                placeholder = '文本', 
+                blockText = null, 
+                wrapSelection = true, 
+                language = '' 
+            } = options;
+
+            const start = dom.editor.selectionStart;
+            const end = dom.editor.selectionEnd;
+            const selectedText = dom.editor.value.substring(start, end);
+            let finalText;
+            let finalSelectionStart, finalSelectionEnd;
+
+            if (blockText !== null) {
+                finalText = blockText;
+                dom.editor.setRangeText(finalText, start, end, 'end'); 
+                // For block text, select after insertion for potential further editing or place cursor at end
+                const newCursorPos = start + finalText.length;
+                dom.editor.setSelectionRange(newCursorPos, newCursorPos);
+
+            } else if (selectedText && wrapSelection) {
+                finalText = pretext + selectedText + posttext;
+                dom.editor.setRangeText(finalText, start, end, 'select');
+            } else { 
+                finalText = pretext + placeholder + posttext;
+                dom.editor.setRangeText(finalText, start, end, 'end'); 
+                
+                finalSelectionStart = start + pretext.length;
+                finalSelectionEnd = finalSelectionStart + placeholder.length;
+                dom.editor.setSelectionRange(finalSelectionStart, finalSelectionEnd);
+            }
+            dom.editor.focus();
+            updateAll();
+        }
+
+
+        function handleToolbarClick(e) {
+            const button = e.target.closest('.toolbar-btn');
+            if (!button) return;
+            const action = button.dataset.action;
+            if (!action) return;
+            
+            const actions = {
+                undo: () => document.execCommand('undo'),
+                redo: () => document.execCommand('redo'),
+                h1: () => insertText({ pretext: '# ', placeholder: '一级标题', wrapSelection: false }),
+                h2: () => insertText({ pretext: '## ', placeholder: '二级标题', wrapSelection: false }),
+                h3: () => insertText({ pretext: '### ', placeholder: '三级标题', wrapSelection: false }),
+                bold: () => insertText({ pretext: '**', posttext: '**', placeholder: '加粗文本' }),
+                italic: () => insertText({ pretext: '*', posttext: '*', placeholder: '斜体文本' }),
+                underline: () => insertText({ pretext: '<u>', posttext: '</u>', placeholder: '下划线文本' }),
+                strikethrough: () => insertText({ pretext: '~~', posttext: '~~', placeholder: '删除线' }),
+                ul: () => insertText({ blockText: '\n- 项目1\n- 项目2\n', wrapSelection: false}),
+                ol: () => insertText({ blockText: '\n1. 项目1\n2. 项目2\n', wrapSelection: false}),
+                checklist: () => insertText({ blockText: '\n- [ ] 任务项\n- [x] 已完成项\n', wrapSelection: false }),
+                quote: () => insertText({ pretext: '> ', placeholder: '引用内容', wrapSelection: false }),
+                'jp-quote': () => insertText({ pretext: '「', posttext: '」', placeholder: '引用内容' }),
+                hr: () => insertText({ blockText: '\n\n---\n\n', wrapSelection: false }), // Add newlines for separation
+                link: () => insertText({ pretext: '[', posttext: '](https://)', placeholder: '链接文本' }),
+                image: () => insertText({ pretext: '![', posttext: '](https://)', placeholder: '图片描述', wrapSelection: false }),
+                table: () => insertText({ blockText: '\n| 表头1 | 表头2 |\n|---|---|\n| 单元格1 | 单元格2 |\n| 单元格3 | 单元格4 |\n', wrapSelection: false}),
+                code: () => insertText({ pretext: '`', posttext: '`', placeholder: '代码' }),
+                codeblock: () => {
+                    const lang = prompt("输入语言类型 (例如: js, python) 可留空", "") || '';
+                    insertText({ pretext: '```' + lang + '\n', posttext: '\n```', placeholder: '在此输入代码', wrapSelection: true });
+                },
+                pinyin: () => insertText({ pretext: '<ruby>', posttext: '<rp>(</rp><rt>pinyin</rt><rp>)</rp></ruby>', placeholder: '汉字' }),
+                convertQuotes: () => {
+                    let val = dom.editor.value;
+                    val = val.replace(/“([^”]+)”/g, '「$1」').replace(/"([^"]+)"/g, '「$1」');
+                    val = val.replace(/‘([^’]+)’/g, '『$1』').replace(/'([^']+)'/g, '『$1』');
+                    if (dom.editor.value !== val) {
+                        dom.editor.value = val;
+                        updateAll();
+                        showToast('引号已转换为日文/中文优化引号');
+                    } else {
+                        showToast('未找到可转换的引号');
+                    }
+                },
+                exportImage: () => exportContent('image'),
+                exportPdf: () => exportContent('pdf'),
+            };
+            if (actions[action]) actions[action]();
+        }
+
+
+        async function exportContent(type) {
+            const elementToCapture = dom.previewContent;
+            const title = dom.hexoTitle.value.trim() || '书卷导出';
+            showToast(`正在生成${type === 'image' ? '图片' : 'PDF'}...`, 'info');
+        
+            const isCurrentlyDark = document.documentElement.classList.contains('dark-mode');
+            let exportCanvasBg = getComputedStyle(dom.previewPane).getPropertyValue('background-color').trim(); // Default to current preview bg
+
+            if (isCurrentlyDark) {
+                // Temporarily switch to light theme for export
+                document.documentElement.classList.remove('dark-mode');
+                document.documentElement.classList.add('light-mode-for-export-transition'); // For any CSS transition disabling
+                elementToCapture.classList.add('preview-content-for-export');
+                // Force mermaid to re-render with light theme if it exists
+                if (window.mermaid) {
+                    mermaid.initialize({ startOnLoad: false, theme: 'default' }); // 'default' is light
+                    mermaid.run({ nodes: elementToCapture.querySelectorAll('.mermaid')});
+                     await new Promise(resolve => setTimeout(resolve, 50)); // Give mermaid time to re-render
+                }
+                exportCanvasBg = getComputedStyle(document.documentElement).getPropertyValue('--light-theme-bg-for-export').trim() || '#FFFFFF';
+            }
+             // Ensure styles are applied before capture, especially after theme switch
+            await new Promise(resolve => setTimeout(resolve, 150));
+
+
+            const originalPadding = elementToCapture.style.padding;
+            elementToCapture.style.padding = '30px'; // Ensure padding for export aesthetics
+        
+            try {
+                const canvas = await html2canvas(elementToCapture, {
+                    backgroundColor: exportCanvasBg, // Use determined background
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    height: elementToCapture.scrollHeight,
+                    windowHeight: elementToCapture.scrollHeight,
+                    scrollX: 0, // Ensure no scroll offset issues
+                    scrollY: 0,
+                    x: elementToCapture.offsetLeft, // Try to capture from element's actual position
+                    y: elementToCapture.offsetTop,
+                    width: elementToCapture.offsetWidth,
+                });
+        
+                if (type === 'image') {
+                    const link = document.createElement('a');
+                    link.download = `${title}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    showToast('图片导出成功！', 'success');
+                } else if (type === 'pdf') {
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const imgData = canvas.toDataURL('image/png');
+                    
+                    const imgProps = pdf.getImageProperties(imgData);
+                    const pdfMargin = 10; // mm
+                    const pdfWidth = pdf.internal.pageSize.getWidth() - 2 * pdfMargin;
+                    const pdfHeight = pdf.internal.pageSize.getHeight() - 2 * pdfMargin;
+                    
+                    let imgRenderHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                    let currentPos = 0;
+                    let pageCount = 0;
+
+                    while (currentPos < imgProps.height) {
+                        pageCount++;
+                        if (pageCount > 1) pdf.addPage();
+                        
+                        // Calculate height of the image slice for the current PDF page
+                        // This determines how much of the original canvas to draw
+                        let sliceCanvasHeight = (pdfHeight * imgProps.width) / pdfWidth;
+                        if (currentPos + sliceCanvasHeight > imgProps.height) {
+                           sliceCanvasHeight = imgProps.height - currentPos; // Last piece
+                        }
+                        
+                        // Calculate rendered height of this slice on the PDF
+                        let renderSlicePdfHeight = (sliceCanvasHeight * pdfWidth) / imgProps.width;
+
+                        // Create a temporary canvas for the slice
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = imgProps.width;
+                        tempCanvas.height = sliceCanvasHeight;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCtx.drawImage(canvas, 0, currentPos, imgProps.width, sliceCanvasHeight, 0, 0, imgProps.width, sliceCanvasHeight);
+                        
+                        pdf.addImage(tempCanvas.toDataURL('image/png'), 'PNG', pdfMargin, pdfMargin, pdfWidth, renderSlicePdfHeight);
+                        currentPos += sliceCanvasHeight;
+
+                        if (pageCount > 20) { // Safety break
+                            showToast('PDF生成因页数过多而中止 (超过20页)。', 'error');
+                            break;
+                        }
+                    }
+                    pdf.save(`${title}.pdf`);
+                    showToast('PDF导出成功！', 'success');
+                }
+            } catch (error) {
+                console.error(`Export to ${type} failed:`, error);
+                showToast(`导出${type === 'image' ? '图片' : 'PDF'}失败: ${error.message}`, 'error');
+            } finally {
+                // Revert temporary styles and theme
+                elementToCapture.style.padding = originalPadding;
+                if (isCurrentlyDark) {
+                    document.documentElement.classList.add('dark-mode');
+                    document.documentElement.classList.remove('light-mode-for-export-transition');
+                    elementToCapture.classList.remove('preview-content-for-export');
+                     // Re-render mermaid with dark theme if needed
+                    if (window.mermaid) {
+                        mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+                        mermaid.run({ nodes: elementToCapture.querySelectorAll('.mermaid')});
+                         await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                }
+                 await new Promise(resolve => setTimeout(resolve, 50)); // Final delay for UI to settle
+                updatePreview(); // Ensure preview is correct after export manipulation
+            }
+        }
+
+        function exportMarkdown() {
+            const content = dom.editor.value;
+            const title = (dom.hexoTitle.value.trim() || '书卷导出').replace(/[\s\/]/g, '_'); 
+            const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${title}.md`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            showToast('Markdown 文件已导出', 'success');
+        }
+        
+        function updatePreview() {
+            try {
+                const rawMd = dom.editor.value;
+                marked.setOptions({
+                    renderer: new marked.Renderer(),
+                    highlight: function(code, lang) {
+                        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                        return hljs.highlight(code, { language }).value;
+                    },
+                    langPrefix: 'hljs language-',
+                    pedantic: false, gfm: true, breaks: true, sanitize: false, 
+                    smartLists: true, smartypants: false, xhtml: false
+                });
+                
+                let html = marked.parse(rawMd);
+                dom.previewContent.innerHTML = html;
+                
+                const mermaidElements = dom.previewContent.querySelectorAll('code.language-mermaid');
+                if (mermaidElements.length > 0) {
+                    mermaidElements.forEach(el => {
+                        const pre = el.parentElement;
+                        if (pre && pre.tagName === 'PRE') {
+                            const mermaidContainer = document.createElement('div');
+                            mermaidContainer.className = 'mermaid';
+                            mermaidContainer.textContent = el.textContent || '';
+                            mermaidContainer.style.backgroundColor = 'transparent';
+                            pre.parentNode.replaceChild(mermaidContainer, pre);
+                        }
+                    });
+                    if (window.mermaid) {
+                        const isDarkMode = document.documentElement.classList.contains('dark-mode');
+                        mermaid.initialize({ startOnLoad: false, theme: isDarkMode ? 'dark' : 'default' });
+                        mermaid.run({ nodes: dom.previewContent.querySelectorAll('.mermaid')});
+                    }
+                }
+            } catch (e) {
+                dom.previewContent.innerHTML = `<div class="error" style="color:red;">Markdown 渲染出错: ${e.message}</div>`;
+                console.error("Markdown rendering error:", e);
+            }
+        }
+
+        function updateStats() {
+            const text = dom.editor.value;
+            const lines = text.split('\n').length;
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            dom.wordCount.textContent = `字数: ${words}`;
+            dom.lineCount.textContent = `行数: ${lines}`;
+        }
+        function updateTime() {
+            const now = new Date();
+            dom.currentTime.textContent = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function toggleMode(newMode) {
+            if (state.currentMode === newMode && dom.hexoPanelWrapper.style.display === (newMode === 'hexo' ? 'block' : 'none')) return;
+
+            state.currentMode = newMode;
+            localStorage.setItem(STORAGE_PREFIX + 'mode', newMode);
+
+            const exportImageBtn = document.getElementById('btn-exportImage');
+            const exportPdfBtn = document.getElementById('btn-exportPdf');
+
+            if (newMode === 'hexo') {
+                if (!state.hexoUrl) showHexoConfigModal();
+                dom.hexoPanelWrapper.style.display = 'block';
+                dom.toggleHexoModeBtn.classList.add('active');
+                dom.toggleEditorModeBtn.classList.remove('active');
+                if (exportImageBtn) exportImageBtn.classList.add('hidden');
+                if (exportPdfBtn) exportPdfBtn.classList.add('hidden');
+            } else { 
+                dom.hexoPanelWrapper.style.display = 'none';
+                dom.toggleHexoModeBtn.classList.remove('active');
+                dom.toggleEditorModeBtn.classList.add('active');
+                if (exportImageBtn) exportImageBtn.classList.remove('hidden');
+                if (exportPdfBtn) exportPdfBtn.classList.remove('hidden');
+            }
+            showToast(`已切换到 ${newMode === 'hexo' ? 'Hexo' : 'Editor'} 模式`, 'info');
+        }
+
+        function toggleTheme(theme, isInternalCall = false) { // Added isInternalCall for export
+            const isDarkMode = theme === 'dark';
+            
+            if (!isInternalCall) { // Only update UI text if not an internal call for export
+                dom.themeText.textContent = isDarkMode ? '日间模式' : '夜间模式';
+                dom.themeIconSun.style.display = isDarkMode ? 'none' : 'block';
+                dom.themeIconMoon.style.display = isDarkMode ? 'block' : 'none';
+                localStorage.setItem(STORAGE_PREFIX + 'theme', theme);
+            }
+            document.documentElement.classList.toggle('dark-mode', isDarkMode);
+            document.documentElement.classList.toggle('light-mode', !isDarkMode);
+
+
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: isDarkMode ? 'dark' : 'default' });
+                // Only update preview if not an internal call to prevent recursive updates during export
+                if(!isInternalCall) updatePreview(); 
+            }
+        }
+        
+        function setupHexo() {
+            dom.hexoDate.valueAsDate = new Date(); 
+        }
+
+        function getHexoFrontMatter() {
+            const title = dom.hexoTitle.value.trim();
+            const pubDate = dom.hexoDate.value;
+            const categories = dom.hexoCategories.value.split(',').map(c => c.trim()).filter(Boolean);
+            const description = dom.hexoDescription.value.trim();
+            
+            let frontMatter = '---\n';
+            frontMatter += `title: ${title || '无标题'}\n`;
+            frontMatter += `date: ${pubDate}\n`; 
+            if(categories.length > 0) {
+                frontMatter += `categories:\n`;
+                categories.forEach(cat => { frontMatter += `  - '${cat.replace(/'/g, "''")}'\n`; });
+            }
+            if (description) frontMatter += `description: '${description.replace(/'/g, "''")}'\n`;
+            frontMatter += '---\n\n';
+            return frontMatter;
+        }
+
+        function copyHexoContent(andOpen = false) {
+            if (state.currentMode === 'hexo') {
+                if (!dom.hexoTitle.value.trim() || !dom.hexoDate.value) {
+                    showToast('Hexo 模式下，文章标题和发布日期不能为空！', 'error');
+                    return;
+                }
+            }
+            if (andOpen && !state.hexoUrl) {
+                showToast('请先配置 Hexo URL', 'error');
+                showHexoConfigModal(); return;
+            }
+
+            const fullContent = (state.currentMode === 'hexo' ? getHexoFrontMatter() : '') + dom.editor.value;
+            navigator.clipboard.writeText(fullContent).then(() => {
+                showToast('已复制内容到剪贴板', 'success');
+                if (andOpen && state.currentMode === 'hexo') {
+                    try { window.open(state.hexoUrl, '_blank'); } 
+                    catch(e) { console.error('Failed to open URL:', e); showToast('打开 URL 失败', 'error'); }
+                }
+            }).catch(err => { showToast('复制失败', 'error'); console.error('Clipboard copy failed:', err); });
+        }
+        
+        function showHexoConfigModal() { dom.hexoConfigModal.classList.add('active'); dom.hexoUrlInput.focus(); }
+        function hideHexoConfigModal() { dom.hexoConfigModal.classList.remove('active'); }
+        function saveHexoUrl() {
+            const url = dom.hexoUrlInput.value.trim();
+            try {
+                if (!url.startsWith('http://') && !url.startsWith('https://')) throw new Error('Invalid protocol');
+                new URL(url); 
+                dom.modalError.textContent = ''; state.hexoUrl = url;
+                localStorage.setItem(STORAGE_PREFIX + 'hexo_url', url);
+                hideHexoConfigModal(); showToast('URL 保存成功', 'success');
+            } catch (_) { dom.modalError.textContent = '请输入一个合法的 URL (例如: https://example.com)'; }
+        }
+        
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            const iconSvgPaths = {
+                info: 'M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z',
+                success: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z',
+                error: 'M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z'
+            };
+            toast.innerHTML = `<svg viewBox="0 0 24 24"><path d="${iconSvgPaths[type] || iconSvgPaths.info}"></path></svg> <span>${message}</span>`;
+            dom.toastContainer.appendChild(toast);
+        }
+
+        function setupMultiWindowSync() {
+            window.addEventListener('storage', (e) => {
+                if (e.key === STORAGE_PREFIX + 'content' && e.newValue !== dom.editor.value) {
+                    const cursorPos = dom.editor.selectionStart;
+                    dom.editor.value = e.newValue;
+                    try { dom.editor.setSelectionRange(cursorPos, cursorPos); } catch (ex) {}
+                    updateAll(); showToast('内容已从其他窗口同步', 'info');
+                }
+                if (e.key === STORAGE_PREFIX + 'theme' && e.newValue !== (document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light')) {
+                    toggleTheme(e.newValue);
+                    showToast('主题已从其他窗口同步', 'info');
+                }
+            });
+        }
+        
+        function updateAll() { updatePreview(); updateStats(); }
+
+        function initPaneResizer() {
+            let isResizing = false;
+            dom.editorResizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                dom.mainContentArea.classList.add('resizing'); 
+                document.body.style.cursor = 'col-resize'; 
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing || window.innerWidth <= 768) return; 
+                const containerOffsetLeft = dom.mainContentArea.offsetLeft;
+                const pointerRelativeX = e.clientX - containerOffsetLeft;
+                const minWidth = dom.mainContentArea.clientWidth * 0.2; 
+                const maxWidth = dom.mainContentArea.clientWidth * 0.8; 
+                
+                let newEditorWidth = Math.max(minWidth, Math.min(pointerRelativeX, maxWidth));
+                let newEditorWidthPercent = (newEditorWidth / dom.mainContentArea.clientWidth) * 100;
+                
+                state.editorPaneWidth = `${newEditorWidthPercent}%`;
+                dom.editorPane.style.width = state.editorPaneWidth;
+                dom.previewPane.style.width = `calc(100% - ${state.editorPaneWidth} - 5px)`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    dom.mainContentArea.classList.remove('resizing');
+                    document.body.style.cursor = 'default';
+                    localStorage.setItem(STORAGE_PREFIX + 'editor_pane_width', state.editorPaneWidth);
+                }
+            });
+        }
+        
+        function updateMobileLayoutCalcs() {
+            // Update CSS variables used for main-content height calc on mobile
+            // This ensures the calc uses the *actual* current heights
+            const toolbarActualHeight = dom.toolbar.offsetHeight;
+            const statusbarActualHeight = document.getElementById('status-bar').offsetHeight;
+            document.documentElement.style.setProperty('--toolbar-actual-height', `${toolbarActualHeight}px`);
+            document.documentElement.style.setProperty('--statusbar-actual-height', `${statusbarActualHeight}px`);
+        }
+
+
+        function loadSettings() {
+            const savedTheme = localStorage.getItem(STORAGE_PREFIX + 'theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            toggleTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+
+            const savedMode = localStorage.getItem(STORAGE_PREFIX + 'mode') || 'editor';
+            state.hexoUrl = localStorage.getItem(STORAGE_PREFIX + 'hexo_url');
+            toggleMode(savedMode);
+
+            state.isHexoPanelCollapsed = localStorage.getItem(STORAGE_PREFIX + 'hexo_panel_collapsed') === 'true';
+            dom.hexoPanel.classList.toggle('collapsed', state.isHexoPanelCollapsed);
+            const toggleIconPath = state.isHexoPanelCollapsed ? "M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" : "M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z";
+            dom.hexoPanelToggleButton.querySelector('svg path').setAttribute('d', toggleIconPath);
+
+            const savedContent = localStorage.getItem(STORAGE_PREFIX + 'content') || '# 欢迎使用 书卷\n\n这是一个仿实体书样式的 **Markdown** 在线编辑器。\n\n## 功能亮点\n\n- **实时预览**: 编辑内容即时在右侧呈现。\n- **Hexo 支持**: 轻松生成 Front-matter。\n- **多种格式**: 支持流程图 `Mermaid`。\n- **表格支持**: 使用 GFM 表格语法。\n\n```mermaid\ngraph TD\n    A[开始写作] --> B{选择模式};\n    B -- Hexo模式 --> C[配置信息];\n    B -- Editor模式 --> D[自由编辑];\n    C --> D;\n    D --> E[导出或复制];\n```\n\n| 表头1 | 表头2 | 表头3 |\n|---|:---:|---:|\n| 左对齐 | 居中 | 右对齐 |\n| cell | cell | cell |\n\n尝试输入一些 Markdown 文本吧！';
+            dom.editor.value = savedContent;
+
+            const savedPaneWidth = localStorage.getItem(STORAGE_PREFIX + 'editor_pane_width');
+            if (savedPaneWidth && window.innerWidth > 768) { 
+                state.editorPaneWidth = savedPaneWidth;
+                dom.editorPane.style.width = state.editorPaneWidth;
+                dom.previewPane.style.width = `calc(100% - ${state.editorPaneWidth} - 5px)`;
+            }
+            updateMobileLayoutCalcs(); // Set initial calc values
+        }
+        
+        // function handleMobileHeaderScroll() { ... } // Commented out due to body scroll prevention
+        
+
+        function init() {
+            console.log("书卷 Markdown 生成器初始化 (v4)...");
+            loadSettings();
+
+            try {
+                 if (window.mermaid) mermaid.initialize({ startOnLoad: false, theme: document.documentElement.classList.contains('dark-mode') ? 'dark' : 'default' });
+                 else console.warn("Mermaid.js not found.");
+            } catch (err) { console.error("库初始化失败:", err); showToast('部分功能库加载失败', 'error');}
+
+            populateToolbar();
+            setupHexo();
+            if (window.innerWidth > 768) initPaneResizer(); 
+            
+            updateAll(); updateTime(); 
+            setInterval(updateTime, 1000);
+
+            dom.editor.addEventListener('input', () => {
+                updateAll();
+                localStorage.setItem(STORAGE_PREFIX + 'content', dom.editor.value);
+            });
+            
+            let editorScrollTimeout, previewScrollTimeout;
+            dom.editor.addEventListener('scroll', () => {
+                if (window.innerWidth <= 768) return; 
+                clearTimeout(previewScrollTimeout);
+                editorScrollTimeout = setTimeout(() => {
+                    if (!dom.editor.scrollHeight || !dom.editor.clientHeight) return;
+                    const editorScrollRatio = dom.editor.scrollTop / (dom.editor.scrollHeight - dom.editor.clientHeight);
+                    if (isFinite(editorScrollRatio) && dom.previewPane.scrollHeight > dom.previewPane.clientHeight) {
+                        dom.previewPane.scrollTop = editorScrollRatio * (dom.previewPane.scrollHeight - dom.previewPane.clientHeight);
+                    }
+                }, 30); 
+            });
+            dom.previewPane.addEventListener('scroll', () => {
+                if (window.innerWidth <= 768) return;
+                clearTimeout(editorScrollTimeout);
+                previewScrollTimeout = setTimeout(() => {
+                    if(!dom.previewPane.scrollHeight || !dom.previewPane.clientHeight) return;
+                    const previewScrollRatio = dom.previewPane.scrollTop / (dom.previewPane.scrollHeight - dom.previewPane.clientHeight);
+                     if (isFinite(previewScrollRatio) && dom.editor.scrollHeight > dom.editor.clientHeight) {
+                        dom.editor.scrollTop = previewScrollRatio * (dom.editor.scrollHeight - dom.editor.clientHeight);
+                    }
+                }, 30);
+            });
+
+            dom.toolbar.addEventListener('click', handleToolbarClick);
+
+            dom.mainMenuToggle.addEventListener('click', (e) => {
+                e.stopPropagation(); state.isMenuOpen = !state.isMenuOpen;
+                dom.mainMenu.classList.toggle('active', state.isMenuOpen);
+                dom.mainMenuToggle.setAttribute('aria-expanded', state.isMenuOpen.toString());
+            });
+            document.addEventListener('click', (e) => {
+                if (state.isMenuOpen && !dom.mainMenu.contains(e.target) && !dom.mainMenuToggle.contains(e.target)) {
+                    state.isMenuOpen = false; dom.mainMenu.classList.remove('active');
+                    dom.mainMenuToggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            dom.toggleThemeBtn.addEventListener('click', () => toggleTheme(document.documentElement.classList.contains('dark-mode') ? 'light' : 'dark'));
+            dom.toggleHexoModeBtn.addEventListener('click', () => toggleMode('hexo'));
+            dom.toggleEditorModeBtn.addEventListener('click', () => toggleMode('editor'));
+            dom.exportMdBtn.addEventListener('click', exportMarkdown);
+
+
+            dom.hexoPanelHeaderToggle.addEventListener('click', () => {
+                state.isHexoPanelCollapsed = !state.isHexoPanelCollapsed;
+                dom.hexoPanel.classList.toggle('collapsed', state.isHexoPanelCollapsed);
+                const iconPath = state.isHexoPanelCollapsed ? "M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" : "M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"; 
+                dom.hexoPanelToggleButton.querySelector('svg path').setAttribute('d', iconPath);
+                localStorage.setItem(STORAGE_PREFIX + 'hexo_panel_collapsed', state.isHexoPanelCollapsed.toString());
+            });
+
+
+            dom.copyHexoMdBtn.addEventListener('click', () => copyHexoContent(true));
+            dom.copyHexoMdOnlyBtn.addEventListener('click', () => copyHexoContent(false));
+
+            dom.saveHexoUrlBtn.addEventListener('click', saveHexoUrl);
+            dom.hexoConfigModal.addEventListener('click', (e) => { if (e.target === dom.hexoConfigModal) hideHexoConfigModal(); });
+            dom.hexoUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') saveHexoUrl(); });
+            
+            dom.editor.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === '1') {
+                    e.preventDefault();
+                    insertText({ pretext: '「', posttext: '」', placeholder: '引用的内容', wrapSelection: true });
+                }
+            });
+
+            dom.mobileShowEditorBtn.addEventListener('click', () => {
+                dom.editorPane.style.display = 'block';
+                dom.previewPane.style.display = 'none';
+                dom.mobileShowEditorBtn.classList.add('active');
+                dom.mobileShowPreviewBtn.classList.remove('active');
+                state.currentMobileView = 'editor';
+            });
+            dom.mobileShowPreviewBtn.addEventListener('click', () => {
+                dom.editorPane.style.display = 'none';
+                dom.previewPane.style.display = 'block';
+                updatePreview(); 
+                dom.mobileShowEditorBtn.classList.remove('active');
+                dom.mobileShowPreviewBtn.classList.add('active');
+                state.currentMobileView = 'preview';
+            });
+
+            const mql = window.matchMedia('(prefers-color-scheme: dark)');
+            function handleOsThemeChange(e) {
+                const savedTheme = localStorage.getItem(STORAGE_PREFIX + 'theme');
+                if (!savedTheme) { 
+                    toggleTheme(e.matches ? 'dark' : 'light');
+                }
+            }
+            mql.addEventListener('change', handleOsThemeChange);
+            // window.addEventListener('scroll', handleMobileHeaderScroll); // Commented out
+
+            window.addEventListener('resize', updateMobileLayoutCalcs); // Update calcs on resize for mobile
+
+
+            setupMultiWindowSync();
+            showToast("书卷编辑器已就绪！", "success");
+            console.log("初始化完成。所有功能已准备就绪。");
+        }
+        window.addEventListener('load', init);
+    })();
+    </script>
+</body>
+</html>
