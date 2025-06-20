@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Markdown Editor Pro</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/neo.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material-darker.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/dialog/dialog.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/search/matchesonscrollbar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/scroll/simplescrollbars.min.css">
+    
+    <!-- highlight.js & KaTeX -->
+    <link id="hljs-light-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-light.min.css">
+    <link id="hljs-dark-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css" media="not all">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css" crossorigin="anonymous">
+
+    <style>
+        :root {
+            --font-serif: 'Noto Serif SC', serif;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            --bg-color-light: #fdfaf6; --text-color-light: #333; --title-color-light: #1a1a1a; --meta-color-light: #777; --accent-color-light: #d4a373; --border-color-light: #e0e0e0; --secondary-bg-light: #f7f1e9; --hover-bg-light: #ede4d9; --button-bg-light: #eaddcf; --button-text-light: #524030; --input-bg-light: #fff; --shadow-light: 0 4px 12px rgba(0,0,0,0.07); --selection-bg-light: rgba(212, 163, 115, 0.4);
+            --bg-color-dark: #2c2a2a; --text-color-dark: #e0e0e0; --title-color-dark: #f5f5f5; --meta-color-dark: #aaa; --accent-color-dark: #a98d70; --border-color-dark: #444; --secondary-bg-dark: #3a3838; --hover-bg-dark: #4d4b4b; --button-bg-dark: #5c5a5a; --button-text-dark: #e0e0e0; --input-bg-dark: #333; --shadow-dark: 0 4px 15px rgba(0,0,0,0.2); --selection-bg-dark: rgba(169, 141, 112, 0.4);
+            --current-bg-color: var(--bg-color-light); --current-text-color: var(--text-color-light); --current-title-color: var(--title-color-light); --current-meta-color: var(--meta-color-light); --current-accent-color: var(--accent-color-light); --current-border-color: var(--border-color-light); --current-secondary-bg: var(--secondary-bg-light); --current-hover-bg: var(--hover-bg-light); --current-button-bg: var(--button-bg-light); --current-button-text: var(--button-text-light); --current-input-bg: var(--input-bg-light); --current-shadow: var(--shadow-light); --current-selection-bg: var(--selection-bg-light);
+        }
+        body.dark-mode { --current-bg-color: var(--bg-color-dark); --current-text-color: var(--text-color-dark); --current-title-color: var(--title-color-dark); --current-meta-color: var(--meta-color-dark); --current-accent-color: var(--accent-color-dark); --current-border-color: var(--border-color-dark); --current-secondary-bg: var(--secondary-bg-dark); --current-hover-bg: var(--hover-bg-dark); --current-button-bg: var(--button-bg-dark); --current-button-text: var(--button-text-dark); --current-input-bg: var(--input-bg-dark); --current-shadow: var(--shadow-dark); --current-selection-bg: var(--selection-bg-dark); }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
+        body { font-family: var(--font-serif); background-color: var(--current-bg-color); color: var(--current-text-color); line-height: 1.7; transition: background-color 0.3s ease, color 0.3s ease; display: flex; flex-direction: column; }
+        h1, h2, h3, h4, h5, h6 { font-family: var(--font-serif); font-weight: 600; color: var(--current-title-color); margin-bottom: 0.8em; line-height: 1.3; }
+        button { position: relative; top: 0; transition: all 0.2s ease; }
+        button:hover { transform: translateY(-1px); filter: brightness(1.08); }
+        button:active { transform: translateY(0px) scale(0.98); filter: brightness(0.95); transition-duration: 0.05s; }
+        button:disabled, button:disabled:hover { cursor: not-allowed; background-color: var(--current-hover-bg); color: var(--current-meta-color); filter: grayscale(0.8); transform: none; box-shadow: none; top: 0; }
+        .app-container { display: flex; flex-direction: column; height: 100vh; }
+        .app-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background-color: var(--current-secondary-bg); border-bottom: 1px solid var(--current-border-color); box-shadow: var(--current-shadow); position: sticky; top: 0; z-index: 1000; flex-shrink: 0; }
+        .app-header h1 { font-family: var(--font-sans); font-size: 1.3em; margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .secondary-menu { position: relative; }
+        .menu-toggle-button { background: none; border: none; color: var(--current-text-color); cursor: pointer; padding: 8px 12px; font-size: 1.5em; line-height: 1; border-radius: 50%; font-family: var(--font-sans); }
+        .menu-toggle-button:hover { background-color: var(--current-hover-bg); }
+        .dropdown-menu { position: absolute; top: calc(100% + 10px); right: 0; background-color: var(--current-bg-color); border: 1px solid var(--current-border-color); border-radius: 8px; box-shadow: var(--current-shadow); padding: 10px 0; min-width: 240px; z-index: 1001; opacity: 0; visibility: hidden; transform: translateY(-10px) scale(0.95); transform-origin: top right; transition: opacity 0.2s ease, visibility 0s 0.2s, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .dropdown-menu.active { opacity: 1; visibility: visible; transform: translateY(0) scale(1); transition-delay: 0s; }
+        .dropdown-menu button { display: flex; align-items: center; width: 100%; padding: 10px 15px; background: none; border: none; color: var(--current-text-color); text-align: left; cursor: pointer; font-family: var(--font-serif); font-size: 0.95em; gap: 12px; }
+        .dropdown-menu button .kaomoji { font-family: var(--font-mono); color: #000 !important; font-size: 1.1em; min-width: 40px; display: inline-block; text-align: center; }
+        body.dark-mode .dropdown-menu button .kaomoji { color: #fff !important; }
+        .dropdown-menu button:hover { background-color: var(--current-hover-bg); transform: none; }
+        .dropdown-menu button.active-mode, .dropdown-menu button.active-toggle { background-color: var(--current-accent-color); color: var(--current-bg-color); font-weight: 600; }
+        body.dark-mode .dropdown-menu button.active-mode, body.dark-mode .dropdown-menu button.active-toggle { color: var(--button-text-dark); }
+        .app-main { flex-grow: 1; display: flex; overflow: hidden; position: relative; transition: transform 0.4s ease-in-out; }
+        #editor-wrapper, #preview-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+        #editor-wrapper { position: relative; }
+        .panel-content { flex: 1; display: flex; flex-direction: column; background-color: var(--current-secondary-bg); border: 1px solid var(--current-border-color); border-radius: 8px; box-shadow: var(--current-shadow); margin: 15px; overflow: hidden; }
+        #editor-wrapper .panel-content { margin-right: 7.5px; }
+        #preview-wrapper .panel-content { margin-left: 7.5px; }
+        #hexo-controls-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; font-weight: 600; cursor: pointer; border-bottom: 1px solid var(--current-border-color); background-color: var(--current-bg-color); user-select: none; }
+        #hexo-controls-header.hidden, #hexo-controls-section.hidden { display: none; }
+        #hexo-controls-header button { background: none; border: none; font-size: 0.9em; color: var(--current-meta-color); cursor: pointer; padding: 5px 8px; }
+        #hexo-controls-section { padding: 15px; border-bottom: 1px solid var(--current-border-color); background-color: var(--current-bg-color); overflow-y: auto; flex-shrink: 0; transition: height 0.3s ease, padding 0.3s ease, border-color 0.3s ease; }
+        #hexo-controls-section.collapsed { height: 0 !important; padding-top: 0; padding-bottom: 0; overflow: hidden; border-bottom-color: transparent; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9em; color: var(--current-meta-color); }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid var(--current-border-color); border-radius: 4px; background-color: var(--current-input-bg); color: var(--current-text-color); font-family: var(--font-sans); transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+        .form-group input:focus { outline: none; border-color: var(--current-accent-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--current-accent-color) 25%, transparent); }
+        .hexo-actions button { padding: 10px 15px; background-color: var(--current-button-bg); color: var(--current-button-text); border: none; border-radius: 4px; cursor: pointer; font-family: var(--font-serif); font-weight: 600; margin-right: 10px; }
+        #toolbars-container { background-color: var(--current-bg-color); border-bottom: 1px solid var(--current-border-color); flex-shrink: 0; }
+        .editor-toolbar { display: flex; flex-wrap: wrap; padding: 6px 8px; gap: 5px; overflow-y: hidden; }
+        #editor-toolbar { border-bottom: 1px solid var(--current-border-color); }
+        #custom-symbols-toolbar { padding-top: 0; border-top: 1px dashed var(--current-border-color); }
+        #custom-symbols-toolbar:empty { display: none; }
+        .editor-toolbar button { background-color: var(--current-button-bg); color: var(--current-button-text); border: 1px solid transparent; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-family: var(--font-mono); font-size: 1.1em; min-width: 32px; text-align: center; }
+        #editor-actions-toolbar button { background-color: transparent; color: var(--current-button-text); border: 1px solid var(--current-border-color); padding: 5px 10px; border-radius: 4px; cursor: pointer; font-family: var(--font-sans); font-size: 0.85em; }
+        #editor-toolbar button.active, #editor-actions-toolbar button.active { background-color: var(--current-accent-color); color: var(--current-bg-color); }
+        body.dark-mode #editor-toolbar button.active, body.dark-mode #editor-actions-toolbar button.active { color: var(--button-text-dark); }
+        #editor-content-cm-wrapper { flex-grow: 1; position: relative; overflow: hidden; }
+        #stats-bar { padding: 8px 15px; background-color: var(--current-bg-color); border-top: 1px solid var(--current-border-color); font-size: 0.85em; color: var(--current-meta-color); display: flex; justify-content: space-between; align-items: center; font-family: var(--font-sans); flex-shrink: 0; }
+        .preview-content { flex-grow: 1; padding: 25px; overflow-y: auto; font-family: var(--font-serif); line-height: 1.8; color: var(--current-text-color); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 2000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { background-color: var(--current-bg-color); padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); width: 90%; max-width: 500px; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
+        .modal-buttons button { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-family: var(--font-serif); font-weight: 600; }
+        .modal-buttons button.primary { background-color: var(--current-accent-color); color: var(--current-bg-color); }
+        body.dark-mode .modal-buttons button.primary { color: var(--button-text-dark); }
+        .modal-buttons button.secondary { background-color: var(--current-button-bg); color: var(--current-button-text); }
+        #message-bar { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background-color: var(--current-title-color); color: var(--current-bg-color); padding: 12px 25px; border-radius: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-size: 0.95em; font-family: var(--font-sans); z-index: 3000; transition: bottom 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.5s ease; opacity: 0; }
+        #message-bar.show { bottom: 20px; opacity: 1; }
+        #quick-scroll-indicator { position: absolute; right: 0; top: 0; bottom: 0; width: 24px; z-index: 100; opacity: 0.25; transition: opacity 0.3s ease; }
+        #editor-wrapper:hover #quick-scroll-indicator, #quick-scroll-indicator.dragging-parent { opacity: 1; }
+        #quick-scroll-thumb { position: absolute; left: 4px; top: 0; width: 16px; height: 60px; background-color: var(--current-meta-color); border-radius: 8px; cursor: ns-resize; display: flex; align-items: center; justify-content: center; }
+        #quick-scroll-thumb.dragging { background-color: var(--current-accent-color); }
+        #quick-scroll-thumb svg { width: 12px; height: 12px; stroke: var(--current-bg-color); stroke-width: 2; }
+        #symbolsModal .modal-content { max-width: 600px; }
+        #currentSymbolsList { list-style: none; max-height: 200px; overflow-y: auto; border: 1px solid var(--current-border-color); border-radius: 4px; padding: 10px; margin-bottom: 20px; }
+        #currentSymbolsList li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-radius: 3px; font-family: var(--font-sans); }
+        #currentSymbolsList li:nth-child(odd) { background-color: var(--current-hover-bg); }
+        .delete-symbol-btn { background: #e57373; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.8em; }
+        body.dark-mode .delete-symbol-btn { background: #c62828; }
+        #addSymbolForm { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 25px; }
+        #addSymbolForm .form-group { flex: 1; margin-bottom: 0; }
+        #addSymbolForm button { padding: 10px 15px; height: 40px; }
+        .symbol-io-actions { display: flex; gap: 10px; border-top: 1px solid var(--current-border-color); padding-top: 15px; margin-top: 15px; }
+        .symbol-io-actions button, .symbol-io-actions label { padding: 8px 15px; background-color: var(--current-button-bg); color: var(--current-button-text); border: none; border-radius: 4px; cursor: pointer; font-family: var(--font-serif); font-weight: 600; text-align: center; }
+        #importSymbolsInput { display: none; }
+        @media (max-width: 768px) {
+            .app-main { flex-direction: row; width: 200%; }
+            #editor-wrapper, #preview-wrapper { width: 50%; flex-shrink: 0; }
+            #editor-wrapper .panel-content, #preview-wrapper .panel-content { margin: 0; border-radius: 0; border: none; border-bottom: 1px solid var(--current-border-color); }
+            .app-main.view-preview { transform: translateX(-50%); }
+            #hexo-controls-section { max-height: 25vh; }
+            .editor-toolbar, #editor-actions-toolbar { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .editor-toolbar::-webkit-scrollbar, #editor-actions-toolbar::-webkit-scrollbar { display: none; }
+            .editor-toolbar button, #editor-actions-toolbar button { flex-shrink: 0; }
+        }
+        .CodeMirror { font-family: var(--font-serif) !important; font-size: 1.05em !important; line-height: 1.75 !important; height: 100% !important; background-color: var(--current-secondary-bg) !important; color: var(--current-text-color) !important; border: none; outline: none; }
+        .cm-typewriter-dimmed .CodeMirror-line > span { opacity: 0.5 !important; transition: opacity 0.2s ease-in-out; }
+        .CodeMirror-activeline-background { background-color: color-mix(in srgb, var(--current-hover-bg) 60%, transparent) !important; }
+        .cm-typewriter-active-line .CodeMirror-line > span { opacity: 1 !important; }
+    </style>
+</head>
+<body class="app-loading">
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Markdown Editor</h1>
+            <div class="secondary-menu">
+                <button class="menu-toggle-button" id="menuToggleButton" aria-label="Open menu">⋮</button>
+                <div class="dropdown-menu" id="appDropdownMenu">
+                    <button id="toggleThemeButton"><span class="kaomoji">(🌙)</span><span class="label">切换日夜模式</span></button>
+                    <button id="toggleSyncScrollBtn" style="display: none;"><span class="kaomoji">(↕)</span><span class="label">同步滚动</span></button>
+                    <hr style="border: none; border-top: 1px solid var(--current-border-color); margin: 5px 0;">
+                    <button id="switchToEditorMode" data-mode="editor"><span class="kaomoji">(•̀ᴗ•́)</span><span class="label">Editor 模式</span></button>
+                    <button id="switchToHexoMode" data-mode="hexo"><span class="kaomoji">(´･ω･`)</span><span class="label">Hexo 模式</span></button>
+                    <button id="setHexoUrlBtn"><span class="kaomoji">(URL)</span><span class="label">设定 Hexo 网址</span></button>
+                    <hr style="border: none; border-top: 1px solid var(--current-border-color); margin: 5px 0;">
+                    <button id="manageSymbolsBtn"><span class="kaomoji">(+)</span><span class="label">管理快捷符号</span></button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main" id="appMain">
+            <div id="editor-wrapper">
+                <div id="quick-scroll-indicator">
+                    <div id="quick-scroll-thumb">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 15L12 20L17 15M7 9L12 4L17 9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div id="hexo-controls-header" class="hidden">
+                        <span>Hexo Front Matter</span>
+                        <button id="toggleHexoControlsBtn">折叠</button>
+                    </div>
+                    <div id="hexo-controls-section" class="hidden">
+                         <div class="form-group"><label for="hexoTitle">标题 (Title)</label><input type="text" id="hexoTitle" name="hexoTitle"></div><div class="form-group"><label for="hexoPubDate">发布日期 (PubDate)</label><input type="date" id="hexoPubDate" name="hexoPubDate"></div><div class="form-group"><label for="hexoCategories">分类 (Categories, 逗号分隔)</label><input type="text" id="hexoCategories" name="hexoCategories" placeholder="例如: 日志,技术"></div><div class="form-group"><label for="hexoDescription">描述 (Description)</label><input type="text" id="hexoDescription" name="hexoDescription"></div><div class="hexo-actions"><button id="copyHexoMarkdown">复制全文</button><button id="openHexoUrl">打开设定网址</button></div>
+                    </div>
+
+                    <div id="toolbars-container">
+                        <div id="editor-toolbar" class="editor-toolbar">
+                            <button data-action="h1" title="H1">#</button><button data-action="h2" title="H2">##</button><button data-action="h3" title="H3">###</button><button data-action="bold" title="Bold (Ctrl+B)">**</button><button data-action="italic" title="Italic (Ctrl+I)">*</button><button data-action="strikethrough" title="Strikethrough">~~</button><button data-action="inlineCode" title="Inline Code">`</button><button data-action="blockquote" title="Blockquote (Ctrl+Q)">&gt;</button><button data-action="ul" title="Unordered List">-</button><button data-action="ol" title="Ordered List">1.</button><button data-action="checkbox" title="Checkbox">-[]</button><button data-action="completedCheckbox" title="Completed Checkbox">- [x]</button><button data-action="link" title="Link (Ctrl+L)">Link</button><button data-action="image" title="Image (Ctrl+G)">Img</button><button data-action="table" title="Table">Table</button><button data-action="codeblock" title="Code Block">Code</button><button data-action="hr" title="Horizontal Rule">---</button><button data-action="jpQuotes" title="Japanese Quotes 「」">「」</button><button data-action="jpSingleQuotes" title="Japanese Single Quotes 『』">『』</button><button data-action="bookTitle" title="Book Title 《》">《》</button><button data-action="parentheses" title="Parentheses ()">（）</button>
+                        </div>
+                        <div id="editor-actions-toolbar" class="editor-toolbar">
+                            <button data-action="undo" title="Undo (Ctrl+Z)">撤销</button><button data-action="redo" title="Redo (Ctrl+Y)">重做</button><button data-action="copy" title="Copy">复制</button><button data-action="paste" title="Paste">粘贴</button><button id="toggleTypewriterMode" title="Typewriter Mode">打字机</button><button data-action="convertQuotes" title="Convert to Japanese Quotes">转日式引号</button><button data-action="s2t" title="Simplified to Traditional">简转繁</button><button data-action="t2s" title="Traditional to Simplified">繁转简</button><button data-action="exportMD" title="Export as MD">导出MD</button><button data-action="generateImage" title="Generate Image">存图</button><button data-action="generatePdf" title="Generate PDF">存PDF</button><button data-action="deleteLine" title="Delete Line">删行</button>
+                        </div>
+                        <div id="custom-symbols-toolbar" class="editor-toolbar"></div>
+                    </div>
+                    
+                    <div id="editor-content-cm-wrapper"><textarea id="markdown-input-fallback" style="display:none;"></textarea></div>
+                    <div id="stats-bar"><span id="charCount">字符: 0</span><span id="wordCount">词数: 0</span><span id="lineCount">行数: 1</span><span id="currentTime"></span></div>
+                </div>
+            </div>
+
+            <div id="preview-wrapper"><div class="panel-content"><div class="preview-content" id="markdown-preview"></div></div></div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="hexoUrlModal"><div class="modal-content"><h2>Hexo 模式配置</h2><p>请输入您博客（或其他目标网站）的新建文章页面的 URL。后续点击 "打开设定网址" 将跳转至此。</p><div class="form-group"><label for="hexoTargetUrlInput">目标 URL</label><input type="text" id="hexoTargetUrlInput" placeholder="https://example.com/admin/new-post"><small id="urlError" style="color: red; display: none; margin-top: 5px;">请输入有效的 URL</small></div><div class="modal-buttons"><button id="cancelHexoUrlBtn" class="secondary">取消</button><button id="saveHexoUrlButton" class="primary">保存并继续</button></div></div></div>
+    <div class="modal-overlay" id="linkModal"><div class="modal-content"><h2>插入链接</h2><div class="form-group"><label for="linkUrlInput">链接 URL</label><input type="text" id="linkUrlInput" placeholder="https://example.com"></div><div class="form-group"><label for="linkTextInput">链接文本 (可选)</label><input type="text" id="linkTextInput" placeholder="显示的文字"></div><div class="modal-buttons"><button id="cancelLinkButton" class="secondary">取消</button><button id="insertLinkButton" class="primary">插入</button></div></div></div>
+    <div class="modal-overlay" id="imageModal"><div class="modal-content"><h2>插入图片</h2><div class="form-group"><label for="imageUrlInput">图片 URL</label><input type="text" id="imageUrlInput" placeholder="https://example.com/image.png"></div><div class="form-group"><label for="imageAltInput">替换文本 (Alt Text)</label><input type="text" id="imageAltInput" placeholder="图片描述"></div><div class="modal-buttons"><button id="cancelImageButton" class="secondary">取消</button><button id="insertImageButton" class="primary">插入</button></div></div></div>
+    <div class="modal-overlay" id="symbolsModal"><div class="modal-content"><h2>管理快捷符号</h2><p>当前符号列表:</p><ul id="currentSymbolsList"></ul><p>添加新符号:</p><div id="addSymbolForm"><div class="form-group"><label for="symbolLabelInput">按钮文字</label><input type="text" id="symbolLabelInput" placeholder="→"></div><div class="form-group"><label for="symbolPrefixInput">前缀</label><input type="text" id="symbolPrefixInput" placeholder="<!-- " ></div><div class="form-group"><label for="symbolSuffixInput">后缀</label><input type="text" id="symbolSuffixInput" placeholder=" -->"></div><button id="addSymbolBtn" class="primary">添加</button></div><div class="symbol-io-actions"><button id="exportSymbolsBtn">导出配置</button><label for="importSymbolsInput">导入配置</label><input type="file" id="importSymbolsInput" accept=".json"></div><div class="modal-buttons"><button id="cancelSymbolsBtn" class="secondary">取消</button><button id="saveSymbolsBtn" class="primary">保存并关闭</button></div></div></div>
+    
+    <div id="message-bar"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/markdown/markdown.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/xml/xml.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/css/css.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/htmlmixed/htmlmixed.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/edit/continuelist.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/dialog/dialog.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/search/searchcursor.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/search/search.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/search/matchesonscrollbar.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/selection/active-line.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/scroll/simplescrollbars.min.js"></script><script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"></script><script src="https://cdn.jsdelivr.net/npm/mermaid@9.1.3/dist/mermaid.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        'use strict';
+        document.addEventListener('DOMContentLoaded', () => {
+            const dom = {
+                appMain: document.getElementById('appMain'), markdownPreview: document.getElementById('markdown-preview'),
+                charCountEl: document.getElementById('charCount'), wordCountEl: document.getElementById('wordCount'), lineCountEl: document.getElementById('lineCount'), currentTimeEl: document.getElementById('currentTime'),
+                toggleThemeButton: document.getElementById('toggleThemeButton'), menuToggleButton: document.getElementById('menuToggleButton'), appDropdownMenu: document.getElementById('appDropdownMenu'),
+                toggleSyncScrollBtn: document.getElementById('toggleSyncScrollBtn'),
+                switchToEditorModeBtn: document.getElementById('switchToEditorMode'), switchToHexoModeBtn: document.getElementById('switchToHexoMode'), setHexoUrlBtn: document.getElementById('setHexoUrlBtn'),
+                hexoControlsHeader: document.getElementById('hexo-controls-header'), toggleHexoControlsBtn: document.getElementById('toggleHexoControlsBtn'), hexoControlsSection: document.getElementById('hexo-controls-section'),
+                hexoTitleInput: document.getElementById('hexoTitle'), hexoPubDateInput: document.getElementById('hexoPubDate'), hexoCategoriesInput: document.getElementById('hexoCategories'), hexoDescriptionInput: document.getElementById('hexoDescription'),
+                copyHexoMarkdownBtn: document.getElementById('copyHexoMarkdown'), openHexoUrlBtn: document.getElementById('openHexoUrl'),
+                hexoUrlModal: document.getElementById('hexoUrlModal'), hexoTargetUrlInput: document.getElementById('hexoTargetUrlInput'), saveHexoUrlButton: document.getElementById('saveHexoUrlButton'), cancelHexoUrlBtn: document.getElementById('cancelHexoUrlBtn'), urlError: document.getElementById('urlError'),
+                messageBar: document.getElementById('message-bar'), toggleTypewriterModeBtn: document.getElementById('toggleTypewriterMode'),
+                linkModal: document.getElementById('linkModal'), linkUrlInput: document.getElementById('linkUrlInput'), linkTextInput: document.getElementById('linkTextInput'), insertLinkButton: document.getElementById('insertLinkButton'), cancelLinkButton: document.getElementById('cancelLinkButton'),
+                imageModal: document.getElementById('imageModal'), imageUrlInput: document.getElementById('imageUrlInput'), imageAltInput: document.getElementById('imageAltInput'), insertImageButton: document.getElementById('insertImageButton'), cancelImageButton: document.getElementById('cancelImageButton'),
+                customSymbolsToolbar: document.getElementById('custom-symbols-toolbar'), manageSymbolsBtn: document.getElementById('manageSymbolsBtn'), symbolsModal: document.getElementById('symbolsModal'),
+                currentSymbolsList: document.getElementById('currentSymbolsList'), symbolLabelInput: document.getElementById('symbolLabelInput'), symbolPrefixInput: document.getElementById('symbolPrefixInput'), symbolSuffixInput: document.getElementById('symbolSuffixInput'),
+                addSymbolBtn: document.getElementById('addSymbolBtn'), exportSymbolsBtn: document.getElementById('exportSymbolsBtn'), importSymbolsInput: document.getElementById('importSymbolsInput'), saveSymbolsBtn: document.getElementById('saveSymbolsBtn'), cancelSymbolsBtn: document.getElementById('cancelSymbolsBtn'),
+                quickScrollIndicator: document.getElementById('quick-scroll-indicator'), quickScrollThumb: document.getElementById('quick-scroll-thumb'),
+                toolbarsContainer: document.getElementById('toolbars-container')
+            };
+
+            let cmEditor, renderTimeout;
+            let openccS2TConverter, openccT2SConverter;
+            let state = {
+                currentMode: localStorage.getItem('editorMode') || 'editor',
+                currentTheme: localStorage.getItem('theme') || 'light',
+                hexoTargetUrl: localStorage.getItem('hexoTargetUrl') || '',
+                isTypewriterMode: false,
+                isHexoControlsCollapsed: false,
+                currentMobileView: 'editor',
+                lastActiveLineCM: -1,
+                isSyncingScroll: localStorage.getItem('syncScroll') === 'true',
+                openCCLoaded: false,
+                customSymbols: [],
+                isThumbDragging: false,
+                dragStartY: 0
+            };
+
+            const util = {
+                showMessage: (message, duration = 3000) => { dom.messageBar.textContent = message; dom.messageBar.classList.add('show'); setTimeout(() => dom.messageBar.classList.remove('show'), duration); },
+                reportError: (message, userFacing = true) => { console.error(message); if (userFacing) util.showMessage(`错误: ${message}`, 5000); },
+                validateUrl: (url) => { try { return (new URL(url).protocol === "http:" || new URL(url).protocol === "https:"); } catch (_) { return false; } },
+                isMobile: () => window.innerWidth <= 768
+            };
+
+            const actions = {
+                applyTheme: (theme) => {
+                    document.body.classList.toggle('dark-mode', theme === 'dark'); state.currentTheme = theme; localStorage.setItem('theme', theme);
+                    const label = dom.toggleThemeButton.querySelector('.label'), kaomoji = dom.toggleThemeButton.querySelector('.kaomoji');
+                    if (theme === 'dark') { label.textContent = "切换日间模式"; kaomoji.textContent = "(☀️)"; } else { label.textContent = "切换夜间模式"; kaomoji.textContent = "(🌙)"; }
+                    if (cmEditor) cmEditor.setOption("theme", theme === 'dark' ? "material-darker" : "neo");
+                    const imgBtn = document.querySelector('button[data-action="generateImage"]');
+                    const pdfBtn = document.querySelector('button[data-action="generatePdf"]');
+                    if(imgBtn) imgBtn.style.display = (theme === 'dark') ? 'none' : '';
+                    if(pdfBtn) pdfBtn.style.display = (theme === 'dark') ? 'none' : '';
+                    document.getElementById('hljs-light-theme').media = (theme === 'light') ? 'all' : 'not all';
+                    document.getElementById('hljs-dark-theme').media = (theme === 'dark') ? 'all' : 'not all';
+                    util.showMessage(`已切换到${theme === 'dark' ? '夜间' : '日间'}模式`);
+                },
+                applyAppMode: (mode) => {
+                    state.currentMode = mode; localStorage.setItem('editorMode', mode);
+                    dom.hexoControlsHeader.classList.toggle('hidden', mode !== 'hexo'); dom.hexoControlsSection.classList.toggle('hidden', mode !== 'hexo');
+                    document.querySelectorAll('.dropdown-menu button[data-mode]').forEach(btn => btn.classList.remove('active-mode'));
+                    if (mode === 'hexo') { dom.switchToHexoModeBtn.classList.add('active-mode'); if (!state.hexoTargetUrl) dom.hexoUrlModal.classList.add('active'); } else { dom.switchToEditorModeBtn.classList.add('active-mode'); }
+                    setTimeout(() => { if(cmEditor) cmEditor.refresh(); }, 50);
+                    util.showMessage(`已切换到 ${mode === 'hexo' ? 'Hexo' : 'Editor'} 模式`);
+                },
+                applyMobileView: (view) => {
+                    if (!util.isMobile()) return; state.currentMobileView = view;
+                    if (view === 'editor') { dom.appMain.classList.remove('view-preview'); if (cmEditor) cmEditor.focus(); } else { dom.appMain.classList.add('view-preview'); actions.updatePreview(); }
+                },
+                updatePreview: () => { if (!cmEditor) return; clearTimeout(renderTimeout); renderTimeout = setTimeout(() => actions.renderMarkdown(cmEditor.getValue()), 250); },
+                renderMarkdown: (mdText) => { try { marked.setOptions({ renderer: new marked.Renderer(), highlight: (code, lang) => hljs.highlight(code, { language: hljs.getLanguage(lang) ? lang : 'plaintext' }).value, gfm: true, breaks: true }); const tempDiv = document.createElement('div'); tempDiv.innerHTML = marked.parse(mdText); renderMathInElement(tempDiv, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}], throwOnError: false }); tempDiv.querySelectorAll('code.language-mermaid, div.mermaid').forEach((el, i) => { const id = `mermaid-${Date.now()}-${i}`; el.id = id; try { mermaid.render(id, el.textContent, svg => el.outerHTML = `<div class="mermaid-container-rendered">${svg}</div>`); } catch (e) { el.outerHTML = `<pre style="color:red">Mermaid Error: ${e.message}</pre>`} }); dom.markdownPreview.innerHTML = tempDiv.innerHTML; } catch(e) { dom.markdownPreview.innerHTML = `<p style="color:red;">渲染错误</p>`; util.reportError(e.message); } },
+                updateStats: () => { if (!cmEditor) return; const text = cmEditor.getValue(); const cursor = cmEditor.getCursor(); dom.charCountEl.textContent = `字符: ${text.length}`; dom.wordCountEl.textContent = `词数: ${text.trim().split(/\s+/).filter(Boolean).length}`; dom.lineCountEl.textContent = `行: ${cursor.line + 1}/${cmEditor.lineCount()}`; },
+                updateTime: () => dom.currentTimeEl.textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+            };
+            const cmUtil = {
+                insert: (prefix, suffix = '', placeholder = 'text', select = true) => { if (!cmEditor) return; const doc = cmEditor.getDoc(); if (doc.getSelection()) { doc.replaceSelection(prefix + doc.getSelection() + suffix); } else { doc.replaceSelection(prefix + placeholder + suffix); if (select && placeholder) { const cur = doc.getCursor(); doc.setSelection({ line: cur.line, ch: cur.ch - suffix.length - placeholder.length }, { line: cur.line, ch: cur.ch - suffix.length }); } } cmEditor.focus(); },
+                togglePrefix: (prefix) => { if (!cmEditor) return; cmEditor.operation(() => { const doc = cmEditor.getDoc(); const { from, to } = { from: doc.getCursor("start"), to: doc.getCursor("end") }; for (let i = from.line; i <= to.line; i++) { if (doc.getLine(i).startsWith(prefix)) { doc.replaceRange("", {line: i, ch: 0}, {line: i, ch: prefix.length}); } else { doc.replaceRange(prefix, {line: i, ch: 0}); } } }); cmEditor.focus(); },
+            };
+            const symbolManager = {
+                renderToolbar: () => { dom.customSymbolsToolbar.innerHTML = ''; state.customSymbols.forEach(s => { const btn = document.createElement('button'); btn.textContent = s.label; btn.title = `插入: ${s.prefix}...${s.suffix}`; btn.dataset.action = 'insertCustom'; btn.dataset.prefix = s.prefix; btn.dataset.suffix = s.suffix; dom.customSymbolsToolbar.appendChild(btn); }); },
+                renderModal: () => { dom.currentSymbolsList.innerHTML = ''; if (state.customSymbols.length === 0) { dom.currentSymbolsList.innerHTML = '<li>无自定义符号。</li>'; return; } state.customSymbols.forEach((s, i) => { const li = document.createElement('li'); li.innerHTML = `<span><b style="min-width:40px;display:inline-block;padding:2px 8px;background:var(--current-button-bg);border-radius:3px;text-align:center;margin-right:10px;">${s.label}</b><i style="color:var(--current-meta-color)">: "${s.prefix}" + "${s.suffix}"</i></span><button class="delete-symbol-btn" data-index="${i}">删除</button>`; dom.currentSymbolsList.appendChild(li); }); },
+                save: () => { try { localStorage.setItem('customSymbols', JSON.stringify(state.customSymbols)); return true; } catch (e) { util.reportError('无法保存符号'); return false; } },
+                load: () => { const saved = localStorage.getItem('customSymbols'); if (saved) { try { state.customSymbols = JSON.parse(saved); if (!Array.isArray(state.customSymbols)) throw new Error("Data is not array"); } catch (e) { console.error("解析符号失败", e); state.customSymbols = []; } } else { state.customSymbols = [{ label: '<!--', prefix: '<!-- ', suffix: ' -->' }]; } symbolManager.renderToolbar(); },
+            };
+            
+            const handleTypewriterFocus = () => {
+                if (!cmEditor || !state.isTypewriterMode) return;
+                const currentLine = cmEditor.getCursor().line;
+                if (currentLine === state.lastActiveLineCM) return;
+                cmEditor.operation(() => {
+                    if (state.lastActiveLineCM !== -1 && state.lastActiveLineCM < cmEditor.lineCount()) { cmEditor.removeLineClass(state.lastActiveLineCM, "wrap", "cm-typewriter-active-line"); }
+                    for (let i = 0; i < cmEditor.lineCount(); i++) { cmEditor.removeLineClass(i, "wrap", "cm-typewriter-dimmed"); if (i !== currentLine) { cmEditor.addLineClass(i, "wrap", "cm-typewriter-dimmed"); } }
+                    cmEditor.addLineClass(currentLine, "wrap", "cm-typewriter-active-line");
+                });
+                state.lastActiveLineCM = currentLine;
+                const editorHeight = cmEditor.getWrapperElement().clientHeight;
+                const top = cmEditor.charCoords({line: currentLine, ch: 0}, "local").top;
+                cmEditor.scrollTo(null, top - editorHeight / 2 + cmEditor.defaultTextHeight() / 2);
+            };
+
+            const setupListeners = () => {
+                dom.toggleThemeButton.addEventListener('click', () => actions.applyTheme(state.currentTheme === 'light' ? 'dark' : 'light'));
+                dom.menuToggleButton.addEventListener('click', () => dom.appDropdownMenu.classList.toggle('active'));
+                document.addEventListener('click', (e) => { if (!dom.menuToggleButton.contains(e.target) && !dom.appDropdownMenu.contains(e.target)) dom.appDropdownMenu.classList.remove('active'); });
+                dom.switchToEditorModeBtn.addEventListener('click', () => actions.applyAppMode('editor'));
+                dom.switchToHexoModeBtn.addEventListener('click', () => actions.applyAppMode('hexo'));
+                dom.setHexoUrlBtn.addEventListener('click', () => dom.hexoUrlModal.classList.add('active'));
+                dom.toggleHexoControlsBtn.addEventListener('click', () => { state.isHexoControlsCollapsed = !state.isHexoControlsCollapsed; dom.hexoControlsSection.classList.toggle('collapsed', state.isHexoControlsCollapsed); dom.toggleHexoControlsBtn.textContent = state.isHexoControlsCollapsed ? '展开' : '折叠'; setTimeout(() => cmEditor.refresh(), 350); });
+                dom.openHexoUrlBtn.addEventListener('click', () => {
+                    if (state.hexoTargetUrl && util.validateUrl(state.hexoTargetUrl)) { window.open(state.hexoTargetUrl, '_blank'); }
+                    else { util.showMessage("请先设置有效的 Hexo 网址"); dom.hexoUrlModal.classList.add('active'); }
+                });
+                dom.saveHexoUrlButton.addEventListener('click', () => {
+                    const url = dom.hexoTargetUrlInput.value.trim();
+                    if (util.validateUrl(url)) {
+                        state.hexoTargetUrl = url; localStorage.setItem('hexoTargetUrl', url);
+                        dom.hexoUrlModal.classList.remove('active'); util.showMessage("Hexo 网址已保存!");
+                    } else { dom.urlError.style.display = 'block'; }
+                });
+                dom.cancelHexoUrlBtn.addEventListener('click', () => dom.hexoUrlModal.classList.remove('active'));
+                dom.copyHexoMarkdownBtn.addEventListener('click', () => { if (state.currentMode !== 'hexo' || !cmEditor) return; const fm = { title: dom.hexoTitleInput.value.trim(), date: dom.hexoPubDateInput.value, categories: dom.hexoCategoriesInput.value.trim().split(',').map(c=>c.trim()).filter(Boolean), description: dom.hexoDescriptionInput.value.trim() }; let fmStr = `---\ntitle: ${fm.title}\ndate: ${fm.date} ${new Date().toLocaleTimeString('zh-CN',{hour12:false})}\ncategories:\n${fm.categories.map(c=>`  - ${c}`).join('\n')}\ndescription: '${fm.description.replace(/'/g, "''")}'\n---\n\n`; navigator.clipboard.writeText(fmStr + cmEditor.getValue()).then(()=>util.showMessage("已复制全文!")).catch(err=>util.reportError(err)); });
+                dom.toggleTypewriterModeBtn.addEventListener('click', () => {
+                    state.isTypewriterMode = !state.isTypewriterMode;
+                    dom.toggleTypewriterModeBtn.classList.toggle('active', state.isTypewriterMode);
+                    if (state.isTypewriterMode) { cmEditor.on('cursorActivity', handleTypewriterFocus); handleTypewriterFocus(); util.showMessage("打字机模式已开启"); } 
+                    else { cmEditor.off('cursorActivity', handleTypewriterFocus); for (let i = 0; i < cmEditor.lineCount(); i++) { cmEditor.removeLineClass(i, "wrap", "cm-typewriter-dimmed"); cmEditor.removeLineClass(i, "wrap", "cm-typewriter-active-line"); } util.showMessage("打字机模式已关闭"); }
+                });
+                dom.toolbarsContainer.addEventListener('click', (e) => {
+                    const btn = e.target.closest('button'); if (!btn || !cmEditor || btn.disabled) return; const action = btn.dataset.action;
+                    if (action === 'insertCustom') { cmUtil.insert(btn.dataset.prefix || '', btn.dataset.suffix || '', 'text', false); return; }
+                    const toolActions = {
+                        h1:()=>cmUtil.togglePrefix('# '), h2:()=>cmUtil.togglePrefix('## '), h3:()=>cmUtil.togglePrefix('### '), bold:()=>cmUtil.insert('**','**','粗体'), italic:()=>cmUtil.insert('*','*','斜体'), strikethrough:()=>cmUtil.insert('~~','~~','删除线'), inlineCode:()=>cmUtil.insert('`','`','code'), blockquote:()=>cmUtil.togglePrefix('> '), ul:()=>cmUtil.togglePrefix('- '), ol:()=>cmUtil.togglePrefix('1. '), checkbox:()=>cmUtil.togglePrefix('- [ ] '), completedCheckbox:()=>cmUtil.togglePrefix('- [x] '), link:()=>dom.linkModal.classList.add('active'), image:()=>dom.imageModal.classList.add('active'), table:()=>cmUtil.insert('\n| Header | Header |\n|---|---|\n| Cell | Cell |\n','','',false), codeblock:()=>cmUtil.insert('```\n','\n```','code here'), hr:()=>{const cur=cmEditor.getCursor(); cmEditor.replaceSelection((cmEditor.getLine(cur.line).trim() !== "" ? "\n\n---\n\n" : "---\n"));}, jpQuotes:()=>cmUtil.insert('「','」','引文'), jpSingleQuotes:()=>cmUtil.insert('『','』','引文'), bookTitle:()=>cmUtil.insert('《','》','书名'), parentheses:()=>cmUtil.insert('（','）','内容'),
+                        undo:()=>cmEditor.undo(), redo:()=>cmEditor.redo(), deleteLine:()=>cmEditor.execCommand('deleteLine'),
+                        copy:()=>document.execCommand('copy'), paste:()=>navigator.clipboard.readText().then(text => cmEditor.replaceSelection(text)),
+                        convertQuotes:()=>{let text=cmEditor.getValue();let doubleQuoteCount=0,singleQuoteCount=0;text=text.replace(/[“”"‘’']/g,m=>{if('"'===m||'“'===m||'”'===m)return doubleQuoteCount++%2==0?'「':'」';if("'"===m||"‘"===m||"’"===m)return singleQuoteCount++%2==0?'『':'』';return m});cmEditor.setValue(text);util.showMessage('引号已转换');},
+                        s2t: async ()=>{if(!await loadOpenCC())return;cmEditor.setValue(openccS2TConverter(cmEditor.getValue()));util.showMessage("简繁转换完成");},
+                        t2s: async ()=>{if(!await loadOpenCC())return;cmEditor.setValue(openccT2SConverter(cmEditor.getValue()));util.showMessage("繁简转换完成");},
+                        exportMD:()=>{const defaultName=`markdown-${new Date().toISOString().slice(0,19).replace('T',' ')}.md`;const fileName=prompt("请输入要导出的文件名:",defaultName);if(fileName){const blob=new Blob([cmEditor.getValue()],{type:"text/markdown;charset=utf-8"});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=fileName;link.click();URL.revokeObjectURL(link.href);}},
+                        generateImage: async ()=>{if(util.isMobile()&&'preview'!==state.currentMobileView)actions.applyMobileView('preview');await new Promise(r=>setTimeout(r,300));util.showMessage("生成图片...");try{const c=await html2canvas(dom.markdownPreview,{backgroundColor:getComputedStyle(document.documentElement).getPropertyValue('--current-secondary-bg'),scale:2,useCORS:!0}),l=document.createElement("a");l.href=c.toDataURL("image/png"),l.download=`md-export-${Date.now()}.png`,l.click(),util.showMessage("图片已生成!")}catch(e){util.reportError(`图片生成失败:${e.message}`)}},
+                        generatePdf: async ()=>{if(util.isMobile()&&'preview'!==state.currentMobileView)actions.applyMobileView('preview');await new Promise(r=>setTimeout(r,300));util.showMessage("生成PDF...");try{const{jsPDF:p}=window.jspdf,d=new p("p","pt","a4"),c=await html2canvas(dom.markdownPreview,{scale:2,useCORS:!0,backgroundColor:getComputedStyle(document.documentElement).getPropertyValue('--current-secondary-bg')}),i=c.toDataURL("image/png"),{width:w,height:h}=d.getImageProperties(i),pw=d.internal.pageSize.getWidth()-80,ph=h*pw/w;let l=ph,pos=40;for(d.addImage(i,"PNG",40,pos,pw,ph),l-=d.internal.pageSize.getHeight()-80;l>0;)pos=l-ph-40,d.addPage(),d.addImage(i,"PNG",40,pos,pw,ph),l-=d.internal.pageSize.getHeight()-80;d.save(`md-export-${Date.now()}.pdf`),util.showMessage("PDF已生成!")}catch(e){util.reportError(`PDF生成失败:${e.toString()}`)}}
+                    };
+                    if (toolActions[action]) toolActions[action]();
+                });
+                dom.insertLinkButton.addEventListener('click',()=>{const u=dom.linkUrlInput.value.trim(), t=dom.linkTextInput.value.trim()||u; if(u&&util.validateUrl(u)){cmUtil.insert(`[${t}](${u})`,'','',false);dom.linkModal.classList.remove('active');}else{util.showMessage("URL无效");}});
+                dom.insertImageButton.addEventListener('click',()=>{const u=dom.imageUrlInput.value.trim(), a=dom.imageAltInput.value.trim()||'image'; if(u){cmUtil.insert(`![${a}](${u})`,'','',false);dom.imageModal.classList.remove('active');}else{util.showMessage("URL无效");}});
+                [dom.cancelLinkButton, dom.linkModal, dom.cancelImageButton, dom.imageModal].forEach(el => el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); }));
+                let touchStartX = 0, touchStartY = 0; dom.appMain.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }, { passive: true });
+                dom.appMain.addEventListener('touchend', e => { if (!util.isMobile()) return; const dX = e.changedTouches[0].clientX - touchStartX; if (Math.abs(dX) > 50 && Math.abs(dX) > Math.abs(e.changedTouches[0].clientY-touchStartY)) { if (dX < 0 && state.currentMobileView === 'editor') actions.applyMobileView('preview'); else if (dX > 0 && state.currentMobileView === 'preview') actions.applyMobileView('editor'); } });
+                window.addEventListener('resize', () => { if (!util.isMobile()) dom.appMain.classList.remove('view-preview'); if (cmEditor) cmEditor.refresh(); setupSyncScroll(); });
+                window.addEventListener('beforeunload', (e) => { e.preventDefault(); e.returnValue = ''; });
+            };
+            const setupSymbolListeners = () => {
+                dom.manageSymbolsBtn.addEventListener('click', ()=>{symbolManager.renderModal(); dom.symbolsModal.classList.add('active');});
+                dom.addSymbolBtn.addEventListener('click', ()=>{const l=dom.symbolLabelInput.value.trim(), p=dom.symbolPrefixInput.value, s=dom.symbolSuffixInput.value; if(!l||(!p&&!s))return util.showMessage('按钮文字和至少一个前后缀不能为空'); state.customSymbols.push({label:l,prefix:p,suffix:s}); symbolManager.renderModal(); dom.symbolLabelInput.value=dom.symbolPrefixInput.value=dom.symbolSuffixInput.value=''; dom.symbolLabelInput.focus();});
+                dom.currentSymbolsList.addEventListener('click', e=>{if(e.target.classList.contains('delete-symbol-btn')){state.customSymbols.splice(parseInt(e.target.dataset.index,10),1); symbolManager.renderModal();}});
+                dom.saveSymbolsBtn.addEventListener('click', ()=>{if(symbolManager.save()){symbolManager.renderToolbar(); dom.symbolsModal.classList.remove('active'); util.showMessage('快捷符号已保存');}});
+                dom.cancelSymbolsBtn.addEventListener('click', ()=>{symbolManager.load(); dom.symbolsModal.classList.remove('active');});
+                dom.exportSymbolsBtn.addEventListener('click', ()=>{const d=JSON.stringify(state.customSymbols,null,2),b=new Blob([d],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='md-symbols.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);util.showMessage('配置已导出');});
+                dom.importSymbolsInput.addEventListener('change', e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const i=JSON.parse(ev.target.result);if(!Array.isArray(i)||!i.every(s=>'label'in s&&'prefix'in s&&'suffix'in s))throw new Error('Invalid format');state.customSymbols=i;symbolManager.renderModal();util.showMessage('配置已加载,请保存');}catch(err){util.reportError('导入失败:文件格式无效')}};r.readAsText(f);e.target.value='';});
+            };
+            const initQuickScroller = () => {
+                const handleDrag = (e) => {
+                    if (!state.isThumbDragging || !cmEditor) return; const clientY = e.clientY || e.touches[0].clientY; const deltaY = clientY - state.dragStartY; const indicatorRect = dom.quickScrollIndicator.getBoundingClientRect(); const thumbRect = dom.quickScrollThumb.getBoundingClientRect(); let newTop = thumbRect.top - indicatorRect.top + deltaY; newTop = Math.max(0, Math.min(newTop, indicatorRect.height - thumbRect.height)); dom.quickScrollThumb.style.top = `${newTop}px`; const scrollPercent = newTop / (indicatorRect.height - thumbRect.height); const scrollInfo = cmEditor.getScrollInfo(); cmEditor.scrollTo(null, scrollPercent * (scrollInfo.height - scrollInfo.clientHeight)); state.dragStartY = clientY;
+                };
+                const stopDrag = () => { state.isThumbDragging = false; dom.quickScrollThumb.classList.remove('dragging'); dom.quickScrollIndicator.classList.remove('dragging-parent'); window.removeEventListener('mousemove', handleDrag); window.removeEventListener('mouseup', stopDrag); window.removeEventListener('touchmove', handleDrag); window.removeEventListener('touchend', stopDrag); };
+                dom.quickScrollThumb.addEventListener('mousedown', (e) => { e.preventDefault(); state.isThumbDragging = true; state.dragStartY = e.clientY; dom.quickScrollThumb.classList.add('dragging'); dom.quickScrollIndicator.classList.add('dragging-parent'); window.addEventListener('mousemove', handleDrag); window.addEventListener('mouseup', stopDrag); });
+                dom.quickScrollThumb.addEventListener('touchstart', (e) => { e.preventDefault(); state.isThumbDragging = true; state.dragStartY = e.touches[0].clientY; dom.quickScrollThumb.classList.add('dragging'); dom.quickScrollIndicator.classList.add('dragging-parent'); window.addEventListener('touchmove', handleDrag, { passive: false }); window.addEventListener('touchend', stopDrag); });
+                cmEditor.on("scroll", () => { if (state.isThumbDragging) return; const scrollInfo = cmEditor.getScrollInfo(); if (scrollInfo.height <= scrollInfo.clientHeight) { dom.quickScrollIndicator.style.display = 'none'; return; } dom.quickScrollIndicator.style.display = ''; const scrollPercent = scrollInfo.top / (scrollInfo.height - scrollInfo.clientHeight); const indicatorHeight = dom.quickScrollIndicator.clientHeight; const thumbHeight = dom.quickScrollThumb.clientHeight; dom.quickScrollThumb.style.top = `${scrollPercent * (indicatorHeight - thumbHeight)}px`; });
+            };
+            const setupSyncScroll = () => {
+                if (util.isMobile()) { dom.toggleSyncScrollBtn.style.display = 'none'; return; }
+                dom.toggleSyncScrollBtn.style.display = 'flex';
+                dom.toggleSyncScrollBtn.classList.toggle('active-toggle', state.isSyncingScroll);
+                
+                const syncEditorToPreview = () => { if (!state.isSyncingScroll) return; const scrollInfo = cmEditor.getScrollInfo(); const p = scrollInfo.top / (scrollInfo.height - scrollInfo.clientHeight); if (!isNaN(p)) dom.markdownPreview.scrollTop = p * (dom.markdownPreview.scrollHeight - dom.markdownPreview.clientHeight); };
+                const syncPreviewToEditor = () => { if (!state.isSyncingScroll) return; const p = dom.markdownPreview.scrollTop / (dom.markdownPreview.scrollHeight - dom.markdownPreview.clientHeight); const scrollInfo = cmEditor.getScrollInfo(); if (!isNaN(p)) cmEditor.scrollTo(null, p * (scrollInfo.height - scrollInfo.clientHeight)); };
+                
+                cmEditor.off('scroll', syncEditorToPreview);
+                dom.markdownPreview.removeEventListener('scroll', syncPreviewToEditor);
+
+                if (state.isSyncingScroll) {
+                    cmEditor.on('scroll', syncEditorToPreview);
+                    dom.markdownPreview.addEventListener('scroll', syncPreviewToEditor);
+                }
+            };
+            dom.toggleSyncScrollBtn.addEventListener('click', () => {
+                state.isSyncingScroll = !state.isSyncingScroll;
+                localStorage.setItem('syncScroll', state.isSyncingScroll);
+                setupSyncScroll();
+            });
+            const loadOpenCC = async () => {
+                if (state.openCCLoaded) return true;
+                if (typeof OpenCC === 'undefined') {
+                    util.showMessage("加载简繁转换库...");
+                    try {
+                        const script = document.createElement("script");
+                        script.src = "https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.min.js";
+                        await new Promise((resolve, reject) => { script.onload = resolve; script.onerror = reject; document.body.appendChild(script); });
+                        openccS2TConverter = OpenCC.Converter({ from: "cn", to: "twp" });
+                        openccT2SConverter = OpenCC.Converter({ from: "twp", to: "cn" });
+                        state.openCCLoaded = true;
+                    } catch (e) { util.reportError("加载OpenCC库失败"); return false; }
+                } else {
+                    openccS2TConverter = OpenCC.Converter({ from: "cn", to: "twp" });
+                    openccT2SConverter = OpenCC.Converter({ from: "twp", to: "cn" });
+                    state.openCCLoaded = true;
+                }
+                return true;
+            };
+
+            try {
+                mermaid.initialize({ startOnLoad: false, theme: 'default' });
+                actions.applyTheme(state.currentTheme);
+                cmEditor = CodeMirror.fromTextArea(document.getElementById('markdown-input-fallback'), { mode: "markdown", theme: state.currentTheme === 'dark' ? "material-darker" : "neo", lineNumbers: true, lineWrapping: true, styleActiveLine: { nonEmpty: true }, extraKeys: { "Enter": "newlineAndIndentContinueMarkdownList" }, autofocus: true, scrollbarStyle: "simple" });
+                cmEditor.on("change", (cm, change) => { if (change.origin !== 'setValue') { actions.updatePreview(); actions.updateStats(); } });
+                cmEditor.on("cursorActivity", actions.updateStats);
+                const savedMarkdown = localStorage.getItem('markdownContent') || '# 欢迎使用 Markdown Editor!\n\n向左滑动即可预览...';
+                cmEditor.setValue(savedMarkdown); cmEditor.refresh();
+                actions.applyAppMode(state.currentMode);
+                if (util.isMobile()) actions.applyMobileView('editor');
+                if (dom.hexoPubDateInput) dom.hexoPubDateInput.value = new Date().toISOString().slice(0, 10);
+                actions.updatePreview(); actions.updateStats();
+                setInterval(actions.updateTime, 1000);
+                symbolManager.load();
+                setupListeners();
+                setupSymbolListeners();
+                initQuickScroller();
+                setupSyncScroll();
+                document.body.classList.remove('app-loading');
+                util.showMessage("编辑器已准备就绪!", 2000);
+            } catch (error) { util.reportError(`初始化失败: ${error.message}.`); document.body.innerHTML = `<div style="padding: 20px; text-align: center; color: red;">编辑器加载失败，请检查控制台。</div>`; }
+        });
+    </script>
+</body>
+</html>
