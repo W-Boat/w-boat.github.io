@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Markdown Editor</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/neo.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material-darker.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/dialog/dialog.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/search/matchesonscrollbar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/scroll/simplescrollbars.min.css">
+
+
+    <style>
+        /* --- Global Resets and Variables --- */
+        :root {
+            --font-serif: 'Noto Serif SC', serif;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+            /* Light Theme */
+            --bg-color-light: #fdfaf6;
+            --text-color-light: #333;
+            --title-color-light: #1a1a1a;
+            --meta-color-light: #777;
+            --accent-color-light: #d4a373; /* Main accent */
+            --border-color-light: #e0e0e0;
+            --secondary-bg-light: #f7f1e9;
+            --hover-bg-light: #ede4d9;
+            --button-bg-light: #eaddcf;
+            --button-text-light: #524030;
+            --input-bg-light: #fff;
+            --shadow-light: 0 4px 12px rgba(0,0,0,0.07);
+            --cursor-url-light: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMyAxN0g1VjE5SDNWMTdaTTYgMTdIN1YxOUg2VjE3Wk04IDE3SDEwVjE5SDhWMTdaTTEzIDE3SDE1VjE5SDEzVjE3Wk0xNiAxN0gxOFYxOUgxNlYxN1pNMTkgMTdIMjFWMTlIMTlWMTdaTTMgMTNINSVWMTVIM1YxM1pNNiAxM0g4VjE1SDZWMTNaTTkgMTNIMTFWMTVIOVYxM1pNMyA5SDVWMTFIN1Y5SDVaTTcgOUg5VjExSDdWOVpNOSA5SDExVjExSDlWOVpNMTIgOUgxNFYxMUgxMlY5Wk0xNSA5SDE3VjExSDE1VjlaTTE4IDlIMjBWMTFIMThWOVpNMjAgOUgyMlYxMUgyMFY5Wk0zIDVINSVWN0gzVjVaTTYgNUg4VjdINlY1Wk05IDVIMTFWN0g5VjVaTTEyIDVIMTRWN0gxMlY1Wk0xNSA1SDE3VjdIMTVWNVpNMTggNUgyMFY3SDE4VjVaTTIwIDVIMjJWN0gyMFY1WiIgZmlsbD0iIzMzMyIvPjwvc3ZnPg==');
+            --selection-bg-light: rgba(212, 163, 115, 0.4); 
+
+            /* Dark Theme */
+            --bg-color-dark: #2c2a2a;
+            --text-color-dark: #e0e0e0;
+            --title-color-dark: #f5f5f5;
+            --meta-color-dark: #aaa;
+            --accent-color-dark: #a98d70;
+            --border-color-dark: #444;
+            --secondary-bg-dark: #3a3838;
+            --hover-bg-dark: #4d4b4b;
+            --button-bg-dark: #5c5a5a;
+            --button-text-dark: #e0e0e0;
+            --input-bg-dark: #333;
+            --shadow-dark: 0 4px 15px rgba(0,0,0,0.2);
+            --cursor-url-dark: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMyAxN0g1VjE5SDNWMTdaTTYgMTdIN1YxOUg2VjE3Wk04IDE3SDEwVjE5SDhWMTdaTTEzIDE3SDE1VjE5SDEzVjE3Wk0xNiAxN0gxOFYxOUgxNlYxN1pNMTkgMTdIMjFWMTlIMTlWMTdaTTMgMTNINSVWMTVIM1YxM1pNNiAxM0g4VjE1SDZWMTNaTTkgMTNIMTFWMTVIOVYxM1pNMyA5SDVWMTFIN1Y5SDVaTTcgOUg5VjExSDdWOVpNOSA5SDExVjExSDlWOVpNMTIgOUgxNFYxMUgxMlY5Wk0xNSA5SDE3VjExSDE1VjlaTTE4IDlIMjBWMTFIMThWOVpNMjAgOUgyMlYxMUgyMFY5Wk0zIDVINSVWN0gzVjVaTTYgNUg4VjdINlY1Wk05IDVIMTFWN0g5VjVaTTEyIDVIMTRWN0gxMlY1Wk0xNSA1SDE3VjdIMTVWNVpNMTggNUgyMFY3SDE4VjVaTTIwIDVIMjJWN0gyMFY1WiIgZmlsbD0iI2VlZSIvPjwvc3ZnPg==');
+            --selection-bg-dark: rgba(169, 141, 112, 0.4);
+
+            /* Current theme variables */
+            --current-bg-color: var(--bg-color-light);
+            --current-text-color: var(--text-color-light);
+            --current-title-color: var(--title-color-light);
+            --current-meta-color: var(--meta-color-light);
+            --current-accent-color: var(--accent-color-light);
+            --current-border-color: var(--border-color-light);
+            --current-secondary-bg: var(--secondary-bg-light);
+            --current-hover-bg: var(--hover-bg-light);
+            --current-button-bg: var(--button-bg-light);
+            --current-button-text: var(--button-text-light);
+            --current-input-bg: var(--input-bg-light);
+            --current-shadow: var(--shadow-light);
+            --current-cursor: var(--cursor-url-light);
+            --current-selection-bg: var(--selection-bg-light);
+
+            /* Heights for dynamic editor layout */
+            --header-height-val: 61px;
+            --mobile-toggle-height-val: 0px;
+            --hexo-controls-height-val: 0px;
+            --toolbar-height-val: 45px;
+            --statsbar-height-val: 37px;
+        }
+
+        body.dark-mode {
+            --current-bg-color: var(--bg-color-dark);
+            --current-text-color: var(--text-color-dark);
+            --current-title-color: var(--title-color-dark);
+            --current-meta-color: var(--meta-color-dark);
+            --current-accent-color: var(--accent-color-dark);
+            --current-border-color: var(--border-color-dark);
+            --current-secondary-bg: var(--secondary-bg-dark);
+            --current-hover-bg: var(--hover-bg-dark);
+            --current-button-bg: var(--button-bg-dark);
+            --current-button-text: var(--button-text-dark);
+            --current-input-bg: var(--input-bg-dark);
+            --current-shadow: var(--shadow-dark);
+            --current-cursor: var(--cursor-url-dark);
+            --current-selection-bg: var(--selection-bg-dark);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: var(--font-serif);
+            background-color: var(--current-bg-color);
+            color: var(--current-text-color);
+            line-height: 1.7;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            cursor: var(--current-cursor), auto;
+            display: flex;
+            flex-direction: column;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-serif);
+            font-weight: 600; /* semibold */
+            color: var(--current-title-color);
+            margin-bottom: 0.8em;
+            line-height: 1.3;
+        }
+        button {
+            transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease, box-shadow 0.2s ease;
+        }
+        button:active {
+            transform: scale(0.96);
+            filter: brightness(0.95);
+        }
+
+        /* --- Base64 SVG Icons --- */
+        .icon { display: inline-block; width: 1em; height: 1em; background-repeat: no-repeat; background-position: center; background-size: contain; vertical-align: middle; }
+        .icon-sun { background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXN1biI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iNCIvPjxwYXRoIGQ9Ik0xMiAxdjIiLz48cGF0aCBkPSJNMTIgMjF2MiIvPjxwYXRoIGQ9Im00LjIyIDQuMjIgMS40MiAxLjQyIi8+PHBhdGggZD0ibTE4LjM2IDE4LjM2IDEuNDIgMS40MiIvPjxwYXRoIGQ9Ik0xIDExaDIiLz48cGF0aCBkPSJNMjEgMTFoMiIvPjxwYXRoIGQ9Im00LjIyIDE5Ljc4IDEuNDItMS40MiIvPjxwYXRoIGQ9Im0xOC4zNiA1LjY0IDEuNDItMS40MiIvPjwvc3ZnPg=='); }
+        .icon-moon { background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLW1vb24iPjxwYXRoIGQ9Ik0xMiAzYTYgNiAwIDAgMCA4LjgyIDguODJBNC41IDQuNSAwIDEgMSAxMiAzWiIvPjwvc3ZnPg=='); }
+        .icon-settings { background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXNldHRpbmdzLTIiPjxwYXRoIGQ9Ik0yMCAxOC4yYTMuMDIgMy4wMiAwIDAgMC0xLjE4LTEuOTlsLTMuNzYtMi4xNmEuMTQuMTQgMCAwIDEtLjAyLS4yNGwzLjc2LTIuMThhMy4wMiAzLjAyIDAgMCAwIDEuMTgtMS45OVY0LjRjMC0uOC0xLjEtMS4yLTMtMS4yaC0yLjM0YTMuMDcgMy4wNyAwIDAgMC0xLjM0LTIuMDNMMTEuNSAwaC0zTDEwIDMuMzdBMy4wNyAzLjA3IDAgMCAwIDguNjYgMy4ySDYuM2MtMS45IDAtMyAuNC0zIDEuMnYxLjQyYTMuMDIgMy4wMiAwIDAgMCAxLjE4IDEuOTlsMy43NiAyLjE2YS4xNC4xNCAwIDAgMSAuMDIuMjRsLTMuNzYgMi4xOGEzLjAyIDMuMDIgMCAwIDAtMS4xOCAxLjk5djEuNDJjMCAuOCAxLjEgMS4yIDMgMS4yaDIuMzRhMy4wNyAzLjA3IDAgMCAwIDEuMzQgMi4wM2wxLjU0IDMuMzdIMTRsMS41NC0zLjM3YTMuMDcgMy4wNyAwIDAgMCAxLjM0LTIuMDNoMi4zNGMxLjkgMCAzLS40IDMtMS4yWiIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjMiLz48L3N2Zz4='); }
+        .icon-copy { background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNvcHkiPjxyZWN0IHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgeD0iOCIgeT0iOCIgcng9IjIiIHJ5PSIyIi8+PHBhdGggZD0iTTQgMTZWNWMyLTIgMi0yIDAtNGgtMVY0Ii8+PC9zdmc+'); }
+        .icon-external-link { background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWV4dGVybmFsLWxpbmciPjxwYXRoIGQ9Ik0xOCAxM3Y1YTQgNCAwIDAgMS00IDRINWMtMi4yIDAtNC0xLjgtNC00VjVhNCA0IDAgMCAxIDQtNGg1Ii8+PHBvbHlsaW5lIHBvaW50cz0iMTUgMyAyMSA5IDE1IDE1Ii8+PHBhdGggZD0iTTIxIDNoLTYiLz48L3N2Zz4='); }
+        .icon-bold { background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvbGQiPjxwYXRoIGQ9Ik02IDNoMTJhMyAzIDAgMCAxIDAgNkg5YTMgMyAwIDAgMCAwIDZoOWEzIDMgMCAwIDEgMCA2SDYiLz48L3N2Zz4=');}
+        .icon-italic { background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWl0YWxpYyI+PGxpbmUgeDE9IjE5IiB4Mj0iMTAiIHkxPSI0IiB5Mj0iNCIvPjxsaW5lIHgxPSIxNCIgeDI9IjUiIHkxPSIyMCIgeTI9IjIwIi8+PGxpbmUgeDE9IjE1IiB4Mj0iOSIgeTE9IjQiIHkyPSIyMCIvPjwvc3ZnPg==');}
+        .icon-h1 { background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWhlYWRpbmctMSI+PHBhdGggZD0iTTQgMTJoOG0tOGwtMyAzIDMgM201IDBMMTEgOWwtMyAzTTMgNWg0TTUgM3Y0TTIxIDE4aC0zYTMgMyAwIDAgMS0zLTMVNmEzIDMgMCAwIDEgMy0zaDNAIi8+PC9zdmc+');}
+        .icon-link { background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWxpbmsiPjxwYXRoIGQ9Ik0xMCAxM2ExIDAgMCAwLTEgMWgtM2EzIDMgMCAxIDEgMC02aDNhMSAxIDAgMCAwIDEtMU0xNCAxMWExIDEgMCAwIDAgMS0xaDNhMyAzIDAgMSAxIDAgNmgzYTEgMSAwIDAgMCAxIDFNNCAxOGg0TTE2IDZoNCIvPjwvc3ZnPg==');}
+        .icon-image { background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHg9IjMiIHk9IjMiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSA1Ii8+PC9zdmc+');}
+        .icon-table { background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXRhYmxlIj48cGF0aCBkPSJNOSAzSDVhMiAyIDAgMCAwLTIgMnYxNGMwIDEuMS45IDIgMiAyaDE0YTIgMiAwIDAgMCAyLTJWNWgwYTIgMiAwIDAgMC0yLTJoLTRaTTkgM3YxOE0xNSAzIFYyMU0zIDEySDIxTTMgOUgyMW0wIDZIMyIvPjwvc3ZnPg==');}
+
+        /* --- Layout --- */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .app-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px; background-color: var(--current-secondary-bg);
+            border-bottom: 1px solid var(--current-border-color); box-shadow: var(--current-shadow);
+            position: sticky; top: 0; z-index: 1000;
+            height: var(--header-height-val);
+            flex-shrink: 0;
+        }
+        .app-header h1 { font-size: 1.5em; margin: 0; font-weight: 700; }
+        .secondary-menu { position: relative; }
+        .menu-toggle-button { background: none; border: none; color: var(--current-text-color); cursor: pointer; padding: 8px; font-size: 1.2em; border-radius: 50%; }
+        .menu-toggle-button:hover { background-color: var(--current-hover-bg); }
+        .menu-toggle-button .icon { width: 24px; height: 24px; }
+        .dropdown-menu {
+            position: absolute; top: calc(100% + 10px); right: 0;
+            background-color: var(--current-bg-color); border: 1px solid var(--current-border-color);
+            border-radius: 8px; box-shadow: var(--current-shadow); padding: 10px 0;
+            min-width: 220px; z-index: 1001; opacity: 0; visibility: hidden;
+            transform: translateY(-10px) scale(0.95) rotateZ(1deg); transform-origin: top right;
+            transition: opacity 0.2s ease, visibility 0s 0.2s, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .dropdown-menu.active { opacity: 1; visibility: visible; transform: translateY(0) scale(1) rotateZ(0); transition-delay: 0s, 0s, 0s; }
+        .dropdown-menu button {
+            display: flex; align-items: center; width: 100%; padding: 10px 15px;
+            background: none; border: none; color: var(--current-text-color); text-align: left;
+            cursor: pointer; font-family: var(--font-serif); font-size: 0.95em;
+        }
+        .dropdown-menu button .icon { margin-right: 12px; }
+        .dropdown-menu button:hover { background-color: var(--current-hover-bg); }
+        .dropdown-menu button.active-mode {
+            background-color: var(--current-accent-color); color: var(--current-bg-color); font-weight: 600;
+        }
+        body.dark-mode .dropdown-menu button.active-mode { color: var(--button-text-dark); }
+
+        /* Mobile View Toggle Bar */
+        .mobile-view-toggle {
+            display: none; padding: 8px 0; text-align: center;
+            background-color: var(--current-secondary-bg);
+            border-bottom: 1px solid var(--current-border-color);
+            position: sticky; top: var(--header-height-val); z-index: 999;
+            box-shadow: var(--current-shadow);
+            height: var(--mobile-toggle-height-val);
+            flex-shrink: 0;
+        }
+        .mobile-view-toggle button {
+            padding: 8px 15px; margin: 0 5px; background-color: transparent;
+            color: var(--current-meta-color); border: none; border-radius: 6px;
+            font-family: var(--font-serif); font-weight: 600; cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .mobile-view-toggle button.active {
+            color: var(--current-button-text);
+            border-color: var(--current-accent-color);
+            background-color: var(--current-button-bg);
+        }
+
+        .app-main {
+            flex-grow: 1; display: flex;
+            overflow: hidden; position: relative;
+        }
+
+        #editor-wrapper, #preview-wrapper {
+            flex: 1; display: flex; flex-direction: column;
+            overflow: hidden;
+            height: calc(100vh - var(--header-height-val) - var(--mobile-toggle-height-val));
+            min-width: 0;
+        }
+
+        .panel-content {
+            flex: 1; display: flex; flex-direction: column;
+            background-color: var(--current-secondary-bg);
+            border: 1px solid var(--current-border-color);
+            border-radius: 8px;
+            box-shadow: var(--current-shadow);
+            margin: 15px;
+            overflow: hidden;
+        }
+        /* Panels sit flush against each other with a single border in between */
+        #editor-wrapper .panel-content { margin-right: 7.5px; }
+        #preview-wrapper .panel-content { margin-left: 7.5px; }
+
+
+        /* --- Hexo Controls --- */
+        #hexo-controls-section {
+            padding: 15px; border-bottom: 1px solid var(--current-border-color);
+            background-color: var(--current-bg-color);
+            overflow-y: auto;
+            height: var(--hexo-controls-height-val);
+            flex-shrink: 0;
+            transition: height 0.3s ease;
+        }
+        #hexo-controls-section.hidden { display: none; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9em; color: var(--current-meta-color); }
+        .form-group input[type="text"], .form-group input[type="date"] {
+            width: 100%; padding: 10px; border: 1px solid var(--current-border-color);
+            border-radius: 4px; background-color: var(--current-input-bg);
+            color: var(--current-text-color); font-family: var(--font-sans);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .form-group input:focus {
+            outline: none; border-color: var(--current-accent-color);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--current-accent-color) 25%, transparent);
+        }
+        .hexo-actions button {
+            padding: 10px 15px; background-color: var(--current-button-bg);
+            color: var(--current-button-text); border: none; border-radius: 4px;
+            cursor: pointer; font-family: var(--font-serif); font-weight: 600;
+            margin-right: 10px;
+        }
+        .hexo-actions button:hover { filter: brightness(1.08); }
+        .hexo-actions button .icon { margin-right: 5px; }
+
+        /* --- Editor Toolbar --- */
+        #editor-toolbar {
+            display: flex; flex-wrap: wrap; padding: 8px;
+            background-color: var(--current-bg-color);
+            border-bottom: 1px solid var(--current-border-color);
+            gap: 5px;
+            height: var(--toolbar-height-val);
+            overflow-y: hidden;
+            flex-shrink: 0;
+        }
+        #editor-toolbar button {
+            background-color: var(--current-button-bg); color: var(--current-button-text);
+            border: 1px solid transparent; padding: 8px 10px; border-radius: 4px;
+            cursor: pointer; font-family: var(--font-sans); font-size: 0.9em;
+        }
+        #editor-toolbar button:hover { filter: brightness(1.1); }
+        #editor-toolbar button.active { background-color: var(--current-accent-color); color: var(--current-bg-color); }
+        body.dark-mode #editor-toolbar button.active { color: var(--button-text-dark); }
+        #editor-toolbar button .icon { width: 16px; height: 16px; }
+
+        /* --- CodeMirror Editor Area --- */
+        #editor-content-cm-wrapper {
+            flex-grow: 1; position: relative; overflow: hidden;
+        }
+        .CodeMirror {
+            font-family: var(--font-serif) !important;
+            font-size: 1.05em !important; line-height: 1.75 !important;
+            height: 100% !important;
+            background-color: var(--current-secondary-bg) !important;
+            color: var(--current-text-color) !important;
+            border: none; outline: none;
+        }
+        .CodeMirror-gutters { background-color: var(--current-bg-color) !important; border-right: 1px solid var(--current-border-color) !important; }
+        .CodeMirror-linenumber { color: var(--current-meta-color) !important; padding: 0 5px 0 10px !important; }
+        .CodeMirror-cursor { border-left: 1.5px solid var(--current-accent-color) !important; }
+        .CodeMirror-selected, ::selection { background-color: var(--current-selection-bg) !important; }
+        .cm-s-neo .CodeMirror-selected { background: var(--selection-bg-light) !important; }
+        .cm-s-material-darker .CodeMirror-selected { background: var(--selection-bg-dark) !important; }
+
+        .cm-typewriter-dimmed .CodeMirror-line > span {
+            opacity: 0.5 !important;
+            transition: opacity 0.2s ease-in-out;
+        }
+        .CodeMirror-activeline-background {
+             background-color: color-mix(in srgb, var(--current-hover-bg) 60%, transparent) !important;
+        }
+        .cm-typewriter-active-line .CodeMirror-line > span {
+            opacity: 1 !important;
+        }
+
+
+        /* --- Stats Bar --- */
+        #stats-bar {
+            padding: 8px 15px; background-color: var(--current-bg-color);
+            border-top: 1px solid var(--current-border-color); font-size: 0.85em;
+            color: var(--current-meta-color); display: flex; justify-content: space-between;
+            align-items: center; font-family: var(--font-sans);
+            height: var(--statsbar-height-val);
+            flex-shrink: 0;
+        }
+
+        /* --- Preview Area --- */
+        .preview-content {
+            flex-grow: 1; padding: 25px; overflow-y: auto;
+            font-family: var(--font-serif); line-height: 1.8;
+            color: var(--current-text-color);
+        }
+        .preview-content > *:first-child { margin-top: 0; }
+        .preview-content img { max-width: 100%; height: auto; border-radius: 4px; margin: 15px 0;}
+        .preview-content table { border-collapse: collapse; margin: 1em 0; width: auto; box-shadow: var(--current-shadow); }
+        .preview-content th, .preview-content td { border: 1px solid var(--current-border-color); padding: 10px 12px; text-align: left; }
+        .preview-content th { background-color: var(--current-bg-color); font-weight: 600; }
+        .preview-content pre {
+            background-color: var(--current-bg-color); padding: 1em; border-radius: 4px;
+            overflow-x: auto; border: 1px solid var(--current-border-color);
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            font-size: 0.9em;
+        }
+        .preview-content code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            background-color: var(--current-hover-bg); padding: 0.2em 0.4em;
+            border-radius: 3px; font-size: 0.9em;
+        }
+        .preview-content pre code { background: none; padding: 0; }
+        .preview-content blockquote { border-left: 4px solid var(--current-accent-color); padding-left: 1em; margin-left: 0; color: var(--current-meta-color); font-style: italic; }
+        .preview-content a { color: var(--current-accent-color); text-decoration: none; font-weight: 600; }
+        .preview-content a:hover { text-decoration: underline; }
+        .katex-display { overflow-x: auto; overflow-y: hidden; }
+
+        .preview-content h1 {
+            font-size: 2.5em; text-align: left;
+            margin-top: 1em; margin-bottom: 0.8em; padding-bottom: 0.3em;
+            border-bottom: 3px solid var(--current-accent-color); position: relative;
+        }
+        .preview-content h1::after { display:none; }
+        .preview-content h2 { font-size: 1.8em; margin-top: 1.5em; padding-bottom: 0.2em; border-bottom: 1px solid var(--current-border-color); }
+
+
+        /* --- Modals --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); display: flex;
+            justify-content: center; align-items: center; z-index: 2000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content {
+            background-color: var(--current-bg-color); padding: 30px; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); width: 90%; max-width: 500px;
+            transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-content h2 { font-size: 1.8em; margin-bottom: 20px; text-align: center; color: var(--current-title-color); }
+        .modal-content p { margin-bottom: 20px; color: var(--current-text-color); line-height: 1.6; }
+        .modal-content .form-group { margin-bottom: 20px; }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
+        .modal-buttons button {
+            padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer;
+            font-family: var(--font-serif); font-weight: 600;
+        }
+        .modal-buttons button.primary { background-color: var(--current-accent-color); color: var(--current-bg-color); }
+        body.dark-mode .modal-buttons button.primary { color: var(--button-text-dark); }
+        .modal-buttons button.secondary { background-color: var(--current-button-bg); color: var(--current-button-text); }
+        .modal-buttons button:hover { filter: brightness(1.1); }
+
+        /* --- Message Bar --- */
+        #message-bar {
+            position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
+            background-color: var(--current-title-color); color: var(--current-bg-color);
+            padding: 12px 25px; border-radius: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            font-size: 0.95em; font-family: var(--font-sans); z-index: 3000;
+            transition: bottom 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.5s ease;
+            opacity: 0;
+        }
+        #message-bar.show { bottom: 20px; opacity: 1; }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 768px) {
+            .app-main { flex-direction: column; }
+            #editor-wrapper .panel-content, #preview-wrapper .panel-content { margin: 0; border-radius: 0; border: none; border-bottom: 1px solid var(--current-border-color);}
+            .mobile-view-toggle { display: flex; justify-content: center; align-items: center; }
+
+            #editor-wrapper, #preview-wrapper {
+                width: 100%; height: calc(100vh - var(--header-height-val) - var(--mobile-toggle-height-val));
+            }
+            #preview-wrapper.mobile-hidden, #editor-wrapper.mobile-hidden {
+                display: none !important;
+            }
+
+            #hexo-controls-section { max-height: 25vh; }
+            
+            .app-header h1 { font-size: 1.2em; }
+            .menu-toggle-button .icon { width: 20px; height: 20px; }
+            #editor-toolbar {
+                padding: 6px;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none; /* For Firefox */
+            }
+            #editor-toolbar::-webkit-scrollbar {
+                display: none; /* For Chrome, Safari, and Opera */
+            }
+            #editor-toolbar button { flex-shrink: 0; }
+
+            #stats-bar { font-size: 0.8em; padding: 6px 10px; }
+            .preview-content { padding: 15px; }
+            .modal-content { width: 95%; padding: 20px; }
+            .modal-content h2 { font-size: 1.5em; }
+            #message-bar { width: calc(100% - 40px); text-align: center; }
+        }
+
+        /* Scrollbar styles for CM and Preview */
+        .CodeMirror-simplescrollbar-horizontal div, .CodeMirror-simplescrollbar-vertical div,
+        .preview-content::-webkit-scrollbar-thumb {
+            background: var(--current-meta-color);
+            border-radius: 5px;
+        }
+        .CodeMirror-simplescrollbar-horizontal, .CodeMirror-simplescrollbar-vertical,
+        .preview-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .CodeMirror-simplescrollbar-horizontal div:hover, .CodeMirror-simplescrollbar-vertical div:hover,
+        .preview-content::-webkit-scrollbar-thumb:hover {
+            background: var(--current-accent-color);
+        }
+        .CodeMirror-scroll, .preview-content {
+             scrollbar-width: thin;
+             scrollbar-color: var(--current-meta-color) transparent;
+        }
+        .CodeMirror-overlayscroll .CodeMirror-scrollbar-filler, .CodeMirror-overlayscroll .CodeMirror-gutter-filler { display: none; }
+        .CodeMirror-overlayscroll-horizontal div, .CodeMirror-overlayscroll-vertical div { background: var(--current-meta-color); }
+    </style>
+    <!-- highlight.js for code syntax highlighting (marked.js will use this) -->
+    <link id="hljs-light-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-light.min.css">
+    <link id="hljs-dark-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css" media="not all">
+    <!-- KaTeX for Math -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css" crossorigin="anonymous">
+
+</head>
+<body class="app-loading">
+    <div class="app-container">
+        <header class="app-header" id="appHeader">
+            <h1>Markdown Editor</h1>
+            <div class="secondary-menu">
+                <button class="menu-toggle-button" id="menuToggleButton" aria-label="Open menu">
+                    <span class="icon icon-settings"></span>
+                </button>
+                <div class="dropdown-menu" id="appDropdownMenu">
+                    <button id="toggleThemeButton"><span class="icon icon-moon"></span>切换日夜模式</button>
+                    <hr style="border: none; border-top: 1px solid var(--current-border-color); margin: 5px 0;">
+                    <button id="switchToEditorMode" data-mode="editor"><span class="icon">E</span>Editor 模式</button>
+                    <button id="switchToHexoMode" data-mode="hexo"><span class="icon">H</span>Hexo 模式</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="mobile-view-toggle" id="mobileViewToggle">
+            <button id="showEditorBtnMobile" class="active">编辑</button>
+            <button id="showPreviewBtnMobile">预览</button>
+        </div>
+
+        <main class="app-main">
+            <div id="editor-wrapper">
+                <div class="panel-content">
+                    <div id="hexo-controls-section" class="hidden">
+                        <div class="form-group">
+                            <label for="hexoTitle">标题 (Title)</label>
+                            <input type="text" id="hexoTitle" name="hexoTitle">
+                        </div>
+                        <div class="form-group">
+                            <label for="hexoPubDate">发布日期 (PubDate)</label>
+                            <input type="date" id="hexoPubDate" name="hexoPubDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="hexoCategories">分类 (Categories, 逗号分隔)</label>
+                            <input type="text" id="hexoCategories" name="hexoCategories" placeholder="例如: 日志,技术">
+                        </div>
+                        <div class="form-group">
+                            <label for="hexoDescription">描述 (Description)</label>
+                            <input type="text" id="hexoDescription" name="hexoDescription">
+                        </div>
+                        <div class="hexo-actions">
+                            <button id="copyHexoMarkdown"><span class="icon icon-copy"></span>复制全文</button>
+                            <button id="openHexoUrl"><span class="icon icon-external-link"></span>打开设定网址</button>
+                        </div>
+                    </div>
+
+                    <div id="editor-toolbar">
+                        <button data-action="h1" title="H1"><span class="icon icon-h1"></span>H1</button>
+                        <button data-action="h2" title="H2">H2</button>
+                        <button data-action="h3" title="H3">H3</button>
+                        <button data-action="bold" title="Bold (Ctrl+B)"><span class="icon icon-bold"></span></button>
+                        <button data-action="italic" title="Italic (Ctrl+I)"><span class="icon icon-italic"></span></button>
+                        <button data-action="link" title="Link (Ctrl+L)"><span class="icon icon-link"></span></button>
+                        <button data-action="image" title="Image (Ctrl+G)"><span class="icon icon-image"></span></button>
+                        <button data-action="table" title="Table"><span class="icon icon-table"></span></button>
+                        <button data-action="strikethrough" title="Strikethrough">删除线</button>
+                        <button data-action="underline" title="Underline (HTML)"><u>U</u></button>
+                        <button data-action="blockquote" title="Blockquote (Ctrl+Q)">引言</button>
+                        <button data-action="codeblock" title="Code Block">代码块</button>
+                        <button data-action="hr" title="Horizontal Rule">分割线</button>
+                        <button data-action="checkbox" title="Checkbox">- [ ]</button>
+                        <button data-action="completedCheckbox" title="Completed Checkbox">- [x]</button>
+                        <button data-action="jpQuotes" title="Japanese Quotes 「」 (Ctrl+1)">「」</button>
+                        <button data-action="jpSingleQuotes" title="Japanese Single Quotes 『』">『』</button>
+                        <button data-action="parentheses" title="Parentheses ()">()</button>
+                        <button data-action="bookTitle" title="Book Title 《》">《》</button>
+                        <button data-action="deleteLine" title="Delete Line">删行</button>
+                        <button data-action="undo" title="Undo (Ctrl+Z)">撤销</button>
+                        <button data-action="redo" title="Redo (Ctrl+Y)">重做</button>
+                        <button id="toggleTypewriterMode" title="Typewriter Mode">打字机</button>
+                        <button data-action="convertQuotes" title="Convert to Japanese Quotes">转日式引号</button>
+                        <button data-action="s2t" title="Simplified to Traditional">简转繁</button>
+                        <button data-action="generateImage" title="Generate Image">存图</button>
+                        <button data-action="generatePdf" title="Generate PDF">存PDF</button>
+                    </div>
+                    
+                    <div id="editor-content-cm-wrapper">
+                        <textarea id="markdown-input-fallback" style="display:none;"></textarea>
+                    </div>
+
+                    <div id="stats-bar">
+                        <span id="charCount">字符: 0</span>
+                        <span id="wordCount">词数: 0</span>
+                        <span id="lineCount">行数: 1</span>
+                        <span id="currentTime"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="preview-wrapper">
+                 <div class="panel-content">
+                    <div class="preview-content" id="markdown-preview">
+                        <p style="text-align:center; color: var(--current-meta-color); padding-top: 20px;">预览区域</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="hexoUrlModal">
+        <div class="modal-content">
+            <h2>Hexo 模式配置</h2>
+            <p>首次使用 Hexo 模式，请输入您博客（或其他目标网站）的新建文章页面的 URL。后续点击 "打开设定网址" 将跳转至此。</p>
+            <div class="form-group">
+                <label for="hexoTargetUrlInput">目标 URL (例如：https://myblog.com/admin/new-post)</label>
+                <input type="text" id="hexoTargetUrlInput" placeholder="https://example.com/admin/new-post">
+                <small id="urlError" style="color: red; display: none; margin-top: 5px;">请输入有效的 URL (以 http:// 或 https:// 开头)</small>
+            </div>
+            <div class="modal-buttons">
+                <button id="saveHexoUrlButton" class="primary">保存并继续</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="linkModal">
+        <div class="modal-content">
+            <h2>插入链接</h2>
+            <div class="form-group">
+                <label for="linkUrlInput">链接 URL</label>
+                <input type="text" id="linkUrlInput" placeholder="https://example.com">
+            </div>
+            <div class="form-group">
+                <label for="linkTextInput">链接文本 (可选)</label>
+                <input type="text" id="linkTextInput" placeholder="显示的文字">
+            </div>
+            <div class="modal-buttons">
+                <button id="cancelLinkButton" class="secondary">取消</button>
+                <button id="insertLinkButton" class="primary">插入</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="imageModal">
+        <div class="modal-content">
+            <h2>插入图片</h2>
+            <div class="form-group">
+                <label for="imageUrlInput">图片 URL</label>
+                <input type="text" id="imageUrlInput" placeholder="https://example.com/image.png">
+            </div>
+            <div class="form-group">
+                <label for="imageAltInput">替换文本 (Alt Text)</label>
+                <input type="text" id="imageAltInput" placeholder="图片描述">
+            </div>
+            <div class="modal-buttons">
+                <button id="cancelImageButton" class="secondary">取消</button>
+                <button id="insertImageButton" class="primary">插入</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="message-bar"></div>
+
+    <!-- CodeMirror Core & Modes & Addons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/edit/continuelist.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/dialog/dialog.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/search/searchcursor.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/search/search.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/search/matchesonscrollbar.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/selection/active-line.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/scroll/simplescrollbars.min.js"></script>
+
+    <!-- Other Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@9.1.3/dist/mermaid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+
+    <script>
+        'use strict';
+
+        // --- DOM Elements ---
+        const appHeader = document.getElementById('appHeader');
+        const mobileViewToggleEl = document.getElementById('mobileViewToggle');
+        const markdownInputFallback = document.getElementById('markdown-input-fallback');
+        const markdownPreview = document.getElementById('markdown-preview');
+        const charCountEl = document.getElementById('charCount');
+        const wordCountEl = document.getElementById('wordCount');
+        const lineCountEl = document.getElementById('lineCount');
+        const currentTimeEl = document.getElementById('currentTime');
+        const editorToolbar = document.getElementById('editor-toolbar');
+        const toggleThemeButton = document.getElementById('toggleThemeButton');
+        const menuToggleButton = document.getElementById('menuToggleButton');
+        const appDropdownMenu = document.getElementById('appDropdownMenu');
+        const switchToEditorModeBtn = document.getElementById('switchToEditorMode');
+        const switchToHexoModeBtn = document.getElementById('switchToHexoMode');
+        const hexoControlsSection = document.getElementById('hexo-controls-section');
+        const hexoUrlModal = document.getElementById('hexoUrlModal');
+        const hexoTargetUrlInput = document.getElementById('hexoTargetUrlInput');
+        const saveHexoUrlButton = document.getElementById('saveHexoUrlButton');
+        const urlErrorEl = document.getElementById('urlError');
+        const hexoTitleInput = document.getElementById('hexoTitle');
+        const hexoPubDateInput = document.getElementById('hexoPubDate');
+        const hexoCategoriesInput = document.getElementById('hexoCategories');
+        const hexoDescriptionInput = document.getElementById('hexoDescription');
+        const copyHexoMarkdownBtn = document.getElementById('copyHexoMarkdown');
+        const openHexoUrlBtn = document.getElementById('openHexoUrl');
+        const messageBar = document.getElementById('message-bar');
+        const toggleTypewriterModeBtn = document.getElementById('toggleTypewriterMode');
+        const showEditorBtnMobile = document.getElementById('showEditorBtnMobile');
+        const showPreviewBtnMobile = document.getElementById('showPreviewBtnMobile');
+        const editorWrapper = document.getElementById('editor-wrapper');
+        const previewWrapper = document.getElementById('preview-wrapper');
+        const linkModal = document.getElementById('linkModal');
+        const linkUrlInput = document.getElementById('linkUrlInput');
+        const linkTextInput = document.getElementById('linkTextInput');
+        const insertLinkButton = document.getElementById('insertLinkButton');
+        const cancelLinkButton = document.getElementById('cancelLinkButton');
+        const imageModal = document.getElementById('imageModal');
+        const imageUrlInput = document.getElementById('imageUrlInput');
+        const imageAltInput = document.getElementById('imageAltInput');
+        const insertImageButton = document.getElementById('insertImageButton');
+        const cancelImageButton = document.getElementById('cancelImageButton');
+
+        // --- App State ---
+        let cmEditor;
+        let currentMode = localStorage.getItem('editorMode') || 'editor';
+        let currentTheme = localStorage.getItem('theme') || 'light';
+        let hexoTargetUrl = localStorage.getItem('hexoTargetUrl') || '';
+        let isTypewriterMode = false;
+        let openccConverter = null;
+        let currentMobileView = 'editor';
+        let lastActiveLineCM = -1;
+        let isSyncingScroll = false;
+        let openCCLoaded = false;
+
+
+        // --- Utility Functions ---
+        function showMessage(message, duration = 3000) {
+            messageBar.textContent = message;
+            messageBar.classList.add('show');
+            setTimeout(() => { messageBar.classList.remove('show'); }, duration);
+        }
+        function reportError(message, userFacing = true) {
+            console.error(message);
+            if (userFacing) showMessage(`错误: ${message}`, 5000);
+        }
+        function validateUrl(url) {
+            try { return (new URL(url).protocol === "http:" || new URL(url).protocol === "https:"); }
+            catch (_) { return false; }
+        }
+        function getCssVariableValue(varName) { return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
+        function setCssVariable(varName, value) { document.documentElement.style.setProperty(varName, value); }
+        function isMobile() { return window.innerWidth <= 768; }
+
+        // --- Layout Update ---
+        function updateEditorLayout() {
+            const headerH = appHeader.offsetHeight;
+            const mobileToggleH = isMobile() ? mobileViewToggleEl.offsetHeight : 0;
+            const hexoH = (currentMode === 'hexo' && !hexoControlsSection.classList.contains('hidden')) ? hexoControlsSection.scrollHeight : 0;
+            
+            setCssVariable('--header-height-val', `${headerH}px`);
+            setCssVariable('--mobile-toggle-height-val', `${mobileToggleH}px`);
+            
+            if (currentMode === 'hexo' && !hexoControlsSection.classList.contains('hidden')) {
+                setCssVariable('--hexo-controls-height-val', `${hexoH}px`);
+            } else {
+                setCssVariable('--hexo-controls-height-val', `0px`);
+            }
+            
+            if (cmEditor) cmEditor.refresh();
+        }
+
+
+        // --- Theme Management ---
+        function applyTheme(theme) {
+            document.body.classList.toggle('dark-mode', theme === 'dark');
+            currentTheme = theme;
+            localStorage.setItem('theme', theme);
+            const themeIcon = toggleThemeButton.querySelector('.icon');
+            if (theme === 'dark') {
+                themeIcon.classList.remove('icon-moon'); themeIcon.classList.add('icon-sun');
+                toggleThemeButton.childNodes[1].nodeValue = " 切换日间模式";
+            } else {
+                themeIcon.classList.remove('icon-sun'); themeIcon.classList.add('icon-moon');
+                toggleThemeButton.childNodes[1].nodeValue = " 切换夜间模式";
+            }
+            if (cmEditor) cmEditor.setOption("theme", theme === 'dark' ? "material-darker" : "neo");
+            
+            const lightHljs = document.getElementById('hljs-light-theme');
+            const darkHljs = document.getElementById('hljs-dark-theme');
+            if(lightHljs && darkHljs){
+                lightHljs.media = (theme === 'light') ? 'all' : 'not all';
+                darkHljs.media = (theme === 'dark') ? 'all' : 'not all';
+            }
+            showMessage(`已切换到${theme === 'dark' ? '夜间' : '日间'}模式`);
+        }
+        function toggleTheme() { applyTheme(currentTheme === 'light' ? 'dark' : 'light'); }
+        function autoSetTheme() {
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const storedTheme = localStorage.getItem('theme');
+            applyTheme(storedTheme ? storedTheme : (prefersDark ? 'dark' : 'light'));
+        }
+        
+        // --- Mode Management (Editor/Hexo) ---
+        function applyAppMode(mode) {
+            currentMode = mode;
+            localStorage.setItem('editorMode', mode);
+            hexoControlsSection.classList.toggle('hidden', mode !== 'hexo');
+            
+            document.querySelectorAll('.dropdown-menu button[data-mode]').forEach(btn => btn.classList.remove('active-mode'));
+            if (mode === 'hexo') {
+                switchToHexoModeBtn.classList.add('active-mode');
+                if (!hexoTargetUrl) hexoUrlModal.classList.add('active');
+            } else {
+                switchToEditorModeBtn.classList.add('active-mode');
+            }
+            // Use a timeout to allow the DOM to update before calculating new layout
+            setTimeout(() => {
+                updateEditorLayout();
+                updatePreview();
+            }, 50);
+            showMessage(`已切换到 ${mode === 'hexo' ? 'Hexo' : 'Editor'} 模式`);
+        }
+
+        // --- Mobile View Management ---
+        function applyMobileView(view) {
+            if (!isMobile()) return;
+            currentMobileView = view;
+            if (view === 'editor') {
+                editorWrapper.classList.remove('mobile-hidden');
+                previewWrapper.classList.add('mobile-hidden');
+                showEditorBtnMobile.classList.add('active');
+                showPreviewBtnMobile.classList.remove('active');
+                if (cmEditor) cmEditor.focus();
+            } else {
+                editorWrapper.classList.add('mobile-hidden');
+                previewWrapper.classList.remove('mobile-hidden');
+                showEditorBtnMobile.classList.remove('active');
+                showPreviewBtnMobile.classList.add('active');
+                updatePreview();
+            }
+            setTimeout(updateEditorLayout, 50);
+        }
+        
+        // --- Markdown Rendering ---
+        let renderTimeout;
+        function updatePreview() {
+            if (!cmEditor) return;
+            clearTimeout(renderTimeout);
+            renderTimeout = setTimeout(() => { renderMarkdown(cmEditor.getValue()); }, 250);
+        }
+
+        function renderMarkdown(mdText) {
+            try {
+                let fullMdText = mdText;
+                if (currentMode === 'hexo') {
+                    const fmObj = generateHexoFrontmatter();
+                    let fmParts = [];
+                    if (fmObj.title) fmParts.push(`title: ${fmObj.title}`);
+                    if (fmObj.pubDate) fmParts.push(`pubDate: ${fmObj.pubDate}`);
+                    if (fmObj.categories && fmObj.categories.length > 0) fmParts.push(`categories: ['${fmObj.categories.join("', '")}']`);
+                    if (fmObj.description) fmParts.push(`description: '${fmObj.description.replace(/'/g, "''")}'`);
+
+                    if (fmParts.length > 0) {
+                        const fmString = `---\n${fmParts.join('\n')}\n---\n\n`;
+                        fullMdText = fmString + mdText;
+                    }
+                }
+
+                marked.setOptions({
+                    renderer: new marked.Renderer(),
+                    highlight: function(code, lang) {
+                        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                        return hljs.highlight(code, { language }).value;
+                    },
+                    pedantic: false, gfm: true, breaks: true,
+                    sanitize: false, smartLists: true, smartypants: false, xhtml: false
+                });
+
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = marked.parse(fullMdText);
+
+                renderMathInElement(tempDiv, {
+                    delimiters: [
+                        {left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false},
+                        {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}
+                    ],
+                    throwOnError: false
+                });
+                
+                tempDiv.querySelectorAll('code.language-mermaid, div.mermaid').forEach((el, index) => {
+                    try {
+                        const graphId = `mermaid-graph-${Date.now()}-${index}`;
+                        const graphDefinition = el.textContent;
+                        const newMermaidDiv = document.createElement('div');
+                        newMermaidDiv.id = graphId;
+                        newMermaidDiv.className = 'mermaid-container-rendered';
+                        el.parentNode.replaceChild(newMermaidDiv, el);
+                        mermaid.render(graphId, graphDefinition, (svgCode) => {
+                             const target = document.getElementById(graphId);
+                             if (target) target.innerHTML = svgCode;
+                        });
+                    } catch (e) {
+                       const errorEl = document.createElement('pre');
+                       errorEl.className = 'error';
+                       errorEl.style.color = 'red';
+                       errorEl.textContent = `Mermaid Error: ${e.message}`;
+                       if(el.parentNode) el.parentNode.replaceChild(errorEl, el);
+                       reportError(`Mermaid rendering error: ${e.message}`, false);
+                    }
+                });
+                markdownPreview.innerHTML = tempDiv.innerHTML;
+            } catch (e) {
+                markdownPreview.innerHTML = `<p style="color:red;">Markdown渲染错误: ${e.message}</p>`;
+                reportError(`Markdown rendering error: ${e.message}`);
+            }
+        }
+        
+        // --- CodeMirror Editor Core ---
+        function initCodeMirror() {
+            cmEditor = CodeMirror.fromTextArea(markdownInputFallback, {
+                mode: "markdown",
+                theme: currentTheme === 'dark' ? "material-darker" : "neo",
+                lineNumbers: true,
+                lineWrapping: true,
+                styleActiveLine: true,
+                extraKeys: {
+                    "Enter": "newlineAndIndentContinueMarkdownList",
+                    "Ctrl-B": (cm) => cmActionBold(cm), "Cmd-B": (cm) => cmActionBold(cm),
+                    "Ctrl-I": (cm) => cmActionItalic(cm), "Cmd-I": (cm) => cmActionItalic(cm),
+                    "Ctrl-L": () => showLinkModal(), "Cmd-L": () => showLinkModal(),
+                    "Ctrl-G": () => showImageModal(), "Cmd-G": () => showImageModal(),
+                    "Ctrl-Q": (cm) => cmActionBlockquote(cm), "Cmd-Q": (cm) => cmActionBlockquote(cm),
+                    "Ctrl-1": (cm) => cmInsertText("「", "」", "引文"), "Cmd-1": (cm) => cmInsertText("「", "」", "引文")
+                },
+                autofocus: true,
+                scrollbarStyle: "simple"
+            });
+
+            cmEditor.on("change", (cm, change) => {
+                if (change.origin !== 'setValue') { // Avoid loop from programmatic changes
+                    updatePreview();
+                    updateStats();
+                }
+            });
+
+            cmEditor.on("cursorActivity", () => {
+                if (isTypewriterMode) handleTypewriterFocus();
+                updateStats();
+            });
+            
+            cmEditor.on("scroll", () => {
+                if (isSyncingScroll || isMobile() || isTypewriterMode) return;
+                isSyncingScroll = true;
+                const scrollInfo = cmEditor.getScrollInfo();
+                const scrollPercentage = scrollInfo.top / (scrollInfo.height - scrollInfo.clientHeight);
+                if (!isNaN(scrollPercentage) && markdownPreview.scrollHeight > markdownPreview.clientHeight) {
+                     markdownPreview.scrollTop = scrollPercentage * (markdownPreview.scrollHeight - markdownPreview.clientHeight);
+                }
+                setTimeout(() => isSyncingScroll = false, 60);
+            });
+            
+            const savedMarkdown = localStorage.getItem('markdownContent') || '# 欢迎使用 Markdown Editor!\n\n开始你的创作吧...';
+            cmEditor.setValue(savedMarkdown);
+            cmEditor.refresh();
+        }
+
+        markdownPreview.addEventListener('scroll', () => {
+            if (isSyncingScroll || isMobile() || isTypewriterMode) return;
+            isSyncingScroll = true;
+            const scrollPercentage = markdownPreview.scrollTop / (markdownPreview.scrollHeight - markdownPreview.clientHeight);
+            if (!isNaN(scrollPercentage) && cmEditor) {
+                const scrollInfo = cmEditor.getScrollInfo();
+                if (scrollInfo.height > scrollInfo.clientHeight) {
+                     cmEditor.scrollTo(null, scrollPercentage * (scrollInfo.height - scrollInfo.clientHeight));
+                }
+            }
+            setTimeout(() => isSyncingScroll = false, 60);
+        });
+
+        function updateStats() {
+            if (!cmEditor) return;
+            const text = cmEditor.getValue();
+            const cursor = cmEditor.getCursor();
+            charCountEl.textContent = `字符: ${text.length}`;
+            wordCountEl.textContent = `词数: ${text.trim().split(/\s+/).filter(Boolean).length}`;
+            lineCountEl.textContent = `行: ${cursor.line + 1}/${cmEditor.lineCount()}`;
+        }
+        function updateTime() { currentTimeEl.textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false }); }
+        
+        function cmInsertText(prefix, suffix = '', placeholder = 'text', selectPlaceholder = true) {
+            if (!cmEditor) return;
+            const doc = cmEditor.getDoc();
+            const selection = doc.getSelection();
+            if (selection) {
+                doc.replaceSelection(prefix + selection + suffix);
+            } else {
+                doc.replaceSelection(prefix + placeholder + suffix);
+                if (selectPlaceholder && placeholder) {
+                    const cursorPos = doc.getCursor();
+                    doc.setSelection(
+                        { line: cursorPos.line, ch: cursorPos.ch - suffix.length - placeholder.length },
+                        { line: cursorPos.line, ch: cursorPos.ch - suffix.length }
+                    );
+                }
+            }
+            cmEditor.focus();
+        }
+        
+        function cmToggleLinePrefix(prefix) {
+            if (!cmEditor) return;
+            cmEditor.operation(() => {
+                const doc = cmEditor.getDoc();
+                const { from, to } = { from: doc.getCursor("start"), to: doc.getCursor("end") };
+                for (let i = from.line; i <= to.line; i++) {
+                    const lineContent = doc.getLine(i);
+                    if (lineContent.startsWith(prefix)) {
+                        doc.replaceRange("", {line: i, ch: 0}, {line: i, ch: prefix.length});
+                    } else {
+                        doc.replaceRange(prefix, {line: i, ch: 0});
+                    }
+                }
+            });
+            cmEditor.focus();
+        }
+
+        function cmActionBold(cm) { cmInsertText('**', '**', '粗体'); }
+        function cmActionItalic(cm) { cmInsertText('*', '*', '斜体'); }
+        function cmActionBlockquote(cm) { cmToggleLinePrefix("> "); }
+        function cmActionCodeblock(cm) { cmInsertText('```\n', '\n```', 'code here'); }
+        function cmActionHr(cm) {
+            const doc = cm.getDoc();
+            const cursor = doc.getCursor();
+            const lineContent = doc.getLine(cursor.line).trim();
+            const insertText = (lineContent !== "" ? "\n\n---\n\n" : "---\n");
+            doc.replaceSelection(insertText);
+            cm.focus();
+        }
+
+        // --- Typewriter Mode ---
+        function toggleTypewriter() {
+            isTypewriterMode = !isTypewriterMode;
+            document.body.classList.toggle('typewriter-mode-active', isTypewriterMode);
+            toggleTypewriterModeBtn.classList.toggle('active', isTypewriterMode);
+            if (cmEditor) {
+                if (isTypewriterMode) {
+                    cmEditor.on('cursorActivity', handleTypewriterFocus);
+                    handleTypewriterFocus();
+                    showMessage("打字机模式已开启");
+                } else {
+                    cmEditor.off('cursorActivity', handleTypewriterFocus);
+                    for (let i = 0; i < cmEditor.lineCount(); i++) {
+                        cmEditor.removeLineClass(i, "wrap", "cm-typewriter-dimmed");
+                        cmEditor.removeLineClass(i, "wrap", "cm-typewriter-active-line");
+                    }
+                    showMessage("打字机模式已关闭");
+                }
+                cmEditor.refresh();
+            }
+        }
+        function handleTypewriterFocus() {
+            if (!cmEditor || !isTypewriterMode) return;
+            const currentLine = cmEditor.getCursor().line;
+            if (currentLine === lastActiveLineCM) return;
+
+            cmEditor.operation(() => {
+                if (lastActiveLineCM !== -1 && lastActiveLineCM < cmEditor.lineCount()) {
+                     cmEditor.removeLineClass(lastActiveLineCM, "wrap", "cm-typewriter-active-line");
+                }
+                for (let i = 0; i < cmEditor.lineCount(); i++) {
+                    cmEditor.removeLineClass(i, "wrap", "cm-typewriter-dimmed");
+                    if (i !== currentLine) {
+                        cmEditor.addLineClass(i, "wrap", "cm-typewriter-dimmed");
+                    }
+                }
+                cmEditor.addLineClass(currentLine, "wrap", "cm-typewriter-active-line");
+            });
+            lastActiveLineCM = currentLine;
+
+            const editorHeight = cmEditor.getWrapperElement().clientHeight;
+            const top = cmEditor.charCoords({line: currentLine, ch: 0}, "local").top;
+            const lineHeight = cmEditor.defaultTextHeight();
+            cmEditor.scrollTo(null, top - editorHeight / 2 + lineHeight / 2);
+        }
+
+        // --- Toolbar Actions ---
+        editorToolbar.addEventListener('click', (e) => {
+            const button = e.target.closest('button');
+            if (!button || !cmEditor) return;
+            const action = button.dataset.action;
+            const actions = {
+                h1: () => cmToggleLinePrefix('# '),
+                h2: () => cmToggleLinePrefix('## '),
+                h3: () => cmToggleLinePrefix('### '),
+                bold: () => cmActionBold(cmEditor),
+                italic: () => cmActionItalic(cmEditor),
+                link: showLinkModal,
+                image: showImageModal,
+                table: () => cmInsertText('\n| Header 1 | Header 2 |\n|---|---|\n| Cell 1   | Cell 2   |\n', '', '', false),
+                strikethrough: () => cmInsertText('~~', '~~', '删除内容'),
+                underline: () => cmInsertText('<u>', '</u>', '下划线内容'),
+                blockquote: () => cmActionBlockquote(cmEditor),
+                codeblock: () => cmActionCodeblock(cmEditor),
+                hr: () => cmActionHr(cmEditor),
+                checkbox: () => cmToggleLinePrefix('- [ ] '),
+                completedCheckbox: () => cmToggleLinePrefix('- [x] '),
+                jpQuotes: () => cmInsertText('「', '」', '引文'),
+                jpSingleQuotes: () => cmInsertText('『', '』', '引文'),
+                parentheses: () => cmInsertText('（', '）', '内容'),
+                bookTitle: () => cmInsertText('《', '》', '书名'),
+                deleteLine: () => cmEditor.execCommand("deleteLine"),
+                undo: () => cmEditor.undo(),
+                redo: () => cmEditor.redo(),
+                convertQuotes: () => convertToJapaneseQuotesCM(),
+                s2t: () => convertS2TCM(),
+                generateImage: () => generateImage(),
+                generatePdf: () => generatePdf()
+            };
+            if (actions[action]) actions[action]();
+            else console.warn(`Unknown action: ${action}`);
+        });
+
+        // --- Modal Handling ---
+        function showLinkModal() {
+            linkUrlInput.value = 'https://';
+            linkTextInput.value = cmEditor.getSelection() || '';
+            linkModal.classList.add('active');
+            linkUrlInput.focus();
+        }
+        function showImageModal() {
+            imageUrlInput.value = 'https://';
+            imageAltInput.value = cmEditor.getSelection() || '';
+            imageModal.classList.add('active');
+            imageUrlInput.focus();
+        }
+        function closeModal(modalElement) {
+            modalElement.classList.remove('active');
+            cmEditor.focus();
+        }
+
+        insertLinkButton.addEventListener('click', () => {
+            const url = linkUrlInput.value.trim();
+            const text = linkTextInput.value.trim() || url;
+            if (url && validateUrl(url)) {
+                cmInsertText(`[${text}](${url})`, '', '', false);
+                closeModal(linkModal);
+            } else { showMessage("请输入有效的链接 URL", 3000); linkUrlInput.focus(); }
+        });
+        [cancelLinkButton, linkModal].forEach(el => el.addEventListener('click', (e) => { if (e.target === el) closeModal(linkModal); }));
+
+        insertImageButton.addEventListener('click', () => {
+            const url = imageUrlInput.value.trim();
+            const alt = imageAltInput.value.trim() || 'image';
+            if (url) {
+                cmInsertText(`![${alt}](${url})`, '', '', false);
+                closeModal(imageModal);
+            } else { showMessage("请输入图片 URL", 3000); imageUrlInput.focus(); }
+        });
+        [cancelImageButton, imageModal].forEach(el => el.addEventListener('click', (e) => { if (e.target === el) closeModal(imageModal); }));
+
+        // --- Editor Functions ---
+        function convertToJapaneseQuotesCM() {
+            if (!cmEditor) return;
+            cmEditor.setValue(cmEditor.getValue().replace(/“/g, '「').replace(/”/g, '」').replace(/"([^"]*)"/g, '「$1」').replace(/'([^']*)'/g, '『$1』'));
+            showMessage("引号已转换为日式风格");
+        }
+
+        async function loadOpenCC() {
+            if (openCCLoaded) return true;
+            if (typeof OpenCC === 'undefined') {
+                showMessage("正在加载简繁转换库...", 2000);
+                try {
+                    const script = document.createElement('script');
+                    script.src = "https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.min.js";
+                    await new Promise((resolve, reject) => { script.onload = resolve; script.onerror = reject; document.body.appendChild(script); });
+                    openccConverter = OpenCC.Converter({ from: 'cn', to: 'twp' });
+                    openCCLoaded = true;
+                    return true;
+                } catch (e) { reportError("无法加载 OpenCC 库。"); return false; }
+            } else {
+                 if(!openccConverter) openccConverter = OpenCC.Converter({ from: 'cn', to: 'twp' });
+                 openCCLoaded = true;
+                 return true;
+            }
+        }
+        async function convertS2TCM() {
+            if (!cmEditor || !await loadOpenCC()) return;
+            try {
+                const selection = cmEditor.getSelection();
+                const converted = openccConverter(selection || cmEditor.getValue());
+                if (selection) cmEditor.replaceSelection(converted);
+                else cmEditor.setValue(converted);
+                showMessage("已完成简体到繁体转换");
+            } catch (e) { reportError(`简繁转换失败: ${e.message}`); }
+        }
+        
+        async function generateImage() {
+            if (isMobile() && currentMobileView !== 'preview') applyMobileView('preview');
+            await new Promise(resolve => setTimeout(resolve, 300));
+            showMessage("正在生成图片...", 2000);
+            try {
+                const canvas = await html2canvas(markdownPreview, { backgroundColor: getCssVariableValue('--current-secondary-bg'), scale: 2, useCORS: true });
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = `markdown-export-${Date.now()}.png`;
+                link.click();
+                showMessage("图片已生成并开始下载!");
+            } catch (e) { reportError(`图片生成失败: ${e.message}`); }
+        }
+        async function generatePdf() {
+            if (isMobile() && currentMobileView !== 'preview') applyMobileView('preview');
+            await new Promise(resolve => setTimeout(resolve, 300));
+            showMessage("正在生成PDF...", 3000);
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'pt', 'a4');
+                const canvas = await html2canvas(markdownPreview, { scale: 2, useCORS: true, backgroundColor: getCssVariableValue('--current-secondary-bg')});
+                const imgData = canvas.toDataURL('image/png');
+                const { width: imgWidth, height: imgHeight } = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth() - 80;
+                const pdfHeight = (imgHeight * pdfWidth) / imgWidth;
+                let heightLeft = pdfHeight;
+                let position = 40;
+
+                pdf.addImage(imgData, 'PNG', 40, position, pdfWidth, pdfHeight);
+                heightLeft -= (pdf.internal.pageSize.getHeight() - 80);
+
+                while (heightLeft > 0) {
+                  position = heightLeft - pdfHeight - 40;
+                  pdf.addPage();
+                  pdf.addImage(imgData, 'PNG', 40, position, pdfWidth, pdfHeight);
+                  heightLeft -= (pdf.internal.pageSize.getHeight() - 80);
+                }
+                pdf.save(`markdown-export-${Date.now()}.pdf`);
+                showMessage("PDF已生成并开始下载!");
+            } catch (e) { reportError(`PDF生成失败: ${e.toString()}`); }
+        }
+
+        // --- Hexo Mode Specifics ---
+        function getFormattedDate() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        function generateHexoFrontmatter() {
+            const categoriesRaw = hexoCategoriesInput.value.trim();
+            return {
+                title: hexoTitleInput.value.trim(),
+                pubDate: hexoPubDateInput.value,
+                categories: categoriesRaw ? categoriesRaw.split(',').map(c => c.trim()).filter(Boolean) : [],
+                description: hexoDescriptionInput.value.trim()
+            };
+        }
+        function copyHexoMarkdownContent() {
+            if (currentMode !== 'hexo' || !cmEditor) return;
+            const fmObj = generateHexoFrontmatter();
+            let fmString = "";
+            if (fmObj.title || fmObj.pubDate || fmObj.categories.length > 0 || fmObj.description) {
+                 fmString = `---\n`;
+                 if (fmObj.title) fmString += `title: ${fmObj.title}\n`;
+                 if (fmObj.pubDate) fmString += `date: ${fmObj.pubDate} ${new Date().toLocaleTimeString('zh-CN', {hour12: false})}\n`;
+                 if (fmObj.categories.length) fmString += `categories:\n${fmObj.categories.map(c => `  - ${c}`).join('\n')}\n`;
+                 if (fmObj.description) fmString += `description: '${fmObj.description.replace(/'/g, "''")}'\n`;
+                 fmString += `---\n\n`;
+            }
+            navigator.clipboard.writeText(fmString + cmEditor.getValue())
+                .then(() => showMessage("已复制带标识的 Markdown 到剪贴板!"))
+                .catch(err => reportError(`复制失败: ${err.message}`));
+        }
+        function openHexoTargetUrl() {
+            if (currentMode !== 'hexo' || !hexoTargetUrl) {
+                showMessage("Hexo URL 未设置或当前非 Hexo 模式。");
+                if (!hexoTargetUrl) hexoUrlModal.classList.add('active');
+                return;
+            }
+            if (validateUrl(hexoTargetUrl)) {
+                window.open(hexoTargetUrl, '_blank');
+            } else {
+                reportError("配置的 Hexo URL 无效。");
+                hexoUrlModal.classList.add('active');
+            }
+        }
+
+        // --- Event Listeners Setup ---
+        function setupEventListeners() {
+            toggleThemeButton.addEventListener('click', toggleTheme);
+            menuToggleButton.addEventListener('click', () => appDropdownMenu.classList.toggle('active'));
+            document.addEventListener('click', (e) => {
+                if (!menuToggleButton.contains(e.target) && !appDropdownMenu.contains(e.target)) {
+                    appDropdownMenu.classList.remove('active');
+                }
+            });
+
+            switchToEditorModeBtn.addEventListener('click', () => applyAppMode('editor'));
+            switchToHexoModeBtn.addEventListener('click', () => applyAppMode('hexo'));
+            toggleTypewriterModeBtn.addEventListener('click', toggleTypewriter);
+            showEditorBtnMobile.addEventListener('click', () => applyMobileView('editor'));
+            showPreviewBtnMobile.addEventListener('click', () => applyMobileView('preview'));
+            
+            saveHexoUrlButton.addEventListener('click', () => {
+                const url = hexoTargetUrlInput.value.trim();
+                urlErrorEl.style.display = validateUrl(url) ? 'none' : 'block';
+                if (validateUrl(url)) {
+                    hexoTargetUrl = url;
+                    localStorage.setItem('hexoTargetUrl', hexoTargetUrl);
+                    closeModal(hexoUrlModal);
+                    showMessage("Hexo 目标 URL 已保存!");
+                }
+            });
+            hexoUrlModal.addEventListener('click', (e) => { if (e.target === hexoUrlModal) closeModal(hexoUrlModal); });
+
+            copyHexoMarkdownBtn.addEventListener('click', copyHexoMarkdownContent);
+            openHexoUrlBtn.addEventListener('click', openHexoTargetUrl);
+            [hexoTitleInput, hexoPubDateInput, hexoCategoriesInput, hexoDescriptionInput].forEach(input => {
+                if(input) input.addEventListener('input', updatePreview);
+            });
+
+            window.addEventListener('resize', () => {
+                applyMobileView(currentMobileView);
+                if (!isMobile()) {
+                    editorWrapper.classList.remove('mobile-hidden');
+                    previewWrapper.classList.remove('mobile-hidden');
+                    mobileViewToggleEl.style.display = 'none';
+                }
+                updateEditorLayout();
+            });
+
+            window.addEventListener('beforeunload', () => {
+                if (cmEditor) localStorage.setItem('markdownContent', cmEditor.getValue());
+            });
+        }
+
+        // --- Initialization ---
+        function init() {
+            try {
+                autoSetTheme();
+                initCodeMirror();
+                applyAppMode(currentMode);
+                
+                if (isMobile()) {
+                    applyMobileView('editor');
+                } else {
+                    mobileViewToggleEl.style.display = 'none';
+                }
+                
+                if(hexoPubDateInput) hexoPubDateInput.value = getFormattedDate();
+                
+                updatePreview();
+                updateStats();
+                updateTime();
+                setInterval(updateTime, 1000);
+                setupEventListeners();
+                
+                setTimeout(updateEditorLayout, 100);
+
+                document.body.classList.remove('app-loading');
+                showMessage("Markdown 编辑器已准备就绪!", 2000);
+
+            } catch (error) {
+                reportError(`初始化失败: ${error.message}. Stack: ${error.stack}`);
+                document.body.innerHTML = `<div style="padding: 20px; text-align: center; color: red; font-size: 1.2em;">编辑器加载失败，请检查控制台获取更多信息。</div>`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if(typeof mermaid !== 'undefined') {
+                mermaid.initialize({ startOnLoad: false, theme: 'default' });
+            }
+            init();
+        });
+
+    </script>
+</body>
+</html>
