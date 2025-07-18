@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025分红计划 (专业版)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* --- 基础与字体设置 (同V2) --- */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Roboto:wght@300;400&display=swap');
+        :root {
+            --primary-color: #0a4d68;
+            --secondary-color: #088395;
+            --accent-color: #f5b971;
+            --text-color: #333;
+            --bg-color: #f1f1f1;
+            --page-color: #fdfaf3;
+            --shadow-color: rgba(0, 0, 0, 0.2);
+            --border-radius: 12px;
+            --transition-speed: 0.5s;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* 改为flex-start以适应更长的内容 */
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        /* --- 书籍与卡片布局 (基本同V2) --- */
+        .book-container { display: flex; width: 100%; max-width: 1600px; perspective: 2500px; }
+        .page { background-color: var(--page-color); padding: 30px 40px; box-shadow: 0 10px 30px var(--shadow-color), 0 0 0 1px #ddd; transition: transform var(--transition-speed) ease; flex: 1; display: flex; flex-direction: column; gap: 25px; max-height: 95vh; overflow-y: auto; }
+        #page-left { border-top-left-radius: var(--border-radius); border-bottom-left-radius: var(--border-radius); transform-origin: right center; }
+        #page-right { border-top-right-radius: var(--border-radius); border-bottom-right-radius: var(--border-radius); transform-origin: left center; border-left: 1px solid #ccc; }
+        .book-container:hover #page-left { transform: rotateY(-5deg); }
+        .book-container:hover #page-right { transform: rotateY(5deg); }
+        .card { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(5px); border-radius: var(--border-radius); padding: 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); animation: fadeIn 0.8s ease-in-out both; opacity: 0; transform: translateY(20px); }
+        .card:nth-child(1) { animation-delay: 0.1s; } .card:nth-child(2) { animation-delay: 0.2s; } .card:nth-child(3) { animation-delay: 0.3s; } .card:nth-child(4) { animation-delay: 0.4s; } .card:nth-child(5) { animation-delay: 0.5s; }
+        .card h2 { margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid var(--secondary-color); padding-bottom: 10px; font-size: 1.8em; }
+
+        /* --- 结果与按钮组 (部分同V2) --- */
+        .results-header { display: flex; justify-content: space-between; align-items: center; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        button { padding: 10px 20px; border: none; border-radius: 8px; font-size: 0.9em; font-weight: bold; cursor: pointer; transition: all 0.3s ease; color: #fff; }
+        button.primary { background-color: var(--secondary-color); }
+        button.secondary { background-color: var(--accent-color); color: var(--primary-color); }
+        button:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); }
+        
+        /* --- 历史记录 (新增) --- */
+        .history-item {
+            background-color: #fff;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            cursor: pointer;
+            background-color: rgba(10, 77, 104, 0.05);
+        }
+        .history-header:hover { background-color: rgba(10, 77, 104, 0.1); }
+        .history-header h4 { margin: 0; color: var(--primary-color); }
+        .history-date { font-size: 0.8em; color: #777; }
+        .history-details {
+            max-height: 0;
+            opacity: 0;
+            transition: max-height 0.5s ease-out, opacity 0.5s ease, padding 0.5s ease;
+            padding: 0 15px;
+        }
+        .history-details.open {
+            max-height: 500px; /* 足够大的高度 */
+            opacity: 1;
+            padding: 15px;
+        }
+        .history-item .results-table { margin-top: 0; }
+        #no-history-msg { text-align: center; color: #999; padding: 20px; }
+        
+        /* --- 其他 (基本同V2) --- */
+        /* 输入、表格、图表、计划书、动画、响应式等样式... */
+        .input-group,.settings-grid{display:grid;gap:20px;margin-bottom:20px}.input-group{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.settings-grid{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}.input-field{display:flex;flex-direction:column}.input-field label{font-weight:700;color:var(--primary-color);margin-bottom:8px;font-size:.9em}.input-field .value-display{font-size:1.8em;font-weight:700;color:var(--secondary-color)}input[type=text]{padding:12px;border:1px solid #ccc;border-radius:8px;font-size:1.1em;transition:all .3s ease;background-color:#fff}input[type=text]:focus{outline:0;border-color:var(--secondary-color);box-shadow:0 0 8px rgba(8,131,149,.2)}.results-table{width:100%;border-collapse:collapse;margin-top:20px}.results-table td,.results-table th{padding:15px;text-align:left;border-bottom:1px solid #ddd}.results-table th{background-color:rgba(10,77,104,.1);color:var(--primary-color)}.results-table .total-amount{font-weight:700;color:var(--secondary-color);font-size:1.2em}.charts-container{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center}.chart-wrapper{position:relative;height:300px}#page-right h3{font-size:1.5rem;margin-top:20px;border-left:4px solid var(--accent-color);padding-left:10px}#page-right h4{font-size:1.2rem;color:var(--secondary-color);margin-top:15px}.plan-table{width:100%;border-collapse:collapse;margin-top:15px;font-size:.9em}.plan-table td,.plan-table th{border:1px solid #ccc;padding:8px 12px;text-align:center}.plan-table th{background-color:rgba(10,77,104,.1)}@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        @media (max-width:1200px){body{display:block;padding:10px;align-items:stretch}.book-container{flex-direction:column;min-height:auto;perspective:none}.page{border-radius:var(--border-radius)!important;margin-bottom:20px;padding:20px;box-shadow:0 5px 20px var(--shadow-color);max-height:none;overflow-y:visible}.book-container:hover .page{transform:none!important}}
+        @media (max-width:768px){.charts-container{grid-template-columns:1fr}.chart-wrapper{height:250px}}
+
+    </style>
+</head>
+<body>
+
+    <div class="book-container">
+        <!-- 左侧页面 -->
+        <div class="page" id="page-left">
+            <header><h1>2025分红</h1></header>
+
+            <section class="card">
+                <h2>财务概览</h2>
+                <!-- (内容同V2) -->
+                <div class="input-group">
+                    <div class="input-field"><label for="totalAmount">输入总金额 (元)</label><input type="text" id="totalAmount" value="50000"></div>
+                    <div class="input-field"><label for="necessaryExpenses">输入必要支出 (元)</label><input type="text" id="necessaryExpenses" value="3000"></div>
+                    <div class="input-field"><label>可供比例分配金额</label><span id="distributableAmount" class="value-display" data-value="0">¥ 0.00</span></div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="results-header">
+                    <h2>分红结果</h2>
+                    <div class="button-group">
+                        <button id="saveRecordBtn" class="primary">保存当前记录</button>
+                        <button id="exportCsvBtn" class="secondary">导出为CSV</button>
+                    </div>
+                </div>
+                <table class="results-table">
+                    <thead><tr><th>成员</th><th>必要分配 (元)</th><th>比例分配 (元)</th><th>总计分红 (元)</th></tr></thead>
+                    <tbody id="resultsTableBody"></tbody>
+                </table>
+            </section>
+            
+            <section class="card"><h2>数据可视化</h2><div class="charts-container"><div class="chart-wrapper"><canvas id="barChart"></canvas></div><div class="chart-wrapper"><canvas id="pieChart"></canvas></div></div></section>
+            
+            <!-- 新增: 历史记录卡片 -->
+            <section class="card">
+                <h2>历史分红记录</h2>
+                <div id="historyList">
+                    <!-- JS动态生成历史记录 -->
+                </div>
+            </section>
+
+            <section class="card"><h2>分配设置</h2><div id="settings" class="settings-grid"></div><div class="button-group" style="justify-content: flex-start; margin-top:20px;"><button id="saveSettingsBtn" class="primary">保存设置</button><button id="resetSettingsBtn" class="secondary">恢复默认设置</button></div></section>
+        </div>
+
+        <!-- 右侧页面 (内容不变) -->
+        <div class="page" id="page-right">
+             <header>
+                 <h2>2026年发展计划（学生自主运营版）</h2>
+            </header>
+            <p><strong>核心原则：</strong>学生运营、轻资产启动、闭环盈利、资源复用</p>
+            <hr>
+
+            <article>
+                <h3>一、四大业务线及执行方案</h3>
+                
+                <h4>1. 易教平板交易（低买高卖）</h4>
+                <ul>
+                    <li><strong>货源渠道：</strong>毕业生闲置平板（毕业季集中收购，压价30%-50%），闲鱼/转转同城面交。</li>
+                    <li><strong>盈利模式：</strong>收购价 P880S≤450元，P980S≤550元。翻新成本：贴膜（5元/张）+ 酒精清洁。售价：溢价400-600元。</li>
+                    <li><strong>学生分工：</strong>质检组（1人），谈判组（2人，负责压价收购&销售话术）。</li>
+                </ul>
+
+                <h4>2. 学霸笔记/集训资料（暴利变现）</h4>
+                 <ul>
+                    <li><strong>生产资料：</strong>二手激光/喷墨打印机（如佳能G3800，650元，单张成本0.05元），70g复印纸（25元/500张）+简易装订机（100元）。</li>
+                    <li><strong>内容生产：</strong>付费购买年级TOP5学生笔记（50-100元/科买断版权），整合集训学生资料。</li>
+                    <li><strong>定价策略：</strong></li>
+                 </ul>
+                 <table class="plan-table">
+                     <thead>
+                         <tr><th>产品类型</th><th>成本</th><th>售价</th><th>利润率</th></tr>
+                     </thead>
+                     <tbody>
+                         <tr><td>学霸笔记</td><td>~20元/本</td><td>299元</td><td>~1495%</td></tr>
+                         <tr><td>名校模拟题合集</td><td>~2.5元/册</td><td>49元</td><td>~1800%</td></tr>
+                         <tr><td>集训资料</td><td>~8元</td><td>199元</td><td>~2487%</td></tr>
+                     </tbody>
+                 </table>
+
+                <h4>3. 学生补习班（师资0成本）</h4>
+                <ul>
+                    <li><strong>运作模式：</strong>教师为优秀学生（课时费按学费40%分成）。教室排课：周末全天分3时段，每间教室日周转3次。</li>
+                    <li><strong>定价参考：</strong></li>
+                </ul>
+                <table class="plan-table">
+                     <thead>
+                         <tr><th>课程类型</th><th>课时</th><th>学费</th><th>教师分成</th><th>机构留存</th></tr>
+                     </thead>
+                     <tbody>
+                         <tr><td>单科强化班</td><td>10节</td><td>1000元</td><td>400元</td><td>600元</td></tr>
+                         <tr><td>冲刺衔接班</td><td>30节</td><td>2000元</td><td>800元</td><td>1200元</td></tr>
+                     </tbody>
+                 </table>
+                 
+                <h3>二、首期执行流程（1-3个月）</h3>
+                <h4>1. 启动期（第1个月）</h4>
+                <ul>
+                    <li>投入1万元收购二手平板（目标30台）+ 打印机等设备。</li>
+                    <li>签约5名学霸买断笔记版权（预付1000元）。</li>
+                    <li>招募首期教师2人（覆盖3科）。</li>
+                </ul>
+                <h4>2. 裂变期（第2个月）</h4>
+                <ul>
+                    <li>平板销售：加赠相关基础资料（增值50元）。</li>
+                    <li>资料包营销：购平板送59元高级资料代金券（锁定复购）。</li>
+                    <li>补习班裂变：推荐1名学员赠2节课程，而非直接减免费用（满班率需>80%）。</li>
+                </ul>
+                
+                <h3>三、成本控制与盈利保障</h3>
+                <ul>
+                    <li><strong>人力成本封顶：</strong>教师薪资 = 学费分成 + 资料销售提成（无底薪）。</li>
+                </ul>
+            </article>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM 元素获取 ---
+        const totalAmountInput = document.getElementById('totalAmount'),
+              necessaryExpensesInput = document.getElementById('necessaryExpenses'),
+              distributableAmountEl = document.getElementById('distributableAmount'),
+              resultsTableBody = document.getElementById('resultsTableBody'),
+              settingsContainer = document.getElementById('settings'),
+              historyListContainer = document.getElementById('historyList'),
+              saveSettingsBtn = document.getElementById('saveSettingsBtn'),
+              resetSettingsBtn = document.getElementById('resetSettingsBtn'),
+              saveRecordBtn = document.getElementById('saveRecordBtn'),
+              exportCsvBtn = document.getElementById('exportCsvBtn');
+        
+        // --- 状态与实例 ---
+        let barChartInstance, pieChartInstance;
+        const defaultPeopleData = [
+            { id: 'wang', name: '王', necessary: 700, percentage: 40 },
+            { id: 'xu', name: '徐', necessary: 600, percentage: 10 },
+            { id: 'zhang', name: '张', necessary: 500, percentage: 25 },
+            { id: 'guo', name: '郭', necessary: 0, percentage: 25 }
+        ];
+        let peopleData = [],
+            historyData = [],
+            currentResults = []; // 存储当前计算结果
+
+        // --- 功能函数 ---
+        const formatCurrency = (num) => `¥ ${num.toFixed(2)}`;
+        
+        const animateValue = (element, start, end, duration) => { /* (同V2) */
+            let startTimestamp=null;const step=t=>{startTimestamp||(startTimestamp=t);const e=Math.min((t-startTimestamp)/duration,1),a=start+e*(2-e)*(end-start);element.innerHTML=formatCurrency(a),e<1?window.requestAnimationFrame(step):element.innerHTML=formatCurrency(end)};window.requestAnimationFrame(step);
+        };
+        const showToast = (message) => { /* (同V2) */
+            const t=document.createElement("div");t.className="toast",t.textContent=message,document.body.appendChild(t),setTimeout(()=>{t.remove()},3e3)
+        };
+        
+        // --- 数据加载/保存 ---
+        const loadData = () => {
+            const savedSettings = localStorage.getItem('dividendSettings');
+            const savedHistory = localStorage.getItem('dividendHistory');
+            peopleData = savedSettings ? JSON.parse(savedSettings) : JSON.parse(JSON.stringify(defaultPeopleData));
+            historyData = savedHistory ? JSON.parse(savedHistory) : [];
+            renderSettings();
+            renderHistory();
+            calculateAndRender();
+        };
+
+        const saveSettings = () => { /* (逻辑同V2) */ 
+            try {
+                let totalPercentage = 0;
+                const newPeopleData = peopleData.map(p => {
+                    const name = document.getElementById(`${p.id}-name`).value;
+                    const necessary = parseFloat(document.getElementById(`${p.id}-necessary`).value.trim());
+                    const percentage = parseFloat(document.getElementById(`${p.id}-percentage`).value.trim());
+
+                    if (isNaN(necessary) || isNaN(percentage) || necessary < 0 || percentage < 0 || name.trim() === '') {
+                        throw new Error(`成员"${p.name}"的输入无效。请检查是否为非负数字。`);
+                    }
+                    totalPercentage += percentage;
+                    return { id: p.id, name, necessary, percentage };
+                });
+                
+                if (Math.abs(totalPercentage - 100) > 0.01) {
+                    throw new Error(`所有成员的比例总和必须为 100%，当前为 ${totalPercentage}%。`);
+                }
+
+                peopleData = newPeopleData;
+                localStorage.setItem('dividendSettings', JSON.stringify(peopleData));
+                showToast('设置已成功保存！');
+                calculateAndRender();
+            } catch (error) {
+                showToast(error.message);
+            }
+        };
+        const resetSettings = () => { /* (逻辑同V2) */ 
+             if (confirm('您确定要恢复到初始设置吗？当前修改将丢失。')) {
+                peopleData = JSON.parse(JSON.stringify(defaultPeopleData));
+                localStorage.removeItem('dividendSettings');
+                renderSettings();
+                calculateAndRender();
+                showToast('已恢复为默认设置。');
+            }
+        };
+
+        // --- 核心计算与渲染 ---
+        const calculateAndRender = () => {
+            const totalAmount = parseFloat(totalAmountInput.value.trim() || '0');
+            const necessaryExpenses = parseFloat(necessaryExpensesInput.value.trim() || '0');
+            const totalPersonalNecessary = peopleData.reduce((sum, p) => sum + p.necessary, 0);
+            const distributableAfterExpenses = Math.max(0, totalAmount - necessaryExpenses - totalPersonalNecessary);
+            
+            const oldDistributable = parseFloat(distributableAmountEl.dataset.value);
+            animateValue(distributableAmountEl, oldDistributable, distributableAfterExpenses, 800);
+            distributableAmountEl.dataset.value = distributableAfterExpenses;
+
+            currentResults = peopleData.map(person => {
+                const proportionalAmount = distributableAfterExpenses > 0 ? distributableAfterExpenses * (person.percentage / 100) : 0;
+                const totalShare = person.necessary + proportionalAmount;
+                return { ...person, proportionalAmount, totalShare };
+            });
+
+            resultsTableBody.innerHTML = currentResults.map(res => `
+                <tr>
+                    <td>${res.name}</td>
+                    <td>${formatCurrency(res.necessary)}</td>
+                    <td>${formatCurrency(res.proportionalAmount)}</td>
+                    <td class="total-amount">${formatCurrency(res.totalShare)}</td>
+                </tr>
+            `).join('');
+            
+            updateCharts(currentResults);
+        };
+        const renderSettings = () => { /* (同V2) */
+            settingsContainer.innerHTML = peopleData.map(p => `
+                <div class="person-setting">
+                    <h4>${p.name}</h4>
+                    <div class="setting-input-group">
+                        <label for="${p.id}-name">姓名</label><input type="text" id="${p.id}-name" value="${p.name}">
+                        <label for="${p.id}-necessary">必要分配</label><input type="text" id="${p.id}-necessary" value="${p.necessary}">
+                        <label for="${p.id}-percentage">比例分配 (%)</label><input type="text" id="${p.id}-percentage" value="${p.percentage}">
+                    </div>
+                </div>`).join('');
+        };
+        const updateCharts = (results) => { /* (同V2) */ 
+            const labels=results.map(r=>r.name),data=results.map(r=>r.totalShare),chartColors=["#0a4d68","#088395","#f5b971","#ff7b54","#8ec3b0","#e7d3a3"];barChartInstance&&barChartInstance.destroy(),pieChartInstance&&pieChartInstance.destroy();const barCtx=document.getElementById("barChart").getContext("2d");barChartInstance=new Chart(barCtx,{type:"bar",data:{labels:labels,datasets:[{label:"总计分红 (元)",data:data,backgroundColor:chartColors}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1},title:{display:!0,text:"各成员分红总额对比"}},scales:{y:{beginAtZero:!0,ticks:{callback:e=>`¥ ${e}`}}}}});const pieCtx=document.getElementById("pieChart").getContext("2d");pieChartInstance=new Chart(pieCtx,{type:"pie",data:{labels:labels,datasets:[{data:data,backgroundColor:chartColors,hoverOffset:4}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"top"},title:{display:!0,text:"分红总额占比"},tooltip:{callbacks:{label:function(e){const t=e.label||"",a=e.parsed,l=e.chart.data.datasets[0].data.reduce((e,t)=>e+t,0);return`${t}: ${formatCurrency(a)} (${(l>0?a/l*100:0).toFixed(2)}%)`}}}}}});
+        };
+
+        // --- 历史记录函数 (新增) ---
+        const renderHistory = () => {
+            if (historyData.length === 0) {
+                historyListContainer.innerHTML = '<p id="no-history-msg">还没有保存过任何记录。</p>';
+                return;
+            }
+            historyListContainer.innerHTML = historyData.map(record => `
+                <div class="history-item" id="history-${record.id}">
+                    <div class="history-header" data-id="${record.id}">
+                        <div>
+                            <h4>${record.name}</h4>
+                            <span class="history-date">保存于: ${record.date}</span>
+                        </div>
+                        <button class="secondary" style="padding: 5px 10px;" data-delete-id="${record.id}">删除</button>
+                    </div>
+                    <div class="history-details">
+                         <p><strong>总金额:</strong> ${formatCurrency(record.inputs.total)} | <strong>必要支出:</strong> ${formatCurrency(record.inputs.expenses)}</p>
+                         <table class="results-table">
+                            <thead><tr><th>成员</th><th>必要</th><th>比例</th><th>总计</th></tr></thead>
+                            <tbody>${record.results.map(r => `
+                                <tr>
+                                    <td>${r.name}</td>
+                                    <td>${formatCurrency(r.necessary)}</td>
+                                    <td>${formatCurrency(r.proportionalAmount)}</td>
+                                    <td class="total-amount">${formatCurrency(r.totalShare)}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                         </table>
+                    </div>
+                </div>`).join('');
+        };
+        
+        const saveCurrentRecord = () => {
+            const recordName = prompt("请输入本次分红的名称：", `分红 ${new Date().toLocaleDateString()}`);
+            if (!recordName) return;
+
+            const record = {
+                id: Date.now(),
+                name: recordName,
+                date: new Date().toLocaleString(),
+                inputs: {
+                    total: parseFloat(totalAmountInput.value),
+                    expenses: parseFloat(necessaryExpensesInput.value)
+                },
+                results: currentResults
+            };
+            historyData.unshift(record);
+            localStorage.setItem('dividendHistory', JSON.stringify(historyData));
+            renderHistory();
+            showToast('记录已成功保存！');
+        };
+        
+        const deleteRecord = (id) => {
+            if (confirm("确定要删除这条历史记录吗？")) {
+                historyData = historyData.filter(r => r.id !== id);
+                localStorage.setItem('dividendHistory', JSON.stringify(historyData));
+                const itemToRemove = document.getElementById(`history-${id}`);
+                itemToRemove.style.opacity = '0';
+                itemToRemove.style.transform = 'translateX(-100px)';
+                setTimeout(() => {
+                    renderHistory(); // 重新渲染以防万一
+                }, 400);
+                showToast('记录已删除。');
+            }
+        };
+        
+        // --- 导出CSV函数 (新增) ---
+        const exportToCsv = () => {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // \uFEFF for BOM to handle non-ASCII chars in Excel
+            const headers = ["成员", "必要分配(元)", "比例分配(元)", "总计分红(元)"];
+            csvContent += headers.join(",") + "\r\n";
+            currentResults.forEach(row => {
+                const rowData = [row.name, row.necessary.toFixed(2), row.proportionalAmount.toFixed(2), row.totalShare.toFixed(2)];
+                csvContent += rowData.join(",") + "\r\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `分红结果_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("CSV文件已开始下载。");
+        };
+
+        // --- 事件绑定 ---
+        [totalAmountInput, necessaryExpensesInput].forEach(input => {
+            input.addEventListener('input', calculateAndRender);
+            input.addEventListener('keypress', e => !/[0-9.]/.test(e.key) && e.preventDefault());
+        });
+        saveSettingsBtn.addEventListener('click', saveSettings);
+        resetSettingsBtn.addEventListener('click', resetSettings);
+        saveRecordBtn.addEventListener('click', saveCurrentRecord);
+        exportCsvBtn.addEventListener('click', exportToCsv);
+
+        historyListContainer.addEventListener('click', (e) => {
+            const header = e.target.closest('.history-header');
+            const deleteBtn = e.target.closest('[data-delete-id]');
+
+            if (deleteBtn) {
+                e.stopPropagation(); // 阻止展开/折叠事件
+                deleteRecord(Number(deleteBtn.dataset.deleteId));
+                return;
+            }
+            if (header) {
+                const details = header.nextElementSibling;
+                details.classList.toggle('open');
+            }
+        });
+        
+        // --- 初始化 ---
+        loadData();
+    });
+    </script>
+</body>
+</html>
