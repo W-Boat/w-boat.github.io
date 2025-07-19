@@ -73,66 +73,24 @@
     <!-- ======================= -->
     <template id="merger-template">
         <div class="space-y-8 bg-white p-6 md:p-8 rounded-2xl shadow-xl">
-            <!-- 上传区 -->
-            <div>
-                <h2 class="text-2xl font-semibold text-gray-700 flex items-center gap-3"><i data-lucide="upload-cloud" class="text-indigo-500"></i>第一步: 上传文件</h2>
-                <div id="merge-drop-zone" class="mt-4 border-3 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-all duration-300 hover:border-indigo-500 hover:bg-indigo-50">
-                    <div class="pointer-events-none"><i data-lucide="file-up" class="mx-auto h-12 w-12 text-gray-400"></i><p class="mt-4 font-semibold text-gray-700">拖拽多个 DOCX 文件，或<span class="text-indigo-600">点击选择</span></p></div>
-                </div>
-                <input type="file" id="merge-file-input" class="hidden" multiple accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-            </div>
-            <!-- 文件列表与设置 -->
-            <div id="merge-files-section" class="hidden">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-2xl font-semibold text-gray-700 flex items-center gap-3"><i data-lucide="files" class="text-indigo-500"></i>第二步: 排序与设置</h2>
-                    <button id="clear-all-btn" class="text-sm font-medium text-gray-500 hover:text-red-600 transition-colors flex items-center gap-1"><i data-lucide="trash-2" class="h-4 w-4"></i>清空</button>
-                </div>
-                <div id="file-list" class="mt-4 max-h-80 overflow-y-auto pr-2 space-y-3"></div>
-                <div class="mt-6 border-t border-gray-200 pt-6">
-                    <h3 class="text-lg font-semibold text-gray-700">合并选项</h3>
-                    <div class="mt-4 flex items-center"><input id="add-page-break" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"><label for="add-page-break" class="ml-3 block text-sm font-medium text-gray-700">在每个文档间插入分页符</label></div>
-                </div>
-            </div>
-            <!-- 执行按钮 -->
-            <div id="merge-action-section">
-                <button id="merge-button" disabled class="w-full flex items-center justify-center gap-3 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300"><i data-lucide="combine"></i><span id="merge-button-text">请先上传文件</span></button>
-                <p id="merge-error-message" class="text-red-500 text-sm mt-2 text-center"></p>
-            </div>
+            <div><h2 class="text-2xl font-semibold text-gray-700 flex items-center gap-3"><i data-lucide="upload-cloud" class="text-indigo-500"></i>第一步: 上传文件</h2><div id="merge-drop-zone" class="mt-4 border-3 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-all duration-300 hover:border-indigo-500 hover:bg-indigo-50"><div class="pointer-events-none"><i data-lucide="file-up" class="mx-auto h-12 w-12 text-gray-400"></i><p class="mt-4 font-semibold text-gray-700">拖拽多个 DOCX 文件，或<span class="text-indigo-600">点击选择</span></p></div></div><input type="file" id="merge-file-input" class="hidden" multiple accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></div>
+            <div id="merge-files-section" class="hidden"><div class="flex justify-between items-center"><h2 class="text-2xl font-semibold text-gray-700 flex items-center gap-3"><i data-lucide="files" class="text-indigo-500"></i>第二步: 排序与设置</h2><button id="clear-all-btn" class="text-sm font-medium text-gray-500 hover:text-red-600 transition-colors flex items-center gap-1"><i data-lucide="trash-2" class="h-4 w-4"></i>清空</button></div><div id="file-list" class="mt-4 max-h-80 overflow-y-auto pr-2 space-y-3"></div><div class="mt-6 border-t border-gray-200 pt-6"><h3 class="text-lg font-semibold text-gray-700">合并选项</h3><div class="mt-4 flex items-center"><input id="add-page-break" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"><label for="add-page-break" class="ml-3 block text-sm font-medium text-gray-700">在每个文档间插入分页符</label></div></div></div>
+            <div id="merge-action-section"><button id="merge-button" disabled class="w-full flex items-center justify-center gap-3 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300"><i data-lucide="combine"></i><span id="merge-button-text">请先上传文件</span></button><p id="merge-error-message" class="text-red-500 text-sm mt-2 text-center"></p></div>
         </div>
     </template>
-
     <template id="splitter-template">
         <div class="space-y-8 bg-white p-6 md:p-8 rounded-2xl shadow-xl">
-            <!-- 上传区 -->
-            <div>
-                <h2 class="text-2xl font-semibold text-gray-700 flex items-center gap-3"><i data-lucide="file-up" class="text-indigo-500"></i>第一步: 上传单个文件</h2>
-                <div id="split-drop-zone" class="mt-4 border-3 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-all duration-300 hover:border-indigo-500 hover:bg-indigo-50">
-                    <div class="pointer-events-none"><i data-lucide="file-scan" class="mx-auto h-12 w-12 text-gray-400"></i><p class="mt-4 font-semibold text-gray-700">拖拽一个 DOCX 文件，或<span class="text-indigo-600">点击选择</span></p></div>
-                </div>
-                <input type="file" id="split-file-input" class="hidden" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-            </div>
-            <!-- 分析与设置 -->
-            <div id="split-analysis-section" class="hidden">
-                <h2 class="text-2xl font-semibold text-gray-700 flex items-center gap-3"><i data-lucide="settings-2" class="text-indigo-500"></i>第二步: 选择分割模式</h2>
-                <div class="mt-4 bg-gray-50 rounded-lg p-4 flex justify-around text-center"><dl><dt class="text-sm text-gray-500">文件名</dt><dd id="split-file-name" class="font-semibold text-gray-800"></dd></dl><dl><dt class="text-sm text-gray-500">检测到的章节</dt><dd id="detected-sections" class="font-semibold text-gray-800"></dd></dl><dl><dt class="text-sm text-gray-500">检测到的分页符</dt><dd id="detected-page-breaks" class="font-semibold text-gray-800"></dd></dl></div>
-                <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <label for="split-by-page"><input type="radio" name="split-mode" id="split-by-page" value="page" class="sr-only"><div class="p-4 rounded-lg border-2 border-gray-300 cursor-pointer h-full"><h4 class="font-semibold">按分页符范围</h4><p class="text-sm text-gray-600 mt-1">根据手动分页符分割。输入如 "1-3, 5"。</p><input type="text" id="page-range-input" placeholder="例如: 1-3, 5" class="mt-2 w-full text-sm p-2 border border-gray-300 rounded-md"></div></label>
-                    <label for="split-by-section"><input type="radio" name="split-mode" id="split-by-section" value="section" class="sr-only"><div class="p-4 rounded-lg border-2 border-gray-300 cursor-pointer h-full"><h4 class="font-semibold">按章节</h4><p class="text-sm text-gray-600 mt-1">每个章节分割成独立文件。</p></div></label>
-                    <label for="split-single-pages"><input type="radio" name="split-mode" id="split-single-pages" value="single" class="sr-only"><div class="p-4 rounded-lg border-2 border-gray-300 cursor-pointer h-full"><h4 class="font-semibold">逐页分割</h4><p class="text-sm text-gray-600 mt-1">每个分页符分割成独立文件。</p></div></label>
-                </div>
-                 <div class="mt-4 text-xs text-gray-500"><b>新功能:</b> 现在支持在分割时保留图片和超链接。<br><b>注意:</b> "页码"是基于手动插入的“分页符”计算的，并非渲染后的实际页码。</div>
-            </div>
-            <!-- 执行按钮 -->
-            <div id="split-action-section">
-                <button id="split-button" disabled class="w-full flex items-center justify-center gap-3 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300"><i data-lucide="scissors"></i><span id="split-button-text">请先上传文件</span></button>
-                <p id="split-error-message" class="text-red-500 text-sm mt-2 text-center"></p>
-            </div>
+            <div><h2 class="text-2xl font-semibold text-gray-700 flex items-center gap-3"><i data-lucide="file-up" class="text-indigo-500"></i>第一步: 上传单个文件</h2><div id="split-drop-zone" class="mt-4 border-3 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-all duration-300 hover:border-indigo-500 hover:bg-indigo-50"><div class="pointer-events-none"><i data-lucide="file-scan" class="mx-auto h-12 w-12 text-gray-400"></i><p class="mt-4 font-semibold text-gray-700">拖拽一个 DOCX 文件，或<span class="text-indigo-600">点击选择</span></p></div></div><input type="file" id="split-file-input" class="hidden" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></div>
+            <div id="split-analysis-section" class="hidden"><h2 class="text-2xl font-semibold text-gray-700 flex items-center gap-3"><i data-lucide="settings-2" class="text-indigo-500"></i>第二步: 选择分割模式</h2><div class="mt-4 bg-gray-50 rounded-lg p-4 flex justify-around text-center"><dl><dt class="text-sm text-gray-500">文件名</dt><dd id="split-file-name" class="font-semibold text-gray-800"></dd></dl><dl><dt class="text-sm text-gray-500">检测到的章节</dt><dd id="detected-sections" class="font-semibold text-gray-800"></dd></dl><dl><dt class="text-sm text-gray-500">检测到的分页符</dt><dd id="detected-page-breaks" class="font-semibold text-gray-800"></dd></dl></div><div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4"><label for="split-by-page"><input type="radio" name="split-mode" id="split-by-page" value="page" class="sr-only"><div class="p-4 rounded-lg border-2 border-gray-300 cursor-pointer h-full"><h4 class="font-semibold">按分页符范围</h4><p class="text-sm text-gray-600 mt-1">根据手动分页符分割。输入如 "1-3, 5"。</p><input type="text" id="page-range-input" placeholder="例如: 1-3, 5" class="mt-2 w-full text-sm p-2 border border-gray-300 rounded-md"></div></label><label for="split-by-section"><input type="radio" name="split-mode" id="split-by-section" value="section" class="sr-only"><div class="p-4 rounded-lg border-2 border-gray-300 cursor-pointer h-full"><h4 class="font-semibold">按章节</h4><p class="text-sm text-gray-600 mt-1">每个章节分割成独立文件。</p></div></label><label for="split-single-pages"><input type="radio" name="split-mode" id="split-single-pages" value="single" class="sr-only"><div class="p-4 rounded-lg border-2 border-gray-300 cursor-pointer h-full"><h4 class="font-semibold">逐页分割</h4><p class="text-sm text-gray-600 mt-1">每个分页符分割成独立文件。</p></div></label></div><div class="mt-4 text-xs text-gray-500"><b>新功能:</b> 现在支持在分割时保留图片和超链接。<br><b>注意:</b> "页码"是基于手动插入的“分页符”计算的，并非渲染后的实际页码。</div></div>
+            <div id="split-action-section"><button id="split-button" disabled class="w-full flex items-center justify-center gap-3 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300"><i data-lucide="scissors"></i><span id="split-button-text">请先上传文件</span></button><p id="split-error-message" class="text-red-500 text-sm mt-2 text-center"></p></div>
         </div>
     </template>
     
     <script>
     // --- 主程序 ---
-    document.addEventListener('DOMContentLoaded', () => {
+    // **重要修复**: 使用 window.load 代替 DOMContentLoaded
+    // 这可以确保所有外部库 (DocxMerger, PizZip) 在我们的代码运行前已完全加载。
+    window.addEventListener('load', () => {
         const tabContainer = document.getElementById('tab-content-container');
         const mergerTemplate = document.getElementById('merger-template');
         const splitterTemplate = document.getElementById('splitter-template');
@@ -172,7 +130,6 @@
         const filesSection = document.getElementById('merge-files-section');
         const mergeButton = document.getElementById('merge-button');
         const buttonText = document.getElementById('merge-button-text');
-        const buttonIcon = mergeButton.querySelector('i');
         const errorMessage = document.getElementById('merge-error-message');
         const clearAllBtn = document.getElementById('clear-all-btn');
         const addPageBreakCheckbox = document.getElementById('add-page-break');
@@ -183,15 +140,9 @@
         dropZone.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
         clearAllBtn.addEventListener('click', clearAll);
-
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-50'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-indigo-500', 'bg-indigo-50'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
-            handleFiles(e.dataTransfer.files);
-        });
-        
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('border-indigo-500', 'bg-indigo-50'); handleFiles(e.dataTransfer.files); });
         mergeButton.addEventListener('click', executeMerge);
 
         function handleFiles(files) {
@@ -199,27 +150,16 @@
             for (const file of files) {
                 if (file.name.endsWith('.docx')) {
                     const reader = new FileReader();
-                    reader.onload = (e) => {
-                        filesToMerge.push({ id: 'file_' + Date.now() + Math.random(), name: file.name, data: e.target.result });
-                        updateFileList();
-                    };
+                    reader.onload = (e) => { filesToMerge.push({ id: 'file_' + Date.now() + Math.random(), name: file.name, data: e.target.result }); updateFileList(); };
                     reader.readAsArrayBuffer(file);
-                } else { showError(`文件 "${file.name}" 不是 .docx 格式，已忽略。`); }
+                } else { showError(`文件 "${file.name}" 不是 .docx 格式。`); }
             }
         }
-        
         function updateFileList() {
             fileListContainer.innerHTML = '';
-            if (filesToMerge.length > 0) {
-                filesSection.classList.remove('hidden');
-                mergeButton.disabled = false;
-                buttonText.textContent = `合并 ${filesToMerge.length} 个文件`;
-            } else {
-                filesSection.classList.add('hidden');
-                mergeButton.disabled = true;
-                buttonText.textContent = '请先上传文件';
-            }
-
+            filesToMerge.length > 0 ? filesSection.classList.remove('hidden') : filesSection.classList.add('hidden');
+            mergeButton.disabled = filesToMerge.length < 2;
+            buttonText.textContent = filesToMerge.length < 2 ? `请至少上传两个文件` : `合并 ${filesToMerge.length} 个文件`;
             filesToMerge.forEach(file => {
                 const item = document.createElement('div');
                 item.className = 'flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-grab active:cursor-grabbing';
@@ -227,41 +167,18 @@
                 item.innerHTML = `<i data-lucide="grip-vertical" class="h-5 w-5 text-gray-400"></i><i data-lucide="file-text" class="h-6 w-6 text-indigo-500"></i><span class="flex-grow font-medium text-gray-800 truncate">${file.name}</span><button class="remove-btn text-gray-400 hover:text-red-500" data-id="${file.id}"><i data-lucide="x" class="h-5 w-5 pointer-events-none"></i></button>`;
                 fileListContainer.appendChild(item);
             });
-            
             lucide.createIcons();
-
             if (sortableInstance) sortableInstance.destroy();
-            sortableInstance = new Sortable(fileListContainer, {
-                animation: 150, ghostClass: 'file-list-ghost', chosenClass: 'sortable-chosen',
-                onEnd: (evt) => {
-                    const movedItem = filesToMerge.splice(evt.oldIndex, 1)[0];
-                    filesToMerge.splice(evt.newIndex, 0, movedItem);
-                }
-            });
-            
-            document.querySelectorAll('.remove-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    filesToMerge = filesToMerge.filter(f => f.id !== e.currentTarget.dataset.id);
-                    updateFileList();
-                });
-            });
+            sortableInstance = new Sortable(fileListContainer, { animation: 150, ghostClass: 'file-list-ghost', onEnd: (evt) => { const item = filesToMerge.splice(evt.oldIndex, 1)[0]; filesToMerge.splice(evt.newIndex, 0, item); } });
+            document.querySelectorAll('.remove-btn').forEach(btn => btn.addEventListener('click', (e) => { filesToMerge = filesToMerge.filter(f => f.id !== e.currentTarget.dataset.id); updateFileList(); }));
         }
-        
-        function clearAll() {
-            filesToMerge = [];
-            fileInput.value = '';
-            updateFileList();
-        }
-        
+        function clearAll() { filesToMerge = []; fileInput.value = ''; updateFileList(); }
         function showError(message) { errorMessage.textContent = message; }
-
         async function executeMerge() {
             if (filesToMerge.length < 2) { showError('请至少上传两个文件进行合并。'); return; }
-            
             mergeButton.disabled = true;
             buttonText.textContent = '正在合并...';
             errorMessage.textContent = '';
-            
             try {
                 const merger = new DocxMerger({}, filesToMerge.map(f => f.data));
                 merger.save('blob', (mergedData) => {
@@ -271,19 +188,15 @@
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
-                    
                     buttonText.textContent = '合并成功！';
-                    setTimeout(() => {
-                        buttonText.textContent = `合并 ${filesToMerge.length} 个文件`;
-                        mergeButton.disabled = false;
-                    }, 3000);
+                    setTimeout(() => { updateFileList(); }, 2000);
                 }, { pageBreak: addPageBreakCheckbox.checked });
-
             } catch (error) {
                 console.error('合并失败:', error);
                 showError('合并过程中发生错误: ' + error.message);
                 buttonText.textContent = '合并失败';
-                mergeButton.disabled = false;
+            } finally {
+                setTimeout(() => { mergeButton.disabled = false; updateFileList(); }, 2000);
             }
         }
     }
@@ -296,19 +209,13 @@
         const splitButton = document.getElementById('split-button');
         const splitButtonText = document.getElementById('split-button-text');
         const errorMessage = document.getElementById('split-error-message');
-        
-        let docxFile = null;
-        let docInfo = { sections: 0, pageBreaks: 0, bodyChildren: [], originalZip: null, originalRels: null };
+        let docxFile = null, docInfo = {};
 
         dropZone.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleFile);
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-50'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-indigo-500', 'bg-indigo-50'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
-            if (e.dataTransfer.files.length) handleFile({ target: { files: e.dataTransfer.files } });
-        });
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('border-indigo-500', 'bg-indigo-50'); if (e.dataTransfer.files.length) handleFile({ target: { files: e.dataTransfer.files } }); });
         splitButton.addEventListener('click', executeSplit);
 
         async function handleFile(e) {
@@ -316,46 +223,29 @@
             if (!file || !file.name.endsWith('.docx')) { showError('请选择一个有效的 .docx 文件'); return; }
             docxFile = file;
             setLoading(true, '分析中...');
-            
+            errorMessage.textContent = '';
             try {
                 const arrayBuffer = await file.arrayBuffer();
                 const zip = new PizZip(arrayBuffer);
                 const xmlString = zip.file("word/document.xml").asText();
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlString, "text/xml");
-
                 const relsFile = zip.file("word/_rels/document.xml.rels");
-                if (relsFile) {
-                    docInfo.originalRels = parser.parseFromString(relsFile.asText(), "text/xml");
-                }
-
-                const body = xmlDoc.getElementsByTagName("w:body")[0];
-                docInfo.bodyChildren = Array.from(body.children);
-                docInfo.sections = xmlDoc.getElementsByTagName("w:sectPr").length;
-                docInfo.pageBreaks = xmlDoc.querySelectorAll('br[w\\:type="page"]').length;
-                docInfo.originalZip = zip;
-
+                docInfo = { originalZip: zip, originalRels: relsFile ? parser.parseFromString(relsFile.asText(), "text/xml") : null, bodyChildren: Array.from(xmlDoc.getElementsByTagName("w:body")[0].children), sections: xmlDoc.getElementsByTagName("w:sectPr").length, pageBreaks: xmlDoc.querySelectorAll('br[w\\:type="page"]').length, };
                 document.getElementById('split-file-name').textContent = file.name;
                 document.getElementById('detected-sections').textContent = docInfo.sections;
                 document.getElementById('detected-page-breaks').textContent = docInfo.pageBreaks;
                 analysisSection.classList.remove('hidden');
-                setLoading(false, '执行分割');
             } catch (error) {
                 console.error("文件分析失败:", error);
                 showError("无法解析此 DOCX 文件。文件可能已损坏。");
                 resetSplitter();
-                setLoading(false, '请先上传文件');
+            } finally {
+                setLoading(false, '执行分割');
             }
         }
-        
-        function resetSplitter() {
-            analysisSection.classList.add('hidden');
-            setLoading(false, '请先上传文件');
-            splitButton.disabled = true;
-            docxFile = null;
-        }
+        function resetSplitter() { analysisSection.classList.add('hidden'); setLoading(false, '请先上传文件'); splitButton.disabled = true; docxFile = null; }
         function showError(message) { errorMessage.textContent = message; }
-
         function setLoading(isLoading, text) {
              splitButton.disabled = isLoading;
              splitButtonText.textContent = text;
@@ -364,43 +254,26 @@
              if(isLoading) icon.classList.add('animate-spin'); else icon.classList.remove('animate-spin');
              lucide.createIcons();
         }
-        
         async function executeSplit() {
             const mode = document.querySelector('input[name="split-mode"]:checked')?.value;
             if (!mode) { showError("请选择一种分割模式。"); return; }
             setLoading(true, '处理中...');
-            
             setTimeout(async () => {
                 try {
-                    let ranges, singleMode = false;
-                    if (mode === 'page') ranges = document.getElementById('page-range-input').value;
-                    if (mode === 'single') singleMode = true;
-
                     if (mode === 'section') await splitBySections();
-                    else await splitByPageBreaks(ranges, singleMode);
-                } catch (err) {
-                    console.error("分割失败:", err); showError(err.message);
-                } finally { setLoading(false, '执行分割'); }
+                    else await splitByPageBreaks(mode === 'page' ? document.getElementById('page-range-input').value : null, mode === 'single');
+                } catch (err) { console.error("分割失败:", err); showError(err.message); }
+                finally { setLoading(false, '执行分割'); }
             }, 50);
         }
-        
-        // --- 这部分是核心的图片保留逻辑 ---
         function createNewDocx(nodes, fileName) {
             const bodyContent = nodes.map(node => node.outerHTML).join('');
             const requiredRids = new Set();
-            const relRegex = /(?:r:embed|r:id)="([^"]+)"/g;
+            const relRegex = /(?:r:embed|r:id|r:link)="([^"]+)"/g;
             let match;
-            while ((match = relRegex.exec(bodyContent)) !== null) {
-                requiredRids.add(match[1]);
-            }
-
+            while ((match = relRegex.exec(bodyContent)) !== null) requiredRids.add(match[1]);
             const newZip = new PizZip();
-            Object.keys(docInfo.originalZip.files).forEach(path => {
-                if (!path.startsWith('word/media') && path !== 'word/document.xml' && path !== 'word/_rels/document.xml.rels') {
-                    newZip.file(path, docInfo.originalZip.files[path].asNodeBuffer());
-                }
-            });
-            
+            Object.keys(docInfo.originalZip.files).forEach(path => { if (!path.startsWith('word/media') && !path.includes('document.xml')) newZip.file(path, docInfo.originalZip.files[path].asNodeBuffer()); });
             let newRelsContent = '';
             if (docInfo.originalRels) {
                 requiredRids.forEach(rId => {
@@ -408,20 +281,16 @@
                     if (relNode) {
                         newRelsContent += relNode.outerHTML;
                         const target = relNode.getAttribute('Target');
-                        const mediaPath = 'word/' + target;
-                        if (docInfo.originalZip.file(mediaPath)) {
-                            newZip.file(mediaPath, docInfo.originalZip.files[mediaPath].asNodeBuffer());
+                        if (!target.startsWith('http')) {
+                            const mediaPath = 'word/' + target;
+                            if (docInfo.originalZip.file(mediaPath)) newZip.file(mediaPath, docInfo.originalZip.files[mediaPath].asNodeBuffer());
                         }
                     }
                 });
             }
-            const newRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${newRelsContent}</Relationships>`;
-            newZip.file('word/_rels/document.xml.rels', newRelsXml);
-
-            const sectPr = docInfo.bodyChildren[docInfo.bodyChildren.length - 1].outerHTML;
-            const newXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${bodyContent}${sectPr}</w:body></w:document>`;
-            newZip.file("word/document.xml", newXml);
-            
+            newZip.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${newRelsContent}</Relationships>`);
+            const sectPr = docInfo.bodyChildren.find(node => node.tagName === 'w:sectPr')?.outerHTML || docInfo.bodyChildren[docInfo.bodyChildren.length-1].outerHTML;
+            newZip.file("word/document.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w16cid="http://schemas.microsoft.com/office/word/2016/wordml/cid" xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex" mc:Ignorable="w14 w15 w16se w16cid wp14"><w:body>${bodyContent}${sectPr}</w:body></w:document>`);
             const blob = newZip.generate({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -429,44 +298,8 @@
             link.click();
             URL.revokeObjectURL(link.href);
         }
-        
-        async function splitBySections() {
-            let currentSectionNodes = [], sectionIndex = 1;
-            docInfo.bodyChildren.forEach((child) => {
-                currentSectionNodes.push(child);
-                if (child.tagName === 'w:sectPr') {
-                     createNewDocx(currentSectionNodes, `${docxFile.name.replace('.docx','')}_section_${sectionIndex++}.docx`);
-                     currentSectionNodes = [];
-                }
-            });
-            if (currentSectionNodes.length > 0) createNewDocx(currentSectionNodes, `${docxFile.name.replace('.docx','')}_section_${sectionIndex++}.docx`);
-        }
-        
-        async function splitByPageBreaks(rangeString, singleMode) {
-            let pageChunks = [], currentPageNodes = [];
-            docInfo.bodyChildren.forEach(child => {
-                currentPageNodes.push(child);
-                if (child.querySelector('br[w\\:type="page"]')) {
-                    pageChunks.push(currentPageNodes); currentPageNodes = [];
-                }
-            });
-            if (currentPageNodes.length > 0) pageChunks.push(currentPageNodes);
-
-            if (singleMode) {
-                if (pageChunks.length === 0) throw new Error("未检测到手动分页符，无法逐页分割。");
-                pageChunks.forEach((chunk, i) => createNewDocx(chunk, `${docxFile.name.replace('.docx','')}_page_${i + 1}.docx`));
-            } else {
-                if (!rangeString) throw new Error("请输入分页符范围。");
-                const ranges = rangeString.split(',').map(r => r.trim().split('-').map(Number));
-                let combinedNodes = [];
-                ranges.forEach(([start, end]) => {
-                    end = end || start;
-                    for (let i = start - 1; i < end && i < pageChunks.length; i++) combinedNodes.push(...pageChunks[i]);
-                });
-                if (combinedNodes.length > 0) createNewDocx(combinedNodes, `${docxFile.name.replace('.docx','')}_pages_${rangeString.replace(/,/g, '_')}.docx`);
-                else throw new Error("指定的范围无效或未找到内容。");
-            }
-        }
+        async function splitBySections() { let currentSectionNodes = [], sectionIndex = 1; docInfo.bodyChildren.forEach((child) => { currentSectionNodes.push(child); if (child.tagName === 'w:sectPr') { createNewDocx(currentSectionNodes, `${docxFile.name.replace('.docx','')}_section_${sectionIndex++}.docx`); currentSectionNodes = []; } }); if (currentSectionNodes.length > 0) createNewDocx(currentSectionNodes, `${docxFile.name.replace('.docx','')}_section_${sectionIndex++}.docx`); }
+        async function splitByPageBreaks(rangeString, singleMode) { let pageChunks = [], currentPageNodes = []; docInfo.bodyChildren.forEach(child => { currentPageNodes.push(child); if (child.querySelector('br[w\\:type="page"]')) { pageChunks.push(currentPageNodes); currentPageNodes = []; } }); if (currentPageNodes.length > 0) pageChunks.push(currentPageNodes); if (singleMode) { if (pageChunks.length === 0) throw new Error("未检测到手动分页符，无法逐页分割。"); pageChunks.forEach((chunk, i) => createNewDocx(chunk, `${docxFile.name.replace('.docx','')}_page_${i + 1}.docx`)); } else { if (!rangeString) throw new Error("请输入分页符范围。"); const ranges = rangeString.split(',').map(r => r.trim().split('-').map(Number)); let combinedNodes = []; ranges.forEach(([start, end]) => { end = end || start; for (let i = start - 1; i < end && i < pageChunks.length; i++) combinedNodes.push(...pageChunks[i]); }); if (combinedNodes.length > 0) createNewDocx(combinedNodes, `${docxFile.name.replace('.docx','')}_pages_${rangeString.replace(/,/g, '_')}.docx`); else throw new Error("指定的范围无效或未找到内容。"); } }
     }
     </script>
 </body>
