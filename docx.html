@@ -3,625 +3,471 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Docx Forge - 本地 DOCX 合并与分割工具</title>
+    <title>Docx Forge Pro - 专业级本地 DOCX 工具</title>
     
-    <!-- External Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <!-- 引入外部资源库 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS框架: Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 拖拽库: SortableJS -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+    <!-- 图标库: Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- 合并库: docx-merger -->
+    <script src="https://cdn.jsdelivr.net/npm/docx-merger@4.3.0/dist/docx-merger.min.js"></script>
+    
+    <!-- ZIP处理库: Pizzip -->
+    <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.4/dist/pizzip.min.js"></script>
+
 
     <style>
-        /* --- CSS 变量定义 (支持主题切换) --- */
-        :root {
-            --primary-color: #007aff;
-            --primary-hover-color: #005ecb;
-            --background-color: #f0f2f5;
-            --card-bg-color: #ffffff;
-            --text-color: #1f2937;
-            --subtle-text-color: #6b7280;
-            --border-color: #e5e7eb;
-            --success-color: #10b981;
-            --danger-color: #ef4444;
-            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "Arial", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-            --card-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
-            --transition-speed: 0.2s;
-        }
-
-        /* --- 基础样式 --- */
-        body {
-            font-family: var(--font-family);
-            background-color: var(--background-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 2rem 1rem;
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        .container { max-width: 840px; margin: 0 auto; }
-        .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;}
-        .logo { font-size: 1.75rem; font-weight: 700; }
-        .theme-switcher label { font-weight: 500; margin-right: 0.5rem; }
-        .theme-switcher select { padding: 0.25rem 0.5rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; }
-        
-        .intro-section { text-align: center; background: var(--card-bg-color); padding: 3rem 2rem; border-radius: 12px; margin-bottom: 2.5rem; box-shadow: var(--card-shadow); }
-        .intro-section h1 { font-size: 2.8rem; margin-bottom: 1rem; }
-        .intro-section p { font-size: 1.1rem; color: var(--subtle-text-color); max-width: 600px; margin: 0 auto; }
-        
-        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
-        .tab-button { padding: 0.75rem 1.5rem; cursor: pointer; border: none; background-color: transparent; font-size: 1.1rem; font-weight: 600; color: var(--subtle-text-color); border-radius: 8px; position: relative; transition: all var(--transition-speed) ease; }
-        .tab-button.active { color: var(--primary-color); background-color: rgba(0, 122, 255, 0.1); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .card { background-color: var(--card-bg-color); border-radius: 12px; box-shadow: var(--card-shadow); padding: 2rem; margin-bottom: 1.5rem; }
-        .card-header { display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
-        .card-header .step-circle { width: 32px; height: 32px; border-radius: 50%; background-color: var(--primary-color); color: white; display: inline-flex; justify-content: center; align-items: center; font-size: 1rem; flex-shrink: 0;}
-        
-        .drop-zone { border: 2px dashed var(--border-color); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: background-color var(--transition-speed) ease, border-color var(--transition-speed) ease; }
-        .drop-zone.drag-over { border-color: var(--primary-color); background-color: rgba(0, 122, 255, 0.05); }
-        .drop-zone-content { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; pointer-events: none; }
-        .drop-zone-icon { font-size: 2.5rem; color: var(--primary-color); }
-        .drop-zone-text { font-weight: 500; }
-        .drop-zone-subtext { font-size: 0.9rem; color: var(--subtle-text-color); }
-        .file-input { display: none; }
-        
-        .file-list { min-height: 20px; }
-        .file-list-item { display: flex; align-items: center; gap: 1rem; background-color: #f9fafb; border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; cursor: grab; transition: background-color var(--transition-speed), box-shadow var(--transition-speed); animation: slideInUp 0.3s ease; }
-        .file-list-item.sortable-ghost { background: rgba(0, 122, 255, 0.1); }
-        .file-list-item:active { cursor: grabbing; }
-        .file-icon { color: var(--primary-color); }
-        .file-name { flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .delete-btn { background: none; border: none; color: var(--subtle-text-color); cursor: pointer; font-size: 1.2rem; transition: color var(--transition-speed); }
-        .delete-btn:hover { color: var(--danger-color); }
-
-        @keyframes slideInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .action-button { width: 100%; padding: 0.8rem 1rem; font-size: 1.2rem; font-weight: 600; color: #fff; background-color: var(--primary-color); border: none; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 0.5rem; transition: background-color var(--transition-speed), transform 0.1s; }
-        .action-button:hover:not(:disabled) { background-color: var(--primary-hover-color); transform: translateY(-1px); }
-        .action-button:disabled { background-color: #9ca3af; cursor: not-allowed; }
-        .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.5); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .split-info { background-color: #f8f9fa; border-radius: 8px; padding: 1rem; margin-top: 1.5rem; text-align: center;}
-        .split-ranges input { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; }
-        .split-ranges p { font-size: 0.9em; color: var(--subtle-text-color); margin-bottom: 1rem; }
-
-        .content-section { margin-top: 3rem; }
-        .content-section h2 { text-align: center; margin-bottom: 1.5rem; font-size: 1.8rem; }
-        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
-        .feature-item { background: var(--card-bg-color); padding: 1.5rem; border-radius: 8px; box-shadow: var(--card-shadow); text-align: center; }
-        .feature-item h3 { margin-bottom: 0.5rem; }
-        .feature-item .icon { font-size: 2.5rem; margin-bottom: 1rem; color: var(--primary-color); }
-        
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: var(--text-color); color: white; padding: 10px 20px; border-radius: 6px; z-index: 1000; opacity: 0; transition: opacity 0.5s, bottom 0.5s; font-weight: 500;}
-        .toast.show { opacity: 1; bottom: 30px; }
-        .toast.error { background-color: var(--danger-color); }
-
-        @media (max-width: 768px) {
-            body { padding: 1rem 0.5rem; }
-            .intro-section h1 { font-size: 2rem; }
-            .card { padding: 1.5rem; }
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .file-list-ghost { opacity: 0.5; background: #c7d2fe; }
+        .sortable-chosen { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #e5e7eb; }
+        ::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        input:checked + div { border-color: #4f46e5; background-color: #eef2ff; }
+        input:checked + div h4 { color: #4f46e5; }
     </style>
 </head>
-<body>
+<body class="antialiased">
 
-    <div class="container">
-        <header class="main-header">
-            <div class="logo">📄 Docx Forge</div>
-            <div class="theme-switcher">
-                <label for="theme-select">主题:</label>
-                <select id="theme-select">
-                    <option value="default">默认蓝</option>
-                    <option value="green">活力绿</option>
-                    <option value="purple">优雅紫</option>
-                </select>
-            </div>
+    <div class="container mx-auto max-w-4xl p-4 md:p-8">
+        
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 tracking-tight">Docx Forge <span class="text-indigo-600">Pro</span></h1>
+            <p class="mt-4 text-lg text-gray-600">您的私人、安全、强大的本地 DOCX 工作站</p>
         </header>
 
-        <section class="intro-section">
-            <h1>本地 DOCX 合并与分割工具</h1>
-            <p>轻松拖拽、排序、合并或分割您的 DOCX 文件。所有操作均在您的浏览器中完成，确保您的文件隐私和安全。</p>
-        </section>
-
-        <div class="tabs">
-            <button class="tab-button active" data-tab="merge-tab">合并 DOCX</button>
-            <button class="tab-button" data-tab="split-tab">分割 DOCX</button>
+        <!-- 标签页 -->
+        <div class="mb-8 border-b border-gray-200">
+            <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                <button data-tab="merger" class="tab-button active shrink-0 border-b-2 border-indigo-500 px-1 pb-4 text-sm font-medium text-indigo-600">
+                    合并文档
+                </button>
+                <button data-tab="splitter" class="tab-button shrink-0 border-b-2 border-transparent px-1 pb-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700">
+                    分割文档
+                </button>
+            </nav>
         </div>
 
-        <!-- Merge Tab -->
-        <div id="merge-tab" class="tab-content active">
-            <div class="card">
-                <div class="card-header"><span class="step-circle">1</span><span>上传并拖拽排序</span></div>
-                <label for="merge-file-input" id="merge-drop-zone" class="drop-zone">
-                    <div class="drop-zone-content">
-                        <div class="drop-zone-icon">🚀</div>
-                        <span class="drop-zone-text">点击选择 或 拖拽多个 .docx 文件</span>
-                        <span class="drop-zone-subtext">按住文件可拖拽排序</span>
-                    </div>
-                </label>
-                <input type="file" id="merge-file-input" class="file-input" multiple accept=".docx,.docm,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-                <div id="merge-file-list" class="file-list" style="margin-top: 1.5rem;"></div>
-            </div>
-
-            <button id="merge-button" class="action-button" disabled>
-                <span id="merge-button-text">请先上传至少2个文件</span>
-            </button>
-        </div>
-
-        <!-- Split Tab -->
-        <div id="split-tab" class="tab-content">
-             <div class="card">
-                <div class="card-header"><span class="step-circle">1</span><span>上传单个文件</span></div>
-                 <label for="split-file-input" id="split-drop-zone" class="drop-zone">
-                     <div class="drop-zone-content">
-                         <div class="drop-zone-icon">✂️</div>
-                         <span class="drop-zone-text">点击选择 或 拖拽一个 .docx 文件</span>
-                     </div>
-                </label>
-                <input type="file" id="split-file-input" class="file-input" accept=".docx,.docm,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-                <div id="split-info" class="split-info" style="display: none;"></div>
-            </div>
-            <div class="card" id="split-options-card" style="display: none;">
-                <div class="card-header"><span class="step-circle">2</span><span>设置分割范围</span></div>
-                <div class="split-ranges">
-                    <p>根据段落数进行分割。例如：<code>1-50</code> (第1到50段), <code>51-100</code>, <code>101-</code> (第101段到结尾)。每行代表一个分割后的文件。</p>
-                    <textarea id="split-ranges-input" rows="4" class="split-ranges input" placeholder="1-10
-11-20
-21-"></textarea>
-                </div>
-            </div>
-            <button id="split-button" class="action-button" disabled>
-                <span id="split-button-text">请先上传文件</span>
-            </button>
-        </div>
-
-        <!-- Features Section -->
-        <section class="content-section">
-            <h2>核心特性</h2>
-            <div class="features-grid">
-                <div class="feature-item">
-                    <div class="icon">🔒</div>
-                    <h3>绝对隐私</h3>
-                    <p>所有文件处理都在您的浏览器本地进行，您的文档不会被上传到任何服务器。</p>
-                </div>
-                <div class="feature-item">
-                    <div class="icon">✨</div>
-                    <h3>智能合并</h3>
-                    <p>尽最大努力在合并后保持原始文档的文本格式、表格和图片等内容。</p>
-                </div>
-                <div class="feature-item">
-                    <div class="icon">📱</div>
-                    <h3>全平台兼容</h3>
-                    <p>响应式设计，无论是在桌面还是手机上，都能获得流畅的操作体验。</p>
-                </div>
-            </div>
-        </section>
+        <main id="tab-content-container">
+            <!-- 内容通过JS动态注入 -->
+        </main>
+        
+        <footer class="mt-16 text-center text-gray-500 text-sm">
+            <p>© 2025 Docx Forge Pro. 所有文件均在本地处理，我们不存储您的任何数据。</p>
+        </footer>
     </div>
     
-    <div id="toast" class="toast"></div>
+    <!-- ======================= -->
+    <!--  HTML 模板 (用于JS) -->
+    <!-- ======================= -->
+    <template id="merger-template">
+        <div class="space-y-8 bg-white p-6 md:p-8 rounded-2xl shadow-xl">
+            <!-- 上传区 -->
+            <div>
+                <h2 class="text-2xl font-semibold text-gray-700 flex items-center gap-3"><i data-lucide="upload-cloud" class="text-indigo-500"></i>第一步: 上传文件</h2>
+                <div id="merge-drop-zone" class="mt-4 border-3 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-all duration-300 hover:border-indigo-500 hover:bg-indigo-50">
+                    <div class="pointer-events-none"><i data-lucide="file-up" class="mx-auto h-12 w-12 text-gray-400"></i><p class="mt-4 font-semibold text-gray-700">拖拽多个 DOCX 文件，或<span class="text-indigo-600">点击选择</span></p></div>
+                </div>
+                <input type="file" id="merge-file-input" class="hidden" multiple accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+            </div>
+            <!-- 文件列表与设置 -->
+            <div id="merge-files-section" class="hidden">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-semibold text-gray-700 flex items-center gap-3"><i data-lucide="files" class="text-indigo-500"></i>第二步: 排序与设置</h2>
+                    <button id="clear-all-btn" class="text-sm font-medium text-gray-500 hover:text-red-600 transition-colors flex items-center gap-1"><i data-lucide="trash-2" class="h-4 w-4"></i>清空</button>
+                </div>
+                <div id="file-list" class="mt-4 max-h-80 overflow-y-auto pr-2 space-y-3"></div>
+                <div class="mt-6 border-t border-gray-200 pt-6">
+                    <h3 class="text-lg font-semibold text-gray-700">合并选项</h3>
+                    <div class="mt-4 flex items-center"><input id="add-page-break" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"><label for="add-page-break" class="ml-3 block text-sm font-medium text-gray-700">在每个文档间插入分页符</label></div>
+                </div>
+            </div>
+            <!-- 执行按钮 -->
+            <div id="merge-action-section">
+                <button id="merge-button" disabled class="w-full flex items-center justify-center gap-3 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300"><i data-lucide="combine"></i><span id="merge-button-text">请先上传文件</span></button>
+                <p id="merge-error-message" class="text-red-500 text-sm mt-2 text-center"></p>
+            </div>
+        </div>
+    </template>
 
+    <template id="splitter-template">
+        <div class="space-y-8 bg-white p-6 md:p-8 rounded-2xl shadow-xl">
+            <!-- 上传区 -->
+            <div>
+                <h2 class="text-2xl font-semibold text-gray-700 flex items-center gap-3"><i data-lucide="file-up" class="text-indigo-500"></i>第一步: 上传单个文件</h2>
+                <div id="split-drop-zone" class="mt-4 border-3 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-all duration-300 hover:border-indigo-500 hover:bg-indigo-50">
+                    <div class="pointer-events-none"><i data-lucide="file-scan" class="mx-auto h-12 w-12 text-gray-400"></i><p class="mt-4 font-semibold text-gray-700">拖拽一个 DOCX 文件，或<span class="text-indigo-600">点击选择</span></p></div>
+                </div>
+                <input type="file" id="split-file-input" class="hidden" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+            </div>
+            <!-- 分析与设置 -->
+            <div id="split-analysis-section" class="hidden">
+                <h2 class="text-2xl font-semibold text-gray-700 flex items-center gap-3"><i data-lucide="settings-2" class="text-indigo-500"></i>第二步: 选择分割模式</h2>
+                <div class="mt-4 bg-gray-50 rounded-lg p-4 flex justify-around text-center"><dl><dt class="text-sm text-gray-500">文件名</dt><dd id="split-file-name" class="font-semibold text-gray-800"></dd></dl><dl><dt class="text-sm text-gray-500">检测到的章节</dt><dd id="detected-sections" class="font-semibold text-gray-800"></dd></dl><dl><dt class="text-sm text-gray-500">检测到的分页符</dt><dd id="detected-page-breaks" class="font-semibold text-gray-800"></dd></dl></div>
+                <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <label for="split-by-page"><input type="radio" name="split-mode" id="split-by-page" value="page" class="sr-only"><div class="p-4 rounded-lg border-2 border-gray-300 cursor-pointer h-full"><h4 class="font-semibold">按分页符范围</h4><p class="text-sm text-gray-600 mt-1">根据手动分页符分割。输入如 "1-3, 5"。</p><input type="text" id="page-range-input" placeholder="例如: 1-3, 5" class="mt-2 w-full text-sm p-2 border border-gray-300 rounded-md"></div></label>
+                    <label for="split-by-section"><input type="radio" name="split-mode" id="split-by-section" value="section" class="sr-only"><div class="p-4 rounded-lg border-2 border-gray-300 cursor-pointer h-full"><h4 class="font-semibold">按章节</h4><p class="text-sm text-gray-600 mt-1">每个章节分割成独立文件。</p></div></label>
+                    <label for="split-single-pages"><input type="radio" name="split-mode" id="split-single-pages" value="single" class="sr-only"><div class="p-4 rounded-lg border-2 border-gray-300 cursor-pointer h-full"><h4 class="font-semibold">逐页分割</h4><p class="text-sm text-gray-600 mt-1">每个分页符分割成独立文件。</p></div></label>
+                </div>
+                 <div class="mt-4 text-xs text-gray-500"><b>新功能:</b> 现在支持在分割时保留图片和超链接。<br><b>注意:</b> "页码"是基于手动插入的“分页符”计算的，并非渲染后的实际页码。</div>
+            </div>
+            <!-- 执行按钮 -->
+            <div id="split-action-section">
+                <button id="split-button" disabled class="w-full flex items-center justify-center gap-3 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300"><i data-lucide="scissors"></i><span id="split-button-text">请先上传文件</span></button>
+                <p id="split-error-message" class="text-red-500 text-sm mt-2 text-center"></p>
+            </div>
+        </div>
+    </template>
+    
     <script>
+    // --- 主程序 ---
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Globals and State ---
-        const dom = {
-            // Merge elements
-            mergeDropZone: document.getElementById('merge-drop-zone'),
-            mergeFileInput: document.getElementById('merge-file-input'),
-            mergeFileList: document.getElementById('merge-file-list'),
-            mergeButton: document.getElementById('merge-button'),
-            mergeButtonText: document.getElementById('merge-button-text'),
-            // Split elements
-            splitDropZone: document.getElementById('split-drop-zone'),
-            splitFileInput: document.getElementById('split-file-input'),
-            splitInfo: document.getElementById('split-info'),
-            splitOptionsCard: document.getElementById('split-options-card'),
-            splitRangesInput: document.getElementById('split-ranges-input'),
-            splitButton: document.getElementById('split-button'),
-            splitButtonText: document.getElementById('split-button-text'),
-            // Global
-            themeSelect: document.getElementById('theme-select'),
-            tabs: document.querySelectorAll('.tab-button'),
-            tabContents: document.querySelectorAll('.tab-content'),
-            toast: document.getElementById('toast'),
-        };
-
-        let mergeFiles = []; // Array to hold file data for merging
-        let splitFile = null; // Object to hold the file for splitting
-        let sortable; // Sortable.js instance
-
-        // --- Utility Functions ---
-        const showToast = (message, isError = false) => {
-            dom.toast.textContent = message;
-            dom.toast.className = `toast show ${isError ? 'error' : ''}`;
-            setTimeout(() => {
-                dom.toast.className = 'toast';
-            }, 3000);
-        };
+        const tabContainer = document.getElementById('tab-content-container');
+        const mergerTemplate = document.getElementById('merger-template');
+        const splitterTemplate = document.getElementById('splitter-template');
         
-        const showLoading = (button, textElement, message) => {
-            button.disabled = true;
-            textElement.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
-        };
+        const tabs = { merger: mergerTemplate.innerHTML, splitter: splitterTemplate.innerHTML };
+        let currentTab = 'merger';
 
-        const hideLoading = (button, textElement, originalText) => {
-            button.disabled = false;
-            textElement.innerHTML = `<span>${originalText}</span>`;
-        };
+        function renderTab(tabName) {
+            tabContainer.innerHTML = tabs[tabName];
+            if (tabName === 'merger') initMerger();
+            else if (tabName === 'splitter') initSplitter();
+            lucide.createIcons();
+        }
 
-        const readFileAsArrayBuffer = (file) => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsArrayBuffer(file);
-            });
-        };
-
-        // --- UI Interaction Logic ---
-
-        // Tab switching
-        dom.tabs.forEach(button => {
-            button.addEventListener('click', () => {
-                dom.tabs.forEach(btn => btn.classList.remove('active'));
-                button.classList.add('active');
-                const tabId = button.dataset.tab;
-                dom.tabContents.forEach(content => {
-                    content.classList.toggle('active', content.id === tabId);
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const tabName = e.currentTarget.dataset.tab;
+                if (tabName === currentTab) return;
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('border-indigo-500', 'text-indigo-600');
+                    btn.classList.add('border-transparent', 'text-gray-500', 'hover:border-gray-300', 'hover:text-gray-700');
                 });
+                e.currentTarget.classList.add('border-indigo-500', 'text-indigo-600');
+                e.currentTarget.classList.remove('border-transparent', 'text-gray-500', 'hover:border-gray-300', 'hover:text-gray-700');
+                currentTab = tabName;
+                renderTab(tabName);
             });
         });
+        renderTab('merger');
+    });
 
-        // Theme switcher
-        dom.themeSelect.addEventListener('change', (e) => {
-            const theme = e.target.value;
-            const root = document.documentElement;
-            const themes = {
-                default: { primary: '#007aff', hover: '#005ecb' },
-                green: { primary: '#10b981', hover: '#059669' },
-                purple: { primary: '#8b5cf6', hover: '#7c3aed' }
-            };
-            root.style.setProperty('--primary-color', themes[theme].primary);
-            root.style.setProperty('--primary-hover-color', themes[theme].hover);
+    // --- 合并器逻辑 (完整版) ---
+    function initMerger() {
+        const dropZone = document.getElementById('merge-drop-zone');
+        const fileInput = document.getElementById('merge-file-input');
+        const fileListContainer = document.getElementById('file-list');
+        const filesSection = document.getElementById('merge-files-section');
+        const mergeButton = document.getElementById('merge-button');
+        const buttonText = document.getElementById('merge-button-text');
+        const buttonIcon = mergeButton.querySelector('i');
+        const errorMessage = document.getElementById('merge-error-message');
+        const clearAllBtn = document.getElementById('clear-all-btn');
+        const addPageBreakCheckbox = document.getElementById('add-page-break');
+
+        let filesToMerge = [];
+        let sortableInstance = null;
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        clearAllBtn.addEventListener('click', clearAll);
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-50'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-indigo-500', 'bg-indigo-50'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
+            handleFiles(e.dataTransfer.files);
         });
+        
+        mergeButton.addEventListener('click', executeMerge);
 
-        // Generic drag-and-drop handler
-        const setupDropZone = (dropZone, fileInput, fileHandler) => {
-            dropZone.addEventListener('click', () => fileInput.click());
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('drag-over');
+        function handleFiles(files) {
+            errorMessage.textContent = '';
+            for (const file of files) {
+                if (file.name.endsWith('.docx')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        filesToMerge.push({ id: 'file_' + Date.now() + Math.random(), name: file.name, data: e.target.result });
+                        updateFileList();
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else { showError(`文件 "${file.name}" 不是 .docx 格式，已忽略。`); }
+            }
+        }
+        
+        function updateFileList() {
+            fileListContainer.innerHTML = '';
+            if (filesToMerge.length > 0) {
+                filesSection.classList.remove('hidden');
+                mergeButton.disabled = false;
+                buttonText.textContent = `合并 ${filesToMerge.length} 个文件`;
+            } else {
+                filesSection.classList.add('hidden');
+                mergeButton.disabled = true;
+                buttonText.textContent = '请先上传文件';
+            }
+
+            filesToMerge.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-grab active:cursor-grabbing';
+                item.dataset.id = file.id;
+                item.innerHTML = `<i data-lucide="grip-vertical" class="h-5 w-5 text-gray-400"></i><i data-lucide="file-text" class="h-6 w-6 text-indigo-500"></i><span class="flex-grow font-medium text-gray-800 truncate">${file.name}</span><button class="remove-btn text-gray-400 hover:text-red-500" data-id="${file.id}"><i data-lucide="x" class="h-5 w-5 pointer-events-none"></i></button>`;
+                fileListContainer.appendChild(item);
             });
-            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('drag-over');
-                if (e.dataTransfer.files.length) {
-                    fileInput.files = e.dataTransfer.files;
-                    fileHandler(e.dataTransfer.files);
+            
+            lucide.createIcons();
+
+            if (sortableInstance) sortableInstance.destroy();
+            sortableInstance = new Sortable(fileListContainer, {
+                animation: 150, ghostClass: 'file-list-ghost', chosenClass: 'sortable-chosen',
+                onEnd: (evt) => {
+                    const movedItem = filesToMerge.splice(evt.oldIndex, 1)[0];
+                    filesToMerge.splice(evt.newIndex, 0, movedItem);
                 }
             });
-            fileInput.addEventListener('change', (e) => fileHandler(e.target.files));
-        };
-
-        // --- Merge Logic ---
-        const handleMergeFiles = (files) => {
-            const newFiles = Array.from(files).filter(file => file.name.endsWith('.docx') || file.name.endsWith('.docm'));
-            if (newFiles.length === 0) return;
-            mergeFiles.push(...newFiles);
-            renderMergeList();
-            updateMergeButtonState();
-        };
-
-        const renderMergeList = () => {
-            dom.mergeFileList.innerHTML = '';
-            mergeFiles.forEach((file, index) => {
-                const item = document.createElement('div');
-                item.className = 'file-list-item';
-                item.dataset.id = index;
-                item.innerHTML = `
-                    <span class="file-icon">📄</span>
-                    <span class="file-name">${file.name}</span>
-                    <button class="delete-btn" data-index="${index}" title="删除">✖</button>
-                `;
-                dom.mergeFileList.appendChild(item);
-            });
-
-            // Add delete listeners
-            document.querySelectorAll('.delete-btn').forEach(btn => {
+            
+            document.querySelectorAll('.remove-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const index = parseInt(e.currentTarget.dataset.index, 10);
-                    mergeFiles.splice(index, 1);
-                    renderMergeList();
-                    updateMergeButtonState();
+                    filesToMerge = filesToMerge.filter(f => f.id !== e.currentTarget.dataset.id);
+                    updateFileList();
                 });
-            });
-        };
-        
-        const updateMergeButtonState = () => {
-            if (mergeFiles.length >= 2) {
-                dom.mergeButton.disabled = false;
-                dom.mergeButtonText.textContent = `合并 ${mergeFiles.length} 个文件`;
-            } else {
-                dom.mergeButton.disabled = true;
-                dom.mergeButtonText.textContent = '请先上传至少2个文件';
-            }
-        };
-
-        if (dom.mergeFileList) {
-            sortable = Sortable.create(dom.mergeFileList, {
-                animation: 150,
-                ghostClass: 'sortable-ghost',
-                onEnd: (evt) => {
-                    // Reorder the mergeFiles array
-                    const [movedItem] = mergeFiles.splice(evt.oldIndex, 1);
-                    mergeFiles.splice(evt.newIndex, 0, movedItem);
-                    renderMergeList(); // Re-render to update indices correctly
-                },
             });
         }
         
-        const onMerge = async () => {
-            if (mergeFiles.length < 2) {
-                showToast('请选择至少两个文件进行合并', true);
-                return;
-            }
+        function clearAll() {
+            filesToMerge = [];
+            fileInput.value = '';
+            updateFileList();
+        }
+        
+        function showError(message) { errorMessage.textContent = message; }
 
-            showLoading(dom.mergeButton, dom.mergeButtonText, '正在准备...');
-            const orderedFiles = Array.from(dom.mergeFileList.children)
-                .map(item => mergeFiles[parseInt(item.dataset.id, 10)]);
-
-            try {
-                const baseFile = await readFileAsArrayBuffer(orderedFiles[0]);
-                const baseZip = await JSZip.loadAsync(baseFile);
-                
-                const parser = new DOMParser();
-                const serializer = new XMLSerializer();
-
-                let baseDocXmlStr = await baseZip.file("word/document.xml").async("string");
-                let baseDocXml = parser.parseFromString(baseDocXmlStr, "text/xml");
-                let baseBody = baseDocXml.querySelector("body");
-                let baseLastSectPr = baseBody.querySelector(":scope > sectPr");
-
-                let baseRelsXmlStr = await baseZip.file("word/_rels/document.xml.rels").async("string");
-                let baseRelsXml = parser.parseFromString(baseRelsXmlStr, "text/xml");
-                let baseRelationships = baseRelsXml.querySelector("Relationships");
-                let maxId = Array.from(baseRelationships.children).reduce((max, r) => Math.max(max, parseInt(r.id.replace('rId', ''), 10)), 0);
-
-                for (let i = 1; i < orderedFiles.length; i++) {
-                    showLoading(dom.mergeButton, dom.mergeButtonText, `正在合并文件 ${i + 1}/${orderedFiles.length}`);
-
-                    // Add a page break before appending new content
-                    const pageBreak = baseDocXml.createElement("w:p");
-                    pageBreak.innerHTML = '<w:r><w:br w:type="page"/></w:r>';
-                    baseBody.insertBefore(pageBreak, baseLastSectPr);
-
-                    const nextFile = await readFileAsArrayBuffer(orderedFiles[i]);
-                    const nextZip = await JSZip.loadAsync(nextFile);
-                    
-                    if (!nextZip.file("word/document.xml") || !nextZip.file("word/_rels/document.xml.rels")) continue;
-
-                    const nextDocXmlStr = await nextZip.file("word/document.xml").async("string");
-                    const nextDocXml = parser.parseFromString(nextDocXmlStr, "text/xml");
-                    
-                    const nextRelsXmlStr = await nextZip.file("word/_rels/document.xml.rels").async("string");
-                    const nextRelsXml = parser.parseFromString(nextRelsXmlStr, "text/xml");
-                    
-                    const idMap = new Map();
-
-                    // Process relationships (for images, etc.)
-                    for (const rel of nextRelsXml.querySelectorAll("Relationship")) {
-                        const oldId = rel.getAttribute("Id");
-                        const newId = `rId${++maxId}`;
-                        idMap.set(oldId, newId);
-                        
-                        rel.setAttribute("Id", newId);
-                        const target = rel.getAttribute("Target");
-
-                        if (target.startsWith("media/")) {
-                            const mediaFile = nextZip.file(`word/${target}`);
-                            if (mediaFile) {
-                                const mediaData = await mediaFile.async("arraybuffer");
-                                baseZip.file(`word/${target}`, mediaData);
-                            }
-                        }
-                        baseRelationships.appendChild(rel);
-                    }
-                    
-                    // Remap IDs in the document content
-                    const blips = nextDocXml.querySelectorAll("a\\:blip, blip"); // a:blip for drawings, blip for older formats
-                    for(const blip of blips) {
-                        const embedId = blip.getAttribute("r:embed");
-                        if(idMap.has(embedId)) {
-                            blip.setAttribute("r:embed", idMap.get(embedId));
-                        }
-                    }
-
-                    // Append content
-                    const nextBody = nextDocXml.querySelector("body");
-                    for (const child of Array.from(nextBody.children)) {
-                        if (child.tagName !== 'w:sectPr') {
-                            const importedNode = baseDocXml.importNode(child, true);
-                            baseBody.insertBefore(importedNode, baseLastSectPr);
-                        }
-                    }
-                }
-                
-                showLoading(dom.mergeButton, dom.mergeButtonText, '正在生成文件...');
-                baseZip.file("word/document.xml", serializer.serializeToString(baseDocXml));
-                baseZip.file("word/_rels/document.xml.rels", serializer.serializeToString(baseRelsXml));
-
-                const blob = await baseZip.generateAsync({
-                    type: "blob",
-                    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                });
-
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = "merged_document.docx";
-                link.click();
-                URL.revokeObjectURL(link.href);
-
-                showToast('合并成功！');
-
-            } catch (e) {
-                console.error(e);
-                showToast('合并失败，请检查文件或查看控制台日志', true);
-            } finally {
-                hideLoading(dom.mergeButton, dom.mergeButtonText, `合并 ${mergeFiles.length} 个文件`);
-            }
-        };
-
-
-        // --- Split Logic ---
-        const handleSplitFile = async (files) => {
-            if (files.length === 0) return;
-            splitFile = files[0];
+        async function executeMerge() {
+            if (filesToMerge.length < 2) { showError('请至少上传两个文件进行合并。'); return; }
             
-            showLoading(dom.splitButton, dom.splitButtonText, '正在分析...');
-            dom.splitOptionsCard.style.display = 'none';
-            dom.splitInfo.style.display = 'none';
-
-            try {
-                const buffer = await readFileAsArrayBuffer(splitFile);
-                const zip = await JSZip.loadAsync(buffer);
-                const docXmlStr = await zip.file("word/document.xml").async("string");
-                const parser = new DOMParser();
-                const docXml = parser.parseFromString(docXmlStr, "text/xml");
-                const paragraphs = docXml.querySelectorAll("w\\:p, p");
-                
-                dom.splitInfo.innerHTML = `<strong>文件名:</strong> ${splitFile.name} | <strong>总段落数:</strong> ${paragraphs.length}`;
-                dom.splitInfo.style.display = 'block';
-                dom.splitOptionsCard.style.display = 'block';
-                dom.splitButton.disabled = false;
-                dom.splitButtonText.textContent = '开始分割';
-            } catch (e) {
-                console.error(e);
-                showToast('文件分析失败，可能不是有效的DOCX文件', true);
-                 dom.splitButtonText.textContent = '请先上传文件';
-            } finally {
-                hideLoading(dom.splitButton, dom.splitButtonText, '开始分割');
-                if (splitFile) dom.splitButton.disabled = false;
-            }
-        };
-
-        const onSplit = async () => {
-            if (!splitFile) {
-                showToast('请先上传一个文件', true);
-                return;
-            }
-            const rangesStr = dom.splitRangesInput.value.trim();
-            if (!rangesStr) {
-                showToast('请输入分割范围', true);
-                return;
-            }
-
-            showLoading(dom.splitButton, dom.splitButtonText, '正在分割...');
+            mergeButton.disabled = true;
+            buttonText.textContent = '正在合并...';
+            errorMessage.textContent = '';
             
             try {
-                const buffer = await readFileAsArrayBuffer(splitFile);
-                const baseZip = await JSZip.loadAsync(buffer);
-                const docXmlStr = await baseZip.file("word/document.xml").async("string");
-                const relsXmlStr = await baseZip.file("word/_rels/document.xml.rels")?.async("string");
-
-                const parser = new DOMParser();
-                const serializer = new XMLSerializer();
-                
-                const baseDocXml = parser.parseFromString(docXmlStr, "text/xml");
-                const allParagraphs = Array.from(baseDocXml.querySelectorAll("w\\:p, p"));
-                const totalParagraphs = allParagraphs.length;
-                const ranges = rangesStr.split('\n').map(line => line.trim()).filter(Boolean);
-                
-                let successCount = 0;
-                for (let i = 0; i < ranges.length; i++) {
-                     showLoading(dom.splitButton, dom.splitButtonText, `处理部分 ${i+1}/${ranges.length}`);
-                    const range = ranges[i];
-                    let [start, end] = range.split('-').map(n => n.trim());
-                    start = parseInt(start, 10);
-                    end = end ? parseInt(end, 10) : totalParagraphs;
-
-                    if (isNaN(start) || start < 1 || start > totalParagraphs) {
-                        showToast(`范围 "${range}" 的起始值无效`, true);
-                        continue;
-                    }
-
-                    const paragraphsToKeep = allParagraphs.slice(start - 1, end);
-                    
-                    const newZip = new JSZip();
-                    const newDocXml = parser.parseFromString(docXmlStr.substring(0, docXmlStr.indexOf("<w:body>") + 8) + "</w:body></w:document>", "text/xml");
-                    const newBody = newDocXml.querySelector("body");
-                    const baseSectPr = baseDocXml.querySelector("body > sectPr");
-
-                    const relsToKeep = new Map();
-
-                    for (const p of paragraphsToKeep) {
-                        const blips = p.querySelectorAll("a\\:blip, blip");
-                        for(const blip of blips) {
-                            const embedId = blip.getAttribute("r:embed");
-                            if(embedId) relsToKeep.set(embedId, null);
-                        }
-                        newBody.appendChild(p.cloneNode(true));
-                    }
-                    if(baseSectPr) newBody.appendChild(baseSectPr.cloneNode(true));
-                    
-                    // Copy necessary files
-                    for (const [filePath, file] of Object.entries(baseZip.files)) {
-                        if (filePath === 'word/document.xml' || filePath === 'word/_rels/document.xml.rels') continue;
-                        if (!filePath.endsWith('/')) {
-                             newZip.file(filePath, await file.async('arraybuffer'));
-                        } else {
-                            newZip.folder(filePath);
-                        }
-                    }
-                    
-                    // Filter relationships
-                    if (relsXmlStr) {
-                         const baseRelsXml = parser.parseFromString(relsXmlStr, "text/xml");
-                         const newRelsXml = parser.parseFromString(relsXmlStr.substring(0, relsXmlStr.indexOf("<Relationships>") + 15) + "</Relationships>", "text/xml");
-                         const newRelationships = newRelsXml.querySelector("Relationships");
-
-                        for (const rel of baseRelsXml.querySelectorAll("Relationship")) {
-                            if (relsToKeep.has(rel.getAttribute("Id"))) {
-                                newRelationships.appendChild(rel.cloneNode(true));
-                            }
-                        }
-                         newZip.file("word/_rels/document.xml.rels", serializer.serializeToString(newRelsXml));
-                    }
-
-                    newZip.file("word/document.xml", serializer.serializeToString(newDocXml));
-
-                    const blob = await newZip.generateAsync({ type: 'blob' });
+                const merger = new DocxMerger({}, filesToMerge.map(f => f.data));
+                merger.save('blob', (mergedData) => {
                     const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = `split_${start}-${end}_${splitFile.name}`;
+                    link.href = URL.createObjectURL(mergedData);
+                    link.download = `merged_document_${Date.now()}.docx`;
+                    document.body.appendChild(link);
                     link.click();
-                    URL.revokeObjectURL(link.href);
-                    successCount++;
-                }
-                
-                if (successCount > 0) {
-                     showToast(`成功生成 ${successCount} 个分割文件！`);
+                    document.body.removeChild(link);
+                    
+                    buttonText.textContent = '合并成功！';
+                    setTimeout(() => {
+                        buttonText.textContent = `合并 ${filesToMerge.length} 个文件`;
+                        mergeButton.disabled = false;
+                    }, 3000);
+                }, { pageBreak: addPageBreakCheckbox.checked });
+
+            } catch (error) {
+                console.error('合并失败:', error);
+                showError('合并过程中发生错误: ' + error.message);
+                buttonText.textContent = '合并失败';
+                mergeButton.disabled = false;
+            }
+        }
+    }
+
+    // --- 分割器逻辑 (带图片保留功能) ---
+    function initSplitter() {
+        const dropZone = document.getElementById('split-drop-zone');
+        const fileInput = document.getElementById('split-file-input');
+        const analysisSection = document.getElementById('split-analysis-section');
+        const splitButton = document.getElementById('split-button');
+        const splitButtonText = document.getElementById('split-button-text');
+        const errorMessage = document.getElementById('split-error-message');
+        
+        let docxFile = null;
+        let docInfo = { sections: 0, pageBreaks: 0, bodyChildren: [], originalZip: null, originalRels: null };
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFile);
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-50'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-indigo-500', 'bg-indigo-50'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
+            if (e.dataTransfer.files.length) handleFile({ target: { files: e.dataTransfer.files } });
+        });
+        splitButton.addEventListener('click', executeSplit);
+
+        async function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file || !file.name.endsWith('.docx')) { showError('请选择一个有效的 .docx 文件'); return; }
+            docxFile = file;
+            setLoading(true, '分析中...');
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const zip = new PizZip(arrayBuffer);
+                const xmlString = zip.file("word/document.xml").asText();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+
+                const relsFile = zip.file("word/_rels/document.xml.rels");
+                if (relsFile) {
+                    docInfo.originalRels = parser.parseFromString(relsFile.asText(), "text/xml");
                 }
 
-            } catch(e) {
-                console.error(e);
-                showToast('分割失败，请检查文件或控制台日志', true);
-            } finally {
-                hideLoading(dom.splitButton, dom.splitButtonText, '开始分割');
+                const body = xmlDoc.getElementsByTagName("w:body")[0];
+                docInfo.bodyChildren = Array.from(body.children);
+                docInfo.sections = xmlDoc.getElementsByTagName("w:sectPr").length;
+                docInfo.pageBreaks = xmlDoc.querySelectorAll('br[w\\:type="page"]').length;
+                docInfo.originalZip = zip;
+
+                document.getElementById('split-file-name').textContent = file.name;
+                document.getElementById('detected-sections').textContent = docInfo.sections;
+                document.getElementById('detected-page-breaks').textContent = docInfo.pageBreaks;
+                analysisSection.classList.remove('hidden');
+                setLoading(false, '执行分割');
+            } catch (error) {
+                console.error("文件分析失败:", error);
+                showError("无法解析此 DOCX 文件。文件可能已损坏。");
+                resetSplitter();
+                setLoading(false, '请先上传文件');
+            }
+        }
+        
+        function resetSplitter() {
+            analysisSection.classList.add('hidden');
+            setLoading(false, '请先上传文件');
+            splitButton.disabled = true;
+            docxFile = null;
+        }
+        function showError(message) { errorMessage.textContent = message; }
+
+        function setLoading(isLoading, text) {
+             splitButton.disabled = isLoading;
+             splitButtonText.textContent = text;
+             const icon = splitButton.querySelector('i');
+             icon.setAttribute('data-lucide', isLoading ? 'loader-2' : 'scissors');
+             if(isLoading) icon.classList.add('animate-spin'); else icon.classList.remove('animate-spin');
+             lucide.createIcons();
+        }
+        
+        async function executeSplit() {
+            const mode = document.querySelector('input[name="split-mode"]:checked')?.value;
+            if (!mode) { showError("请选择一种分割模式。"); return; }
+            setLoading(true, '处理中...');
+            
+            setTimeout(async () => {
+                try {
+                    let ranges, singleMode = false;
+                    if (mode === 'page') ranges = document.getElementById('page-range-input').value;
+                    if (mode === 'single') singleMode = true;
+
+                    if (mode === 'section') await splitBySections();
+                    else await splitByPageBreaks(ranges, singleMode);
+                } catch (err) {
+                    console.error("分割失败:", err); showError(err.message);
+                } finally { setLoading(false, '执行分割'); }
+            }, 50);
+        }
+        
+        // --- 这部分是核心的图片保留逻辑 ---
+        function createNewDocx(nodes, fileName) {
+            const bodyContent = nodes.map(node => node.outerHTML).join('');
+            const requiredRids = new Set();
+            const relRegex = /(?:r:embed|r:id)="([^"]+)"/g;
+            let match;
+            while ((match = relRegex.exec(bodyContent)) !== null) {
+                requiredRids.add(match[1]);
             }
 
-        };
+            const newZip = new PizZip();
+            Object.keys(docInfo.originalZip.files).forEach(path => {
+                if (!path.startsWith('word/media') && path !== 'word/document.xml' && path !== 'word/_rels/document.xml.rels') {
+                    newZip.file(path, docInfo.originalZip.files[path].asNodeBuffer());
+                }
+            });
+            
+            let newRelsContent = '';
+            if (docInfo.originalRels) {
+                requiredRids.forEach(rId => {
+                    const relNode = docInfo.originalRels.querySelector(`Relationship[Id="${rId}"]`);
+                    if (relNode) {
+                        newRelsContent += relNode.outerHTML;
+                        const target = relNode.getAttribute('Target');
+                        const mediaPath = 'word/' + target;
+                        if (docInfo.originalZip.file(mediaPath)) {
+                            newZip.file(mediaPath, docInfo.originalZip.files[mediaPath].asNodeBuffer());
+                        }
+                    }
+                });
+            }
+            const newRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${newRelsContent}</Relationships>`;
+            newZip.file('word/_rels/document.xml.rels', newRelsXml);
 
-        // --- Initial Setup ---
-        setupDropZone(dom.mergeDropZone, dom.mergeFileInput, handleMergeFiles);
-        setupDropZone(dom.splitDropZone, dom.splitFileInput, handleSplitFile);
-        dom.mergeButton.addEventListener('click', onMerge);
-        dom.splitButton.addEventListener('click', onSplit);
+            const sectPr = docInfo.bodyChildren[docInfo.bodyChildren.length - 1].outerHTML;
+            const newXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${bodyContent}${sectPr}</w:body></w:document>`;
+            newZip.file("word/document.xml", newXml);
+            
+            const blob = newZip.generate({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+        
+        async function splitBySections() {
+            let currentSectionNodes = [], sectionIndex = 1;
+            docInfo.bodyChildren.forEach((child) => {
+                currentSectionNodes.push(child);
+                if (child.tagName === 'w:sectPr') {
+                     createNewDocx(currentSectionNodes, `${docxFile.name.replace('.docx','')}_section_${sectionIndex++}.docx`);
+                     currentSectionNodes = [];
+                }
+            });
+            if (currentSectionNodes.length > 0) createNewDocx(currentSectionNodes, `${docxFile.name.replace('.docx','')}_section_${sectionIndex++}.docx`);
+        }
+        
+        async function splitByPageBreaks(rangeString, singleMode) {
+            let pageChunks = [], currentPageNodes = [];
+            docInfo.bodyChildren.forEach(child => {
+                currentPageNodes.push(child);
+                if (child.querySelector('br[w\\:type="page"]')) {
+                    pageChunks.push(currentPageNodes); currentPageNodes = [];
+                }
+            });
+            if (currentPageNodes.length > 0) pageChunks.push(currentPageNodes);
 
-    });
+            if (singleMode) {
+                if (pageChunks.length === 0) throw new Error("未检测到手动分页符，无法逐页分割。");
+                pageChunks.forEach((chunk, i) => createNewDocx(chunk, `${docxFile.name.replace('.docx','')}_page_${i + 1}.docx`));
+            } else {
+                if (!rangeString) throw new Error("请输入分页符范围。");
+                const ranges = rangeString.split(',').map(r => r.trim().split('-').map(Number));
+                let combinedNodes = [];
+                ranges.forEach(([start, end]) => {
+                    end = end || start;
+                    for (let i = start - 1; i < end && i < pageChunks.length; i++) combinedNodes.push(...pageChunks[i]);
+                });
+                if (combinedNodes.length > 0) createNewDocx(combinedNodes, `${docxFile.name.replace('.docx','')}_pages_${rangeString.replace(/,/g, '_')}.docx`);
+                else throw new Error("指定的范围无效或未找到内容。");
+            }
+        }
+    }
     </script>
 </body>
 </html>
