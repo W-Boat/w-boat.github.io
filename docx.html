@@ -3,913 +3,623 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DOCX 本地处理工具</title>
-    <!-- 引入 JSZip for docx (zip) processing -->
+    <title>Docx Forge - 本地 DOCX 合并与分割工具</title>
+    
+    <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- 引入 SortableJS for drag-and-drop -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
     <style>
-        /* --- 全局样式重置与基础设定 --- */
+        /* --- CSS 变量定义 (支持主题切换) --- */
         :root {
-            --primary-color: #007bff;
-            --primary-hover-color: #0056b3;
-            --background-color: #f4f7fa;
-            --card-background-color: #ffffff;
-            --text-color: #333;
-            --border-color: #dee2e6;
-            --placeholder-color: #a0aec0;
-            --success-color: #28a745;
-            --danger-color: #dc3545;
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "Arial", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            --primary-color: #007aff;
+            --primary-hover-color: #005ecb;
+            --background-color: #f0f2f5;
+            --card-bg-color: #ffffff;
+            --text-color: #1f2937;
+            --subtle-text-color: #6b7280;
+            --border-color: #e5e7eb;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "Arial", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            --card-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+            --transition-speed: 0.2s;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        html {
-            font-size: 16px;
-        }
-
+        /* --- 基础样式 --- */
         body {
             font-family: var(--font-family);
             background-color: var(--background-color);
             color: var(--text-color);
+            margin: 0;
+            padding: 2rem 1rem;
             line-height: 1.6;
-            padding: 1rem;
-            transition: background-color 0.3s;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        /* --- 主容器与头部 --- */
-        .container {
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 1rem;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            color: var(--text-color);
-        }
-
-        .header p {
-            font-size: 1rem;
-            color: #6c757d;
-            margin-top: 0.5rem;
-        }
-
-        /* --- 标签页系统 --- */
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 1.5rem;
-        }
-
-        .tab-button {
-            padding: 0.75rem 1.5rem;
-            cursor: pointer;
-            border: none;
-            background-color: transparent;
-            font-size: 1.1rem;
-            font-weight: 500;
-            color: #6c757d;
-            border-bottom: 3px solid transparent;
-            transition: all 0.2s ease-in-out;
-            transform: translateY(1px); /* slight lift */
-        }
-
-        .tab-button.active {
-            color: var(--primary-color);
-            border-bottom-color: var(--primary-color);
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.5s ease-in-out;
-        }
+        .container { max-width: 840px; margin: 0 auto; }
+        .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;}
+        .logo { font-size: 1.75rem; font-weight: 700; }
+        .theme-switcher label { font-weight: 500; margin-right: 0.5rem; }
+        .theme-switcher select { padding: 0.25rem 0.5rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* --- 卡片样式 --- */
-        .card {
-            background-color: var(--card-background-color);
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            padding: 2rem;
-            margin-bottom: 1.5rem;
-            transition: box-shadow 0.3s;
-        }
-        .card:hover {
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-header {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 1rem;
-        }
-
-        /* --- 文件上传区 --- */
-        .drop-zone {
-            border: 2px dashed var(--border-color);
-            border-radius: 8px;
-            padding: 3rem 1.5rem;
-            text-align: center;
-            cursor: pointer;
-            transition: background-color 0.2s ease, border-color 0.2s ease;
-        }
-
-        .drop-zone.drag-over {
-            background-color: #e9f5ff;
-            border-color: var(--primary-color);
-        }
-
-        .drop-zone-text {
-            color: var(--placeholder-color);
-            font-weight: 500;
-            pointer-events: none;
-        }
+        .intro-section { text-align: center; background: var(--card-bg-color); padding: 3rem 2rem; border-radius: 12px; margin-bottom: 2.5rem; box-shadow: var(--card-shadow); }
+        .intro-section h1 { font-size: 2.8rem; margin-bottom: 1rem; }
+        .intro-section p { font-size: 1.1rem; color: var(--subtle-text-color); max-width: 600px; margin: 0 auto; }
         
-        .drop-zone-icon {
-            font-size: 3rem;
-            color: var(--placeholder-color);
-            margin-bottom: 1rem;
-            transition: transform 0.3s;
-        }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .tab-button { padding: 0.75rem 1.5rem; cursor: pointer; border: none; background-color: transparent; font-size: 1.1rem; font-weight: 600; color: var(--subtle-text-color); border-radius: 8px; position: relative; transition: all var(--transition-speed) ease; }
+        .tab-button.active { color: var(--primary-color); background-color: rgba(0, 122, 255, 0.1); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { background-color: var(--card-bg-color); border-radius: 12px; box-shadow: var(--card-shadow); padding: 2rem; margin-bottom: 1.5rem; }
+        .card-header { display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+        .card-header .step-circle { width: 32px; height: 32px; border-radius: 50%; background-color: var(--primary-color); color: white; display: inline-flex; justify-content: center; align-items: center; font-size: 1rem; flex-shrink: 0;}
         
-        .drop-zone.drag-over .drop-zone-icon {
-            transform: scale(1.1);
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        /* --- 文件列表 --- */
-        .file-list {
-            list-style: none;
-            margin-top: 1.5rem;
-        }
-
-        .file-list-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background-color: #f8f9fa;
-            border: 1px solid var(--border-color);
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            cursor: grab; /* 提示可拖动 */
-            animation: popIn 0.3s ease-out;
-        }
+        .drop-zone { border: 2px dashed var(--border-color); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: background-color var(--transition-speed) ease, border-color var(--transition-speed) ease; }
+        .drop-zone.drag-over { border-color: var(--primary-color); background-color: rgba(0, 122, 255, 0.05); }
+        .drop-zone-content { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; pointer-events: none; }
+        .drop-zone-icon { font-size: 2.5rem; color: var(--primary-color); }
+        .drop-zone-text { font-weight: 500; }
+        .drop-zone-subtext { font-size: 0.9rem; color: var(--subtle-text-color); }
+        .file-input { display: none; }
         
-        @keyframes popIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
+        .file-list { min-height: 20px; }
+        .file-list-item { display: flex; align-items: center; gap: 1rem; background-color: #f9fafb; border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; cursor: grab; transition: background-color var(--transition-speed), box-shadow var(--transition-speed); animation: slideInUp 0.3s ease; }
+        .file-list-item.sortable-ghost { background: rgba(0, 122, 255, 0.1); }
         .file-list-item:active { cursor: grabbing; }
-        .file-list-item.sortable-ghost { background-color: #e9f5ff; }
+        .file-icon { color: var(--primary-color); }
+        .file-name { flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .delete-btn { background: none; border: none; color: var(--subtle-text-color); cursor: pointer; font-size: 1.2rem; transition: color var(--transition-speed); }
+        .delete-btn:hover { color: var(--danger-color); }
 
-        .file-name {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .delete-btn {
-            background: none;
-            border: none;
-            color: var(--danger-color);
-            cursor: pointer;
-            font-size: 1.2rem;
-            padding: 0.25rem;
-            transition: transform 0.2s;
-        }
-        .delete-btn:hover { transform: scale(1.2); }
+        .action-button { width: 100%; padding: 0.8rem 1rem; font-size: 1.2rem; font-weight: 600; color: #fff; background-color: var(--primary-color); border: none; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 0.5rem; transition: background-color var(--transition-speed), transform 0.1s; }
+        .action-button:hover:not(:disabled) { background-color: var(--primary-hover-color); transform: translateY(-1px); }
+        .action-button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.5); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* --- 设置区域 --- */
-        .settings-panel {
-            margin-top: 1.5rem;
-            padding: 1.5rem;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
+        .split-info { background-color: #f8f9fa; border-radius: 8px; padding: 1rem; margin-top: 1.5rem; text-align: center;}
+        .split-ranges input { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; }
+        .split-ranges p { font-size: 0.9em; color: var(--subtle-text-color); margin-bottom: 1rem; }
 
-        .settings-toggle {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            font-weight: 600;
-        }
+        .content-section { margin-top: 3rem; }
+        .content-section h2 { text-align: center; margin-bottom: 1.5rem; font-size: 1.8rem; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+        .feature-item { background: var(--card-bg-color); padding: 1.5rem; border-radius: 8px; box-shadow: var(--card-shadow); text-align: center; }
+        .feature-item h3 { margin-bottom: 0.5rem; }
+        .feature-item .icon { font-size: 2.5rem; margin-bottom: 1rem; color: var(--primary-color); }
         
-        .settings-content {
-            margin-top: 1rem;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            max-height: 500px;
-            overflow: hidden;
-            transition: max-height 0.4s ease-in-out;
-        }
-
-        details:not([open]) .settings-content {
-            max-height: 0;
-            margin-top: 0;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group label {
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-
-        .form-group input, .form-group select {
-            padding: 0.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-family: inherit;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-        }
-
-        /* --- 分割区域 --- */
-        .split-info {
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            padding: 1rem;
-            margin-top: 1.5rem;
-            display: flex;
-            justify-content: space-around;
-            text-align: center;
-            animation: fadeIn 0.5s;
-        }
-        
-        .split-info-item strong {
-            display: block;
-            color: #6c757d;
-            font-size: 0.9rem;
-        }
-        
-        .split-info-item span {
-            font-size: 1.2rem;
-            font-weight: 600;
-            word-break: break-all;
-        }
-        
-        .split-ranges .form-group {
-            flex-direction: row;
-            align-items: center;
-            gap: 0.5rem;
-            animation: popIn 0.3s ease-out;
-        }
-        
-        .split-ranges .form-group input { flex-grow: 1; }
-
-        .add-range-btn {
-            background: none;
-            border: 1px dashed var(--primary-color);
-            color: var(--primary-color);
-            border-radius: 4px;
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            margin-top: 0.5rem;
-            font-weight: 600;
-            transition: background-color 0.2s, color 0.2s;
-        }
-        .add-range-btn:hover {
-            background-color: var(--primary-color);
-            color: #fff;
-        }
-
-        /* --- 主操作按钮 --- */
-        .action-button {
-            width: 100%;
-            padding: 0.8rem 1rem;
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #fff;
-            background-color: var(--primary-color);
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.2s;
-        }
-
-        .action-button:hover:not(:disabled) {
-            background-color: var(--primary-hover-color);
-            transform: translateY(-2px);
-        }
-        
-        .action-button:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        .action-button:disabled {
-            background-color: #a0aec0;
-            cursor: not-allowed;
-        }
-        
-        /* --- 加载与消息提示 --- */
-        .loader-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
-        }
-        .loader-overlay.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-        .loader {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid var(--primary-color);
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 1rem 1.5rem;
-            border-radius: 6px;
-            color: #fff;
-            font-weight: 500;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1001;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.3s, transform 0.3s;
-        }
-        .toast.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .toast.success { background-color: var(--success-color); }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: var(--text-color); color: white; padding: 10px 20px; border-radius: 6px; z-index: 1000; opacity: 0; transition: opacity 0.5s, bottom 0.5s; font-weight: 500;}
+        .toast.show { opacity: 1; bottom: 30px; }
         .toast.error { background-color: var(--danger-color); }
 
-        /* --- 页脚 --- */
-        .footer {
-            text-align: center;
-            margin-top: 3rem;
-            color: #6c757d;
-            font-size: 0.9rem;
-        }
-        .footer a { color: var(--primary-color); text-decoration: none; }
-        .footer a:hover { text-decoration: underline; }
-
-        /* --- 响应式布局 --- */
-        @media (max-width: 600px) {
-            body { padding: 0.5rem; }
-            .container { margin: 1rem auto; }
-            .header h1 { font-size: 2rem; }
+        @media (max-width: 768px) {
+            body { padding: 1rem 0.5rem; }
+            .intro-section h1 { font-size: 2rem; }
             .card { padding: 1.5rem; }
-            .tab-button { padding: 0.75rem 1rem; font-size: 1rem; }
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <header class="header">
-            <h1>DOCX 本地处理工具</h1>
-            <p>所有操作均在您的浏览器本地完成，文件不会上传至服务器。</p>
+        <header class="main-header">
+            <div class="logo">📄 Docx Forge</div>
+            <div class="theme-switcher">
+                <label for="theme-select">主题:</label>
+                <select id="theme-select">
+                    <option value="default">默认蓝</option>
+                    <option value="green">活力绿</option>
+                    <option value="purple">优雅紫</option>
+                </select>
+            </div>
         </header>
 
-        <!-- 标签页 -->
+        <section class="intro-section">
+            <h1>本地 DOCX 合并与分割工具</h1>
+            <p>轻松拖拽、排序、合并或分割您的 DOCX 文件。所有操作均在您的浏览器中完成，确保您的文件隐私和安全。</p>
+        </section>
+
         <div class="tabs">
             <button class="tab-button active" data-tab="merge-tab">合并 DOCX</button>
             <button class="tab-button" data-tab="split-tab">分割 DOCX</button>
         </div>
 
-        <!-- 合并功能区 -->
+        <!-- Merge Tab -->
         <div id="merge-tab" class="tab-content active">
             <div class="card">
-                <div class="card-header">1. 上传并排序 DOCX 文件</div>
-                <label for="merge-file-input" class="drop-zone" id="merge-drop-zone">
-                    <div class="drop-zone-icon">📥</div>
-                    <span class="drop-zone-text">点击选择 或 拖拽多个 .docx 文件到此处</span>
+                <div class="card-header"><span class="step-circle">1</span><span>上传并拖拽排序</span></div>
+                <label for="merge-file-input" id="merge-drop-zone" class="drop-zone">
+                    <div class="drop-zone-content">
+                        <div class="drop-zone-icon">🚀</div>
+                        <span class="drop-zone-text">点击选择 或 拖拽多个 .docx 文件</span>
+                        <span class="drop-zone-subtext">按住文件可拖拽排序</span>
+                    </div>
                 </label>
-                <input type="file" id="merge-file-input" class="file-input" multiple accept=".docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-                <ul class="file-list" id="merge-file-list"></ul>
+                <input type="file" id="merge-file-input" class="file-input" multiple accept=".docx,.docm,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                <div id="merge-file-list" class="file-list" style="margin-top: 1.5rem;"></div>
             </div>
 
-            <div class="card">
-                <div class="card-header">2. 合并设置 (可选)</div>
-                <div class="settings-panel">
-                    <details open>
-                        <summary class="settings-toggle">一键设置合并后文档的格式</summary>
-                        <div class="settings-content">
-                            <div class="form-group">
-                                <label for="font-family">字体</label>
-                                <select id="font-family">
-                                    <option value="等线">等线</option>
-                                    <option value="宋体">宋体</option>
-                                    <option value="黑体">黑体</option>
-                                    <option value="微软雅黑">微软雅黑</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="font-size">字体大小</label>
-                                <select id="font-size">
-                                    <option value="11">小六 (5.5pt)</option>
-                                    <option value="15">小五 (7.5pt)</option>
-                                    <option value="18">五号 (9pt)</option>
-                                    <option value="21">小四 (10.5pt)</option>
-                                    <option value="24">四号 (12pt)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="line-spacing">行距倍数</label>
-                                <select id="line-spacing">
-                                    <option value="120">0.25 倍</option>
-                                    <option value="240">1 倍</option>
-                                    <option value="360">1.5 倍</option>
-                                    <option value="480">2 倍</option>
-                                </select>
-                            </div>
-                        </div>
-                    </details>
-                </div>
-            </div>
-
-            <button id="merge-button" class="action-button" disabled>开始合并</button>
+            <button id="merge-button" class="action-button" disabled>
+                <span id="merge-button-text">请先上传至少2个文件</span>
+            </button>
         </div>
 
-        <!-- 分割功能区 -->
+        <!-- Split Tab -->
         <div id="split-tab" class="tab-content">
              <div class="card">
-                <div class="card-header">1. 上传单个 DOCX 文件</div>
-                 <label for="split-file-input" class="drop-zone" id="split-drop-zone">
-                    <div class="drop-zone-icon">📤</div>
-                    <span class="drop-zone-text">点击选择 或 拖拽一个 .docx 文件到此处</span>
+                <div class="card-header"><span class="step-circle">1</span><span>上传单个文件</span></div>
+                 <label for="split-file-input" id="split-drop-zone" class="drop-zone">
+                     <div class="drop-zone-content">
+                         <div class="drop-zone-icon">✂️</div>
+                         <span class="drop-zone-text">点击选择 或 拖拽一个 .docx 文件</span>
+                     </div>
                 </label>
-                <input type="file" id="split-file-input" class="file-input" accept=".docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-                <div class="split-info" id="split-info-display" style="display: none;">
-                    <div class="split-info-item">
-                        <strong>文件名</strong>
-                        <span id="split-file-name"></span>
-                    </div>
-                    <div class="split-info-item">
-                        <strong>总段落数</strong>
-                        <span id="split-total-paragraphs"></span>
-                    </div>
+                <input type="file" id="split-file-input" class="file-input" accept=".docx,.docm,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                <div id="split-info" class="split-info" style="display: none;"></div>
+            </div>
+            <div class="card" id="split-options-card" style="display: none;">
+                <div class="card-header"><span class="step-circle">2</span><span>设置分割范围</span></div>
+                <div class="split-ranges">
+                    <p>根据段落数进行分割。例如：<code>1-50</code> (第1到50段), <code>51-100</code>, <code>101-</code> (第101段到结尾)。每行代表一个分割后的文件。</p>
+                    <textarea id="split-ranges-input" rows="4" class="split-ranges input" placeholder="1-10
+11-20
+21-"></textarea>
                 </div>
             </div>
-            
-            <div class="card">
-                <div class="card-header">2. 设置分割范围</div>
-                <p style="color: #6c757d; margin-bottom: 1rem;">根据段落数进行分割。例如：第一部分填 <code>1-50</code>，第二部分填 <code>51-</code> (代表51到结尾)。</p>
-                <div class="split-ranges" id="split-ranges-container">
-                    <div class="form-group">
-                        <label>第 1 部分:</label>
-                        <input type="text" placeholder="例如: 1-50">
-                        <button class="delete-btn" title="删除此范围">✖</button>
-                    </div>
-                </div>
-                <button class="add-range-btn" id="add-range-btn">＋ 添加更多分割范围</button>
-            </div>
-            
-            <button id="split-button" class="action-button" disabled>开始分割</button>
+            <button id="split-button" class="action-button" disabled>
+                <span id="split-button-text">请先上传文件</span>
+            </button>
         </div>
-        
-        <footer class="footer">
-            <p>灵感来源 & 参考实现: <a href="https://blog.qiudong123.com/tools/merge-docx.html" target="_blank" rel="noopener noreferrer">qiudong123.com</a></p>
-        </footer>
+
+        <!-- Features Section -->
+        <section class="content-section">
+            <h2>核心特性</h2>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="icon">🔒</div>
+                    <h3>绝对隐私</h3>
+                    <p>所有文件处理都在您的浏览器本地进行，您的文档不会被上传到任何服务器。</p>
+                </div>
+                <div class="feature-item">
+                    <div class="icon">✨</div>
+                    <h3>智能合并</h3>
+                    <p>尽最大努力在合并后保持原始文档的文本格式、表格和图片等内容。</p>
+                </div>
+                <div class="feature-item">
+                    <div class="icon">📱</div>
+                    <h3>全平台兼容</h3>
+                    <p>响应式设计，无论是在桌面还是手机上，都能获得流畅的操作体验。</p>
+                </div>
+            </div>
+        </section>
     </div>
     
-    <!-- 加载与消息提示 DOM -->
-    <div class="loader-overlay" id="loader-overlay">
-        <div class="loader"></div>
-    </div>
-    <div class="toast" id="toast"></div>
+    <div id="toast" class="toast"></div>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- 全局变量和状态 ---
+        // --- Globals and State ---
         const dom = {
-            tabs: document.querySelectorAll('.tab-button'),
-            tabContents: document.querySelectorAll('.tab-content'),
-            
-            // 合并
+            // Merge elements
             mergeDropZone: document.getElementById('merge-drop-zone'),
             mergeFileInput: document.getElementById('merge-file-input'),
             mergeFileList: document.getElementById('merge-file-list'),
             mergeButton: document.getElementById('merge-button'),
-            fontFamilySelect: document.getElementById('font-family'),
-            fontSizeSelect: document.getElementById('font-size'),
-            lineSpacingSelect: document.getElementById('line-spacing'),
-            
-            // 分割
+            mergeButtonText: document.getElementById('merge-button-text'),
+            // Split elements
             splitDropZone: document.getElementById('split-drop-zone'),
             splitFileInput: document.getElementById('split-file-input'),
-            splitInfoDisplay: document.getElementById('split-info-display'),
-            splitFileName: document.getElementById('split-file-name'),
-            splitTotalParagraphs: document.getElementById('split-total-paragraphs'),
-            splitRangesContainer: document.getElementById('split-ranges-container'),
-            addRangeBtn: document.getElementById('add-range-btn'),
+            splitInfo: document.getElementById('split-info'),
+            splitOptionsCard: document.getElementById('split-options-card'),
+            splitRangesInput: document.getElementById('split-ranges-input'),
             splitButton: document.getElementById('split-button'),
-
-            // UI
-            loader: document.getElementById('loader-overlay'),
+            splitButtonText: document.getElementById('split-button-text'),
+            // Global
+            themeSelect: document.getElementById('theme-select'),
+            tabs: document.querySelectorAll('.tab-button'),
+            tabContents: document.querySelectorAll('.tab-content'),
             toast: document.getElementById('toast'),
         };
 
-        let mergeFiles = [];
-        let splitFile = null;
+        let mergeFiles = []; // Array to hold file data for merging
+        let splitFile = null; // Object to hold the file for splitting
+        let sortable; // Sortable.js instance
 
-        // --- UI 工具函数 ---
-        const showLoader = () => dom.loader.classList.add('visible');
-        const hideLoader = () => dom.loader.classList.remove('visible');
-        const showToast = (message, type = 'success') => {
+        // --- Utility Functions ---
+        const showToast = (message, isError = false) => {
             dom.toast.textContent = message;
-            dom.toast.className = `toast show ${type}`;
+            dom.toast.className = `toast show ${isError ? 'error' : ''}`;
             setTimeout(() => {
-                dom.toast.classList.remove('show');
+                dom.toast.className = 'toast';
             }, 3000);
         };
+        
+        const showLoading = (button, textElement, message) => {
+            button.disabled = true;
+            textElement.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
+        };
 
-        // --- 标签页切换 ---
-        dom.tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const targetId = tab.dataset.tab;
+        const hideLoading = (button, textElement, originalText) => {
+            button.disabled = false;
+            textElement.innerHTML = `<span>${originalText}</span>`;
+        };
 
-                dom.tabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
+        const readFileAsArrayBuffer = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        };
 
+        // --- UI Interaction Logic ---
+
+        // Tab switching
+        dom.tabs.forEach(button => {
+            button.addEventListener('click', () => {
+                dom.tabs.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                const tabId = button.dataset.tab;
                 dom.tabContents.forEach(content => {
-                    content.classList.remove('active');
-                    if (content.id === targetId) {
-                        content.classList.add('active');
-                    }
+                    content.classList.toggle('active', content.id === tabId);
                 });
             });
         });
-        
-        // --- 通用文件处理函数 ---
-        const handleFileValidation = (file) => {
-             const acceptedTypes = [
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'application/msword' // for .doc, though processing might fail
-            ];
-            const isDocx = file.name.endsWith('.docx');
 
-            if (!isDocx) {
-                showToast(`文件 "${file.name}" 不是 .docx 格式，可能会处理失败。`, 'error');
-                return false;
-            }
-            return true;
-        };
+        // Theme switcher
+        dom.themeSelect.addEventListener('change', (e) => {
+            const theme = e.target.value;
+            const root = document.documentElement;
+            const themes = {
+                default: { primary: '#007aff', hover: '#005ecb' },
+                green: { primary: '#10b981', hover: '#059669' },
+                purple: { primary: '#8b5cf6', hover: '#7c3aed' }
+            };
+            root.style.setProperty('--primary-color', themes[theme].primary);
+            root.style.setProperty('--primary-hover-color', themes[theme].hover);
+        });
 
-        // --- 拖放区域通用逻辑 ---
-        const setupDropZone = (zone, input, onFilesAdded) => {
-            zone.addEventListener('dragover', (e) => {
+        // Generic drag-and-drop handler
+        const setupDropZone = (dropZone, fileInput, fileHandler) => {
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                zone.classList.add('drag-over');
+                dropZone.classList.add('drag-over');
             });
-            zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-            zone.addEventListener('drop', (e) => {
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+            dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
-                zone.classList.remove('drag-over');
+                dropZone.classList.remove('drag-over');
                 if (e.dataTransfer.files.length) {
-                    onFilesAdded(e.dataTransfer.files);
+                    fileInput.files = e.dataTransfer.files;
+                    fileHandler(e.dataTransfer.files);
                 }
             });
-            input.addEventListener('change', (e) => {
-                 if (e.target.files.length) {
-                    onFilesAdded(e.target.files);
-                }
-            });
+            fileInput.addEventListener('change', (e) => fileHandler(e.target.files));
         };
 
-        // --- 合并功能逻辑 ---
-        const updateMergeFileList = () => {
+        // --- Merge Logic ---
+        const handleMergeFiles = (files) => {
+            const newFiles = Array.from(files).filter(file => file.name.endsWith('.docx') || file.name.endsWith('.docm'));
+            if (newFiles.length === 0) return;
+            mergeFiles.push(...newFiles);
+            renderMergeList();
+            updateMergeButtonState();
+        };
+
+        const renderMergeList = () => {
             dom.mergeFileList.innerHTML = '';
             mergeFiles.forEach((file, index) => {
-                const li = document.createElement('li');
-                li.className = 'file-list-item';
-                li.dataset.id = index;
-                li.innerHTML = `
+                const item = document.createElement('div');
+                item.className = 'file-list-item';
+                item.dataset.id = index;
+                item.innerHTML = `
+                    <span class="file-icon">📄</span>
                     <span class="file-name">${file.name}</span>
-                    <button class="delete-btn" title="删除">✖</button>
+                    <button class="delete-btn" data-index="${index}" title="删除">✖</button>
                 `;
-                li.querySelector('.delete-btn').addEventListener('click', () => {
-                    mergeFiles.splice(index, 1);
-                    updateMergeFileList();
-                });
-                dom.mergeFileList.appendChild(li);
+                dom.mergeFileList.appendChild(item);
             });
-            dom.mergeButton.disabled = mergeFiles.length < 2;
+
+            // Add delete listeners
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(e.currentTarget.dataset.index, 10);
+                    mergeFiles.splice(index, 1);
+                    renderMergeList();
+                    updateMergeButtonState();
+                });
+            });
         };
         
-        const onMergeFilesAdded = (files) => {
-            const newFiles = Array.from(files).filter(handleFileValidation);
-            mergeFiles.push(...newFiles);
-            updateMergeFileList();
+        const updateMergeButtonState = () => {
+            if (mergeFiles.length >= 2) {
+                dom.mergeButton.disabled = false;
+                dom.mergeButtonText.textContent = `合并 ${mergeFiles.length} 个文件`;
+            } else {
+                dom.mergeButton.disabled = true;
+                dom.mergeButtonText.textContent = '请先上传至少2个文件';
+            }
         };
 
-        Sortable.create(dom.mergeFileList, {
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            onEnd: (evt) => {
-                const item = mergeFiles.splice(evt.oldIndex, 1)[0];
-                mergeFiles.splice(evt.newIndex, 0, item);
-            }
-        });
-
-        const handleMerge = async () => {
+        if (dom.mergeFileList) {
+            sortable = Sortable.create(dom.mergeFileList, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: (evt) => {
+                    // Reorder the mergeFiles array
+                    const [movedItem] = mergeFiles.splice(evt.oldIndex, 1);
+                    mergeFiles.splice(evt.newIndex, 0, movedItem);
+                    renderMergeList(); // Re-render to update indices correctly
+                },
+            });
+        }
+        
+        const onMerge = async () => {
             if (mergeFiles.length < 2) {
-                showToast('请至少选择两个文件进行合并。', 'error');
+                showToast('请选择至少两个文件进行合并', true);
                 return;
             }
 
-            showLoader();
+            showLoading(dom.mergeButton, dom.mergeButtonText, '正在准备...');
+            const orderedFiles = Array.from(dom.mergeFileList.children)
+                .map(item => mergeFiles[parseInt(item.dataset.id, 10)]);
+
             try {
-                const mainZip = await JSZip.loadAsync(await mergeFiles[0].arrayBuffer());
-                const mainDocXmlStr = await mainZip.file('word/document.xml').async('string');
+                const baseFile = await readFileAsArrayBuffer(orderedFiles[0]);
+                const baseZip = await JSZip.loadAsync(baseFile);
                 
                 const parser = new DOMParser();
-                const mainXmlDoc = parser.parseFromString(mainDocXmlStr, "application/xml");
-                let mainBody = mainXmlDoc.querySelector('body');
-                
-                // 查找最后一个 section properties，新内容要加在它前面
-                const lastSectPr = mainBody.querySelector('sectPr');
+                const serializer = new XMLSerializer();
 
-                for (let i = 1; i < mergeFiles.length; i++) {
-                    const zip = await JSZip.loadAsync(await mergeFiles[i].arrayBuffer());
-                    const docXmlStr = await zip.file('word/document.xml').async('string');
-                    const xmlDoc = parser.parseFromString(docXmlStr, "application/xml");
-                    const body = xmlDoc.querySelector('body');
+                let baseDocXmlStr = await baseZip.file("word/document.xml").async("string");
+                let baseDocXml = parser.parseFromString(baseDocXmlStr, "text/xml");
+                let baseBody = baseDocXml.querySelector("body");
+                let baseLastSectPr = baseBody.querySelector(":scope > sectPr");
 
-                    // 插入一个分页符，作为文档间的区隔
-                    const pageBreak = mainXmlDoc.createElement('w:p');
+                let baseRelsXmlStr = await baseZip.file("word/_rels/document.xml.rels").async("string");
+                let baseRelsXml = parser.parseFromString(baseRelsXmlStr, "text/xml");
+                let baseRelationships = baseRelsXml.querySelector("Relationships");
+                let maxId = Array.from(baseRelationships.children).reduce((max, r) => Math.max(max, parseInt(r.id.replace('rId', ''), 10)), 0);
+
+                for (let i = 1; i < orderedFiles.length; i++) {
+                    showLoading(dom.mergeButton, dom.mergeButtonText, `正在合并文件 ${i + 1}/${orderedFiles.length}`);
+
+                    // Add a page break before appending new content
+                    const pageBreak = baseDocXml.createElement("w:p");
                     pageBreak.innerHTML = '<w:r><w:br w:type="page"/></w:r>';
-                    if(lastSectPr) {
-                        mainBody.insertBefore(pageBreak, lastSectPr);
-                    } else {
-                        mainBody.appendChild(pageBreak);
-                    }
+                    baseBody.insertBefore(pageBreak, baseLastSectPr);
+
+                    const nextFile = await readFileAsArrayBuffer(orderedFiles[i]);
+                    const nextZip = await JSZip.loadAsync(nextFile);
                     
-                    // 复制子文档的所有内容节点
-                    body.childNodes.forEach(node => {
-                        // 避免复制子文档的末尾 sectPr
-                         if (node.tagName !== 'w:sectPr') {
-                            const importedNode = mainXmlDoc.importNode(node, true);
-                             if(lastSectPr) {
-                                mainBody.insertBefore(importedNode, lastSectPr);
-                            } else {
-                                mainBody.appendChild(importedNode);
+                    if (!nextZip.file("word/document.xml") || !nextZip.file("word/_rels/document.xml.rels")) continue;
+
+                    const nextDocXmlStr = await nextZip.file("word/document.xml").async("string");
+                    const nextDocXml = parser.parseFromString(nextDocXmlStr, "text/xml");
+                    
+                    const nextRelsXmlStr = await nextZip.file("word/_rels/document.xml.rels").async("string");
+                    const nextRelsXml = parser.parseFromString(nextRelsXmlStr, "text/xml");
+                    
+                    const idMap = new Map();
+
+                    // Process relationships (for images, etc.)
+                    for (const rel of nextRelsXml.querySelectorAll("Relationship")) {
+                        const oldId = rel.getAttribute("Id");
+                        const newId = `rId${++maxId}`;
+                        idMap.set(oldId, newId);
+                        
+                        rel.setAttribute("Id", newId);
+                        const target = rel.getAttribute("Target");
+
+                        if (target.startsWith("media/")) {
+                            const mediaFile = nextZip.file(`word/${target}`);
+                            if (mediaFile) {
+                                const mediaData = await mediaFile.async("arraybuffer");
+                                baseZip.file(`word/${target}`, mediaData);
                             }
                         }
-                    });
+                        baseRelationships.appendChild(rel);
+                    }
+                    
+                    // Remap IDs in the document content
+                    const blips = nextDocXml.querySelectorAll("a\\:blip, blip"); // a:blip for drawings, blip for older formats
+                    for(const blip of blips) {
+                        const embedId = blip.getAttribute("r:embed");
+                        if(idMap.has(embedId)) {
+                            blip.setAttribute("r:embed", idMap.get(embedId));
+                        }
+                    }
+
+                    // Append content
+                    const nextBody = nextDocXml.querySelector("body");
+                    for (const child of Array.from(nextBody.children)) {
+                        if (child.tagName !== 'w:sectPr') {
+                            const importedNode = baseDocXml.importNode(child, true);
+                            baseBody.insertBefore(importedNode, baseLastSectPr);
+                        }
+                    }
                 }
                 
-                // 应用格式设置
-                const settingsDetails = dom.settingsPanel.querySelector('details');
-                if (settingsDetails.open) {
-                    const fontFamily = dom.fontFamilySelect.value;
-                    const fontSize = dom.fontSizeSelect.value; // 单位：半磅
-                    const lineSpacing = dom.lineSpacingSelect.value; // 240 = 1倍
+                showLoading(dom.mergeButton, dom.mergeButtonText, '正在生成文件...');
+                baseZip.file("word/document.xml", serializer.serializeToString(baseDocXml));
+                baseZip.file("word/_rels/document.xml.rels", serializer.serializeToString(baseRelsXml));
 
-                    mainXmlDoc.querySelectorAll('p').forEach(p => {
-                        let pPr = p.querySelector('pPr');
-                        if (!pPr) {
-                            pPr = mainXmlDoc.createElement('w:pPr');
-                            p.prepend(pPr);
-                        }
-                        let spacing = pPr.querySelector('spacing');
-                        if (!spacing) {
-                            spacing = mainXmlDoc.createElement('w:spacing');
-                            pPr.appendChild(spacing);
-                        }
-                        spacing.setAttribute('w:line', lineSpacing);
-                        spacing.setAttribute('w:lineRule', 'auto');
-                    });
+                const blob = await baseZip.generateAsync({
+                    type: "blob",
+                    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                });
 
-                    mainXmlDoc.querySelectorAll('r').forEach(r => {
-                        let rPr = r.querySelector('rPr');
-                        if (!rPr) {
-                            rPr = mainXmlDoc.createElement('w:rPr');
-                            r.prepend(rPr);
-                        }
-                        let rFonts = rPr.querySelector('rFonts');
-                        if (!rFonts) {
-                            rFonts = mainXmlDoc.createElement('w:rFonts');
-                            rPr.appendChild(rFonts);
-                        }
-                        rFonts.setAttribute('w:ascii', fontFamily);
-                        rFonts.setAttribute('w:eastAsia', fontFamily);
-                        rFonts.setAttribute('w:hAnsi', fontFamily);
-
-                        let sz = rPr.querySelector('sz');
-                        if (!sz) {
-                            sz = mainXmlDoc.createElement('w:sz');
-                            rPr.appendChild(sz);
-                        }
-                        sz.setAttribute('w:val', fontSize);
-                    });
-                }
-
-                const serializer = new XMLSerializer();
-                const newXmlStr = serializer.serializeToString(mainXmlDoc);
-                mainZip.file('word/document.xml', newXmlStr);
-
-                const blob = await mainZip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-                const link = document.createElement('a');
+                const link = document.createElement("a");
                 link.href = URL.createObjectURL(blob);
-                link.download = 'merged.docx';
+                link.download = "merged_document.docx";
                 link.click();
                 URL.revokeObjectURL(link.href);
 
-                showToast('合并成功！已开始下载。');
-            } catch (error) {
-                console.error("合并失败:", error);
-                showToast(`合并失败: ${error.message}`, 'error');
+                showToast('合并成功！');
+
+            } catch (e) {
+                console.error(e);
+                showToast('合并失败，请检查文件或查看控制台日志', true);
             } finally {
-                hideLoader();
+                hideLoading(dom.mergeButton, dom.mergeButtonText, `合并 ${mergeFiles.length} 个文件`);
             }
         };
 
-        // --- 分割功能逻辑 ---
-        const onSplitFileAdded = (files) => {
-            if (files.length > 0) {
-                const file = files[0];
-                if (!handleFileValidation(file)) return;
-                
-                splitFile = file;
-                analyzeSplitFile();
-            }
-        };
-        
-        const analyzeSplitFile = async () => {
-            if (!splitFile) return;
-            showLoader();
+
+        // --- Split Logic ---
+        const handleSplitFile = async (files) => {
+            if (files.length === 0) return;
+            splitFile = files[0];
+            
+            showLoading(dom.splitButton, dom.splitButtonText, '正在分析...');
+            dom.splitOptionsCard.style.display = 'none';
+            dom.splitInfo.style.display = 'none';
+
             try {
-                const zip = await JSZip.loadAsync(await splitFile.arrayBuffer());
-                const xmlStr = await zip.file("word/document.xml").async("string");
+                const buffer = await readFileAsArrayBuffer(splitFile);
+                const zip = await JSZip.loadAsync(buffer);
+                const docXmlStr = await zip.file("word/document.xml").async("string");
                 const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(xmlStr, "application/xml");
-                const paragraphs = xmlDoc.getElementsByTagName("w:p");
-
-                dom.splitFileName.textContent = splitFile.name;
-                dom.splitTotalParagraphs.textContent = paragraphs.length;
-                dom.splitInfoDisplay.style.display = 'flex';
-                dom.splitButton.disabled = false;
+                const docXml = parser.parseFromString(docXmlStr, "text/xml");
+                const paragraphs = docXml.querySelectorAll("w\\:p, p");
                 
-            } catch (error) {
-                console.error("文件分析失败:", error);
-                showToast(`文件分析失败: ${error.message}`, 'error');
-                dom.splitInfoDisplay.style.display = 'none';
-                dom.splitButton.disabled = true;
+                dom.splitInfo.innerHTML = `<strong>文件名:</strong> ${splitFile.name} | <strong>总段落数:</strong> ${paragraphs.length}`;
+                dom.splitInfo.style.display = 'block';
+                dom.splitOptionsCard.style.display = 'block';
+                dom.splitButton.disabled = false;
+                dom.splitButtonText.textContent = '开始分割';
+            } catch (e) {
+                console.error(e);
+                showToast('文件分析失败，可能不是有效的DOCX文件', true);
+                 dom.splitButtonText.textContent = '请先上传文件';
             } finally {
-                hideLoader();
+                hideLoading(dom.splitButton, dom.splitButtonText, '开始分割');
+                if (splitFile) dom.splitButton.disabled = false;
             }
         };
-        
-        const addSplitRange = () => {
-            const count = dom.splitRangesContainer.children.length;
-            const div = document.createElement('div');
-            div.className = 'form-group';
-            div.innerHTML = `
-                <label>第 ${count + 1} 部分:</label>
-                <input type="text" placeholder="例如: 51-100 或 101-">
-                <button class="delete-btn" title="删除此范围">✖</button>
-            `;
-            div.querySelector('.delete-btn').addEventListener('click', (e) => {
-                e.target.parentElement.remove();
-                // Re-label remaining ranges
-                dom.splitRangesContainer.querySelectorAll('label').forEach((label, index) => {
-                    label.textContent = `第 ${index + 1} 部分:`;
-                });
-            });
-            dom.splitRangesContainer.appendChild(div);
-        };
-        
-        const handleSplit = async () => {
+
+        const onSplit = async () => {
             if (!splitFile) {
-                showToast('请先上传一个文件。', 'error');
+                showToast('请先上传一个文件', true);
                 return;
             }
+            const rangesStr = dom.splitRangesInput.value.trim();
+            if (!rangesStr) {
+                showToast('请输入分割范围', true);
+                return;
+            }
+
+            showLoading(dom.splitButton, dom.splitButtonText, '正在分割...');
             
-            showLoader();
             try {
-                const originalZip = await JSZip.loadAsync(await splitFile.arrayBuffer());
-                const xmlStr = await originalZip.file("word/document.xml").async("string");
+                const buffer = await readFileAsArrayBuffer(splitFile);
+                const baseZip = await JSZip.loadAsync(buffer);
+                const docXmlStr = await baseZip.file("word/document.xml").async("string");
+                const relsXmlStr = await baseZip.file("word/_rels/document.xml.rels")?.async("string");
+
                 const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(xmlStr, "application/xml");
-                const allParagraphs = Array.from(xmlDoc.getElementsByTagName("w:p"));
+                const serializer = new XMLSerializer();
+                
+                const baseDocXml = parser.parseFromString(docXmlStr, "text/xml");
+                const allParagraphs = Array.from(baseDocXml.querySelectorAll("w\\:p, p"));
                 const totalParagraphs = allParagraphs.length;
-
-                const ranges = Array.from(dom.splitRangesContainer.querySelectorAll('input')).map(input => input.value);
-                if (ranges.every(r => r.trim() === '')) {
-                     showToast('请输入至少一个有效的分割范围。', 'error');
-                     hideLoader();
-                     return;
-                }
-
+                const ranges = rangesStr.split('\n').map(line => line.trim()).filter(Boolean);
+                
+                let successCount = 0;
                 for (let i = 0; i < ranges.length; i++) {
-                    const rangeStr = ranges[i];
-                    if (!rangeStr.trim()) continue;
-
-                    let [start, end] = rangeStr.split('-').map(s => s.trim());
+                     showLoading(dom.splitButton, dom.splitButtonText, `处理部分 ${i+1}/${ranges.length}`);
+                    const range = ranges[i];
+                    let [start, end] = range.split('-').map(n => n.trim());
                     start = parseInt(start, 10);
                     end = end ? parseInt(end, 10) : totalParagraphs;
 
-                    if (isNaN(start) || start < 1) {
-                        throw new Error(`范围 "${rangeStr}" 的起始值无效。`);
+                    if (isNaN(start) || start < 1 || start > totalParagraphs) {
+                        showToast(`范围 "${range}" 的起始值无效`, true);
+                        continue;
                     }
-
-                    const newZip = await JSZip.loadAsync(await splitFile.arrayBuffer());
-                    const newXmlDoc = parser.parseFromString(xmlStr, "application/xml");
-                    const body = newXmlDoc.querySelector('body');
-                    body.innerHTML = ''; // 清空body
 
                     const paragraphsToKeep = allParagraphs.slice(start - 1, end);
-                    paragraphsToKeep.forEach(p => body.appendChild(newXmlDoc.importNode(p, true)));
                     
-                    // 保留原始的节属性
-                    const sectPr = xmlDoc.querySelector('sectPr');
-                    if (sectPr) {
-                        body.appendChild(newXmlDoc.importNode(sectPr, true));
+                    const newZip = new JSZip();
+                    const newDocXml = parser.parseFromString(docXmlStr.substring(0, docXmlStr.indexOf("<w:body>") + 8) + "</w:body></w:document>", "text/xml");
+                    const newBody = newDocXml.querySelector("body");
+                    const baseSectPr = baseDocXml.querySelector("body > sectPr");
+
+                    const relsToKeep = new Map();
+
+                    for (const p of paragraphsToKeep) {
+                        const blips = p.querySelectorAll("a\\:blip, blip");
+                        for(const blip of blips) {
+                            const embedId = blip.getAttribute("r:embed");
+                            if(embedId) relsToKeep.set(embedId, null);
+                        }
+                        newBody.appendChild(p.cloneNode(true));
+                    }
+                    if(baseSectPr) newBody.appendChild(baseSectPr.cloneNode(true));
+                    
+                    // Copy necessary files
+                    for (const [filePath, file] of Object.entries(baseZip.files)) {
+                        if (filePath === 'word/document.xml' || filePath === 'word/_rels/document.xml.rels') continue;
+                        if (!filePath.endsWith('/')) {
+                             newZip.file(filePath, await file.async('arraybuffer'));
+                        } else {
+                            newZip.folder(filePath);
+                        }
+                    }
+                    
+                    // Filter relationships
+                    if (relsXmlStr) {
+                         const baseRelsXml = parser.parseFromString(relsXmlStr, "text/xml");
+                         const newRelsXml = parser.parseFromString(relsXmlStr.substring(0, relsXmlStr.indexOf("<Relationships>") + 15) + "</Relationships>", "text/xml");
+                         const newRelationships = newRelsXml.querySelector("Relationships");
+
+                        for (const rel of baseRelsXml.querySelectorAll("Relationship")) {
+                            if (relsToKeep.has(rel.getAttribute("Id"))) {
+                                newRelationships.appendChild(rel.cloneNode(true));
+                            }
+                        }
+                         newZip.file("word/_rels/document.xml.rels", serializer.serializeToString(newRelsXml));
                     }
 
-                    const serializer = new XMLSerializer();
-                    const newXmlStr = serializer.serializeToString(newXmlDoc);
-                    newZip.file('word/document.xml', newXmlStr);
+                    newZip.file("word/document.xml", serializer.serializeToString(newDocXml));
 
                     const blob = await newZip.generateAsync({ type: 'blob' });
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
-                    link.download = `${splitFile.name.replace('.docx', '')}_part${i + 1}.docx`;
+                    link.download = `split_${start}-${end}_${splitFile.name}`;
                     link.click();
                     URL.revokeObjectURL(link.href);
+                    successCount++;
+                }
+                
+                if (successCount > 0) {
+                     showToast(`成功生成 ${successCount} 个分割文件！`);
                 }
 
-                showToast('分割成功！已开始下载所有文件。');
-            } catch (error) {
-                 console.error("分割失败:", error);
-                 showToast(`分割失败: ${error.message}`, 'error');
+            } catch(e) {
+                console.error(e);
+                showToast('分割失败，请检查文件或控制台日志', true);
             } finally {
-                hideLoader();
+                hideLoading(dom.splitButton, dom.splitButtonText, '开始分割');
             }
+
         };
 
-        // --- 事件监听器绑定 ---
-        setupDropZone(dom.mergeDropZone, dom.mergeFileInput, onMergeFilesAdded);
-        dom.mergeButton.addEventListener('click', handleMerge);
-
-        setupDropZone(dom.splitDropZone, dom.splitFileInput, onSplitFileAdded);
-        dom.addRangeBtn.addEventListener('click', addSplitRange);
-        dom.splitButton.addEventListener('click', handleSplit);
-        // Ensure first split range delete button works
-        dom.splitRangesContainer.querySelector('.delete-btn').addEventListener('click', (e) => {
-            if (dom.splitRangesContainer.children.length > 1) {
-                e.target.parentElement.remove();
-            }
-        });
+        // --- Initial Setup ---
+        setupDropZone(dom.mergeDropZone, dom.mergeFileInput, handleMergeFiles);
+        setupDropZone(dom.splitDropZone, dom.splitFileInput, handleSplitFile);
+        dom.mergeButton.addEventListener('click', onMerge);
+        dom.splitButton.addEventListener('click', onSplit);
 
     });
     </script>
