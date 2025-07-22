@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<script>
+if (!window.location.hash) {
+    window.location = window.location + '#loaded';
+    window.location.reload();
+}
+</script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025 分红</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* --- 基础与字体设置 --- */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Roboto:wght@300;400&display=swap');
+
+        :root {
+            --primary-color: #0a4d68;
+            --secondary-color: #088395;
+            --accent-color: #f5b971;
+            --danger-color: #e63946;
+            --text-color: #333;
+            --bg-color: #f1f1f1;
+            --page-color: #fdfaf3;
+            --shadow-color: rgba(0, 0, 0, 0.15);
+            --border-radius: 12px;
+            --transition-speed: 0.5s;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.7;
+        }
+
+        /* --- 整体布局 --- */
+        .book-container {
+            display: flex;
+            width: 100%;
+            max-width: 1600px;
+            perspective: 2500px;
+        }
+
+        .page {
+            background-color: var(--page-color);
+            padding: 30px 40px;
+            box-shadow: 0 10px 30px var(--shadow-color), 0 0 0 1px #ddd;
+            transition: transform var(--transition-speed) ease;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+
+        #page-left {
+            border-top-left-radius: var(--border-radius);
+            border-bottom-left-radius: var(--border-radius);
+            transform-origin: right center;
+        }
+
+        #page-right {
+            border-top-right-radius: var(--border-radius);
+            border-bottom-right-radius: var(--border-radius);
+            transform-origin: left center;
+            border-left: 1px solid #ccc;
+        }
+
+        .book-container:hover #page-left {
+            transform: rotateY(-3deg);
+        }
+
+        .book-container:hover #page-right {
+            transform: rotateY(3deg);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(5px);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            animation: fadeIn 0.8s ease-in-out both;
+        }
+
+        .card:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .card:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .card:nth-child(4) {
+            animation-delay: 0.4s;
+        }
+
+        .card:nth-child(5) {
+            animation-delay: 0.5s;
+        }
+
+        .card:nth-child(6) {
+            animation-delay: 0.6s;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 10px;
+            font-size: 1.8em;
+            font-family: 'Noto Serif SC', serif;
+        }
+
+        /* --- 表单与按钮 --- */
+        .results-header,
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #fff;
+            background-color: var(--primary-color);
+        }
+
+        button.primary {
+            background-color: var(--secondary-color);
+        }
+
+        button.secondary {
+            background-color: var(--accent-color);
+            color: var(--primary-color);
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .input-group,
+        .settings-grid {
+            display: grid;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+
+        .settings-grid {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        .input-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-field label {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+            font-size: .9em;
+        }
+
+        .input-field .value-display {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--secondary-color);
+        }
+
+        input[type=text],
+        input[type=number] {
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all .3s ease;
+            background-color: #fff;
+        }
+
+        input[type=text]:focus,
+        input[type=number]:focus {
+            outline: 0;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 8px rgba(8, 131, 149, .2);
+        }
+
+        /* --- 高级功能: 支出细项 --- */
+        #expenseList {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 15px 0;
+        }
+
+        .expense-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .expense-item:hover {
+            background-color: rgba(10, 77, 104, 0.05);
+        }
+
+        .expense-item input {
+            flex-grow: 1;
+        }
+
+        .expense-item .delete-expense {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-weight: bold;
+            line-height: 1;
+            text-align: center;
+            padding: 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .expense-item .delete-expense:hover {
+            transform: scale(1.1);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+            background: #d32f2f;
+        }
+
+        .expense-total {
+            text-align: right;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--danger-color);
+            margin-top: 10px;
+        }
+
+        #addExpenseBtn {
+            background-color: var(--primary-color);
+        }
+
+
+        /* --- 结果与历史记录 --- */
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.95em;
+        }
+
+        .results-table td,
+        .results-table th {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .results-table th {
+            background-color: rgba(10, 77, 104, .1);
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .results-table .total-amount {
+            font-weight: 700;
+            color: var(--secondary-color);
+            font-size: 1.2em;
+        }
+
+        #historyList .history-item {
+            margin-bottom: 10px;
+        }
+
+        #secretPanelOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s ease, visibility 0.4s;
+        }
+
+        #secretPanelOverlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .secret-panel {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 600px;
+            transform: scale(0.9);
+            transition: transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+
+        #secretPanelOverlay.visible .secret-panel {
+            transform: scale(1);
+        }
+
+        .secret-panel h2 {
+            color: var(--accent-color);
+            text-align: center;
+            border-bottom-color: #34495e;
+        }
+
+        .secret-panel h4 {
+            color: #bdc3c7;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #34495e;
+            padding-bottom: 5px;
+        }
+
+        #secret-transfers-list {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        #secret-transfers-list li {
+            background: #34495e;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideIn 0.3s;
+        }
+
+        #secret-transfers-list button {
+            background-color: var(--danger-color);
+            font-size: 0.8em;
+            padding: 4px 10px;
+        }
+
+        .secret-panel .control-group {
+            margin: 20px 0;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .secret-panel label {
+            display: block;
+            margin-bottom: 5px;
+            color: #bdc3c7;
+        }
+
+        .secret-panel select,
+        .secret-panel input {
+            width: 100%;
+            padding: 10px;
+            background: #34495e;
+            border: 1px solid #7f8c8d;
+            color: #ecf0f1;
+            border-radius: 8px;
+        }
+
+        .secret-panel .transfer-arrow {
+            font-size: 2em;
+            color: var(--accent-color);
+        }
+
+        /* --- Toast 通知 --- */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            z-index: 1001;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            animation: slideDownToast 0.5s ease forwards;
+        }
+
+        @keyframes slideDownToast {
+            from {
+                top: -100px;
+                opacity: 0;
+            }
+
+            to {
+                top: 20px;
+                opacity: 1;
+            }
+        }
+
+        /* --- 动画 --- */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* --- 其他 (继承V2) --- */
+        h1,
+        h2 {
+            font-family: 'Noto Serif SC', serif;
+        }
+
+        .history-item {
+            background-color: #fff;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            transition: all .4s ease
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            cursor: pointer;
+            background-color: rgba(10, 77, 104, .05)
+        }
+
+        .history-header:hover {
+            background-color: rgba(10, 77, 104, .1)
+        }
+
+        .history-header h4 {
+            margin: 0;
+            color: var(--primary-color)
+        }
+
+        .history-date {
+            font-size: .8em;
+            color: #777
+        }
+
+        .history-details {
+            max-height: 0;
+            opacity: 0;
+            transition: max-height .5s ease-out, opacity .5s ease, padding .5s ease;
+            padding: 0 15px
+        }
+
+        .history-details.open {
+            max-height: 500px;
+            opacity: 1;
+            padding: 15px
+        }
+
+        .history-item .results-table {
+            margin-top: 0
+        }
+
+        #no-history-msg {
+            text-align: center;
+            color: #999;
+            padding: 20px
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: center
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px
+        }
+
+        #page-right h3 {
+            font-size: 1.5rem;
+            margin-top: 20px;
+            border-left: 4px solid var(--accent-color);
+            padding-left: 10px
+        }
+
+        #page-right h4 {
+            font-size: 1.2rem;
+            color: var(--secondary-color);
+            margin-top: 15px
+        }
+
+        .plan-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: .9em
+        }
+
+        .plan-table td,
+        .plan-table th {
+            border: 1px solid #ccc;
+            padding: 8px 12px;
+            text-align: center
+        }
+
+        .plan-table th {
+            background-color: rgba(10, 77, 104, .1)
+        }
+
+        @media (max-width:1200px) {
+            body {
+                display: block;
+                padding: 10px;
+                align-items: stretch
+            }
+
+            .book-container {
+                flex-direction: column;
+                min-height: auto;
+                perspective: none
+            }
+
+            .page {
+                border-radius: var(--border-radius) !important;
+                margin-bottom: 20px;
+                padding: 20px;
+                box-shadow: 0 5px 20px var(--shadow-color);
+                max-height: none;
+                overflow-y: visible
+            }
+
+            .book-container:hover .page {
+                transform: none !important
+            }
+        }
+
+        @media (max-width:768px) {
+            .charts-container {
+                grid-template-columns: 1fr
+            }
+
+            .chart-wrapper {
+                height: 250px
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="book-container">
+        <!-- 左侧页面 -->
+        <div class="page" id="page-left">
+            <header>
+                <h1 id="mainTitle">2025分红</h1>
+            </header>
+
+            <section class="card">
+                <h2>财务概览</h2>
+                <div class="input-group">
+                    <div class="input-field"><label for="totalAmount">输入总金额 (元)</label><input type="text"
+                            id="totalAmount" value="14000"></div>
+                    <div class="input-field"><label>可供比例分配金额</label><span id="distributableAmount" class="value-display"
+                            data-value="0">¥ 0.00</span></div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>支出细项管理</h2>
+                    <button id="addExpenseBtn" class="primary" style="padding: 8px 15px;">添加支出项</button>
+                </div>
+                <ul id="expenseList"></ul>
+                <div class="expense-total">总计支出: <span id="totalExpensesDisplay">¥ 0.00</span></div>
+            </section>
+
+            <section class="card">
+                <div class="results-header">
+                    <h2>分红结果</h2>
+                    <div class="button-group">
+                        <button id="saveRecordBtn" class="primary">保存当前记录</button>
+                        <button id="exportCsvBtn" class="secondary">导出为CSV</button>
+                    </div>
+                </div>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>成员</th>
+                            <th>必要分配</th>
+                            <th>补贴</th>
+                            <th>比例分配</th>
+                            <th>总计分红</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody"></tbody>
+                </table>
+            </section>
+
+            <section class="card">
+                <h2>数据可视化</h2>
+                <div class="charts-container">
+                    <div class="chart-wrapper"><canvas id="barChart"></canvas></div>
+                    <div class="chart-wrapper"><canvas id="pieChart"></canvas></div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>历史分红记录</h2>
+                <div id="historyList">
+                    <p id="no-history-msg">还没有保存过任何记录。</p>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>分配与数据管理</h2>
+                <div id="settings" class="settings-grid"></div>
+                <div class="button-group"
+                    style="justify-content: flex-start; margin-top:20px; border-top: 1px solid #eee; padding-top: 20px;">
+                    <button id="saveSettingsBtn" class="primary">保存设置</button>
+                    <button id="resetSettingsBtn" class="secondary">恢复默认设置</button>
+                    <button id="exportJsonBtn">导出为JSON</button>
+                    <button id="importJsonBtn">从文件导入</button>
+                    <button id="importClipboardBtn">从剪贴板导入</button>
+                    <button id="copyUrlBtn" class="primary">复制配置链接</button> <!-- 新增按钮 -->
+                </div>
+            </section>
+        </div>
+
+        <!-- 右侧页面 (内容不变) -->
+        <div class="page" id="page-right">
+            <header>
+                <h2>2026年发展计划（学生自主运营版）</h2>
+            </header>
+            <p><strong>核心原则：</strong>学生运营、轻资产启动、闭环盈利、资源复用</p>
+            <hr>
+            <article>
+                <h3>一、四大业务线及执行方案</h3>
+                <h4>1. 易教平板交易（低买高卖）</h4>
+                <ul>
+                    <li><strong>货源渠道：</strong>毕业生闲置平板（毕业季集中收购，压价30%-50%），闲鱼/转转同城面交。</li>
+                    <li><strong>盈利模式：</strong>收购价 P880S≤450元，P980S≤550元。翻新成本：贴膜（5元/张）+ 酒精清洁。售价：溢价400-600元。</li>
+                    <li><strong>学生分工：</strong>质检组（1人），谈判组（2人，负责压价收购&销售话术）。</li>
+                </ul>
+                <h4>2. 学霸笔记/集训资料（暴利变现）</h4>
+                <ul>
+                    <li><strong>生产资料：</strong>二手激光/喷墨打印机（如佳能G3800，650元，单张成本0.05元），70g复印纸（25元/500张）+简易装订机（100元）。</li>
+                    <li><strong>内容生产：</strong>付费购买年级TOP5学生笔记（50-100元/科买断版权），整合集训学生资料。</li>
+                    <li><strong>定价策略：</strong></li>
+                </ul>
+                <table class="plan-table">
+                    <thead>
+                        <tr>
+                            <th>产品类型</th>
+                            <th>成本</th>
+                            <th>售价</th>
+                            <th>利润率</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>学霸笔记</td>
+                            <td>~20元/本</td>
+                            <td>299元</td>
+                            <td>~1495%</td>
+                        </tr>
+                        <tr>
+                            <td>名校模拟题合集</td>
+                            <td>~2.5元/册</td>
+                            <td>49元</td>
+                            <td>~1800%</td>
+                        </tr>
+                        <tr>
+                            <td>集训资料</td>
+                            <td>~8元</td>
+                            <td>199元</td>
+                            <td>~2487%</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h4>3. 学生补习班（师资0成本）</h4>
+                <ul>
+                    <li><strong>运作模式：</strong>教师为优秀学生（课时费按学费40%分成）。教室排课：周末全天分3时段，每间教室日周转3次。</li>
+                    <li><strong>定价参考：</strong></li>
+                </ul>
+                <table class="plan-table">
+                    <thead>
+                        <tr>
+                            <th>课程类型</th>
+                            <th>课时</th>
+                            <th>学费</th>
+                            <th>教师分成</th>
+                            <th>机构留存</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>单科强化班</td>
+                            <td>10节</td>
+                            <td>1000元</td>
+                            <td>400元</td>
+                            <td>600元</td>
+                        </tr>
+                        <tr>
+                            <td>冲刺衔接班</td>
+                            <td>30节</td>
+                            <td>2000元</td>
+                            <td>800元</td>
+                            <td>1200元</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h3>二、首期执行流程（1-3个月）</h3>
+                <h4>1. 启动期（第1个月）</h4>
+                <ul>
+                    <li>投入1万元收购二手平板（目标30台）+ 打印机等设备。</li>
+                    <li>签约5名学霸买断笔记版权（预付1000元）。</li>
+                    <li>招募首期教师2人（覆盖3科）。</li>
+                </ul>
+                <h4>2. 裂变期（第2个月）</h4>
+                <ul>
+                    <li>平板销售：加赠相关基础资料（增值50元）。</li>
+                    <li>资料包营销：购平板送59元高级资料代金券（锁定复购）。</li>
+                    <li>补习班裂变：推荐1名学员赠2节课程，而非直接减免费用（满班率需>80%）。</li>
+                </ul>
+                <h3>三、成本控制与盈利保障</h3>
+                <ul>
+                    <li><strong>人力成本封顶：</strong>教师薪资 = 学费分成 + 资料销售提成（无底薪）。</li>
+                </ul>
+            </article>
+        </div>
+    </div>
+
+    <div id="secretPanelOverlay">
+        <div class="secret-panel">
+            <h2>高级操作</h2>
+
+            <div id="secret-transfers-list-container">
+                <h4>当前操作列表</h4>
+                <ul id="secret-transfers-list"></ul>
+            </div>
+
+            <h4>添加新操作</h4>
+            <div class="control-group">
+                <div class="input-field">
+                    <label for="secretFrom">从</label>
+                    <select id="secretFrom"></select>
+                </div>
+                <div class="transfer-arrow">→</div>
+                <div class="input-field">
+                    <label for="secretTo">至</label>
+                    <select id="secretTo"></select>
+                </div>
+            </div>
+            <div class="input-field">
+                <label for="secretPercentage">转移比例 (%)</label>
+                <input type="number" id="secretPercentage" placeholder="输入要转移的百分比" min="0">
+            </div>
+            <div class="button-group" style="margin-top: 20px; justify-content: flex-end;">
+                <button id="addSecretTransferBtn">添加操作</button>
+            </div>
+
+            <div class="button-group"
+                style="margin-top: 30px; border-top: 1px solid #34495e; padding-top:20px; justify-content: center;">
+                <button id="applySecretChangesBtn" class="primary">应用并关闭</button>
+                <button id="cancelSecretChangesBtn" class="secondary">放弃并关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐藏的文件输入框 -->
+    <input type="file" id="json-importer" style="display: none;" accept=".json">
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- 全局状态管理 (Single Source of Truth) ---
+            let state = {};
+            const defaultState = {
+                peopleData: [
+                    { id: 'wang', name: '王', necessary: 700, subsidy: 0, percentage: 40 },
+                    { id: 'xu', name: '徐', necessary: 600, subsidy: 50, percentage: 10 },
+                    { id: 'zhang', name: '张', necessary: 500, subsidy: 50, percentage: 25 },
+                    { id: 'guo', name: '郭', necessary: 0, subsidy: 50, percentage: 25 }
+                ],
+                expenseItems: [
+                    { id: Date.now() + 1, name: '场地费', amount: 1500 },
+                    { id: Date.now() + 2, name: '旅游费', amount: 1500 },
+                ],
+                historyData: [],
+                secretTransfers: [],
+            };
+
+            // --- DOM 元素获取 ---
+            const totalAmountInput = document.getElementById('totalAmount'),
+                distributableAmountEl = document.getElementById('distributableAmount'),
+                resultsTableBody = document.getElementById('resultsTableBody'),
+                settingsContainer = document.getElementById('settings'),
+                historyListContainer = document.getElementById('historyList'),
+                expenseListContainer = document.getElementById('expenseList'),
+                totalExpensesDisplay = document.getElementById('totalExpensesDisplay');
+
+            const saveSettingsBtn = document.getElementById('saveSettingsBtn'),
+                resetSettingsBtn = document.getElementById('resetSettingsBtn'),
+                saveRecordBtn = document.getElementById('saveRecordBtn'),
+                exportCsvBtn = document.getElementById('exportCsvBtn'),
+                exportJsonBtn = document.getElementById('exportJsonBtn'),
+                importJsonBtn = document.getElementById('importJsonBtn'),
+                importClipboardBtn = document.getElementById('importClipboardBtn'),
+                copyUrlBtn = document.getElementById('copyUrlBtn'), // 新增
+                jsonImporter = document.getElementById('json-importer'),
+                addExpenseBtn = document.getElementById('addExpenseBtn');
+
+            const secretPanelOverlay = document.getElementById('secretPanelOverlay'),
+                mainTitle = document.getElementById('mainTitle'),
+                addSecretTransferBtn = document.getElementById('addSecretTransferBtn'),
+                applySecretChangesBtn = document.getElementById('applySecretChangesBtn'),
+                cancelSecretChangesBtn = document.getElementById('cancelSecretChangesBtn'),
+                secretTransfersListEl = document.getElementById('secret-transfers-list');
+
+            let barChartInstance, pieChartInstance, currentResults = [];
+            let panelTransfers = [];
+            let lastValidTotalAmount = 0;
+
+            // --- 核心工具函数 ---
+            const formatCurrency = (num) => `¥ ${parseFloat(num || 0).toFixed(2)}`;
+            const showToast = (message, duration = 3000) => {
+                const toast = document.createElement("div");
+                toast.className = "toast";
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                setTimeout(() => { toast.remove() }, duration);
+            };
+            const animateValue = (element, start, end, duration) => {
+                if (start === end) return;
+                let startTimestamp = null;
+                const step = t => {
+                    startTimestamp || (startTimestamp = t);
+                    const progress = Math.min((t - startTimestamp) / duration, 1);
+                    const easedProgress = progress * (2 - progress);
+                    const value = start + easedProgress * (end - start);
+                    element.innerHTML = formatCurrency(value);
+                    if (progress < 1) window.requestAnimationFrame(step);
+                    else element.innerHTML = formatCurrency(end);
+                };
+                window.requestAnimationFrame(step);
+            };
+
+            const importState = (jsonString) => {
+                try {
+                    const newState = JSON.parse(jsonString);
+                    if (!newState.peopleData || !newState.expenseItems || !newState.historyData) {
+                        throw new Error("无效的配置文件格式。");
+                    }
+                    state = newState;
+                    saveState();
+                    fullRender();
+                    showToast("配置已成功导入！");
+                    return true;
+                } catch (error) {
+                    showToast(`导入失败: ${error.message}`);
+                    return false;
+                }
+            };
+
+            // --- 数据持久化 (存档/读档) ---
+            const loadState = () => {
+                // First, try to load from URL parameter
+                try {
+                    const params = new URLSearchParams(window.location.search);
+                    const dataParam = params.get('data');
+                    if (dataParam) {
+                        // The 'json,' prefix is for compatibility if needed, but not strictly required
+                        let jsonString = dataParam.startsWith('json,') ? dataParam.substring(5) : dataParam;
+                        // Decoding is essential
+                        if (importState(decodeURIComponent(atob(jsonString)))) {
+                            // If successfully loaded from URL, clear the param from URL to avoid re-loading on refresh
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error("无法从URL参数解析数据: ", e);
+                    showToast("无法从URL参数解析数据。");
+                }
+
+                // Fallback to localStorage
+                try {
+                    const savedState = localStorage.getItem('dividendProState');
+                    state = savedState ? JSON.parse(savedState) : JSON.parse(JSON.stringify(defaultState));
+                    state.expenseItems = state.expenseItems || [];
+                    state.peopleData.forEach(p => p.subsidy = p.subsidy || 0);
+                    state.secretTransfers = state.secretTransfers || [];
+
+                    const initialTotal = parseFloat(totalAmountInput.value);
+                    if (!isNaN(initialTotal)) lastValidTotalAmount = initialTotal;
+
+                } catch (e) {
+                    console.error("加载状态失败:", e);
+                    state = JSON.parse(JSON.stringify(defaultState));
+                }
+                fullRender();
+            };
+
+            const saveState = () => {
+                try {
+                    localStorage.setItem('dividendProState', JSON.stringify(state));
+                    return true;
+                } catch (e) {
+                    console.error("保存状态失败:", e);
+                    showToast("保存失败，可能存储已满。");
+                    return false;
+                }
+            };
+
+            const resetState = () => {
+                if (confirm('您确定要恢复到初始默认设置吗？所有当前设置、支出项和历史记录都将被重置。')) {
+                    state = JSON.parse(JSON.stringify(defaultState));
+                    totalAmountInput.value = "14000";
+                    lastValidTotalAmount = 14000;
+                    saveState();
+                    fullRender();
+                    showToast('已恢复为默认设置。');
+                }
+            };
+
+            // --- 渲染函数 ---
+            const fullRender = () => {
+                renderExpenseItems();
+                renderSettings();
+                renderHistory();
+                calculateAndRenderAll();
+            };
+
+            const renderExpenseItems = () => {
+                expenseListContainer.innerHTML = state.expenseItems.map(item => `
+            <li class="expense-item" data-id="${item.id}">
+                <input type="text" class="expense-name" value="${item.name}" placeholder="支出项目名">
+                <input type="number" class="expense-amount" value="${item.amount}" placeholder="金额">
+                <button class="delete-expense" data-id="${item.id}">×</button>
+            </li>
+        `).join('');
+                const totalExpenses = state.expenseItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+                totalExpensesDisplay.textContent = formatCurrency(totalExpenses);
+            };
+
+            const renderSettings = () => {
+                settingsContainer.innerHTML = state.peopleData.map(p => `
+            <div class="person-setting">
+                <h4 style="color: var(--primary-color); margin-bottom: 10px;">${p.name}</h4>
+                <div class="input-group" style="gap: 10px;">
+                    <div class="input-field"><label for="${p.id}-name">姓名</label><input type="text" id="${p.id}-name" value="${p.name}"></div>
+                    <div class="input-field"><label for="${p.id}-necessary">必要分配</label><input type="text" id="${p.id}-necessary" value="${p.necessary}"></div>
+                    <div class="input-field"><label for="${p.id}-subsidy">补贴</label><input type="text" id="${p.id}-subsidy" value="${p.subsidy}"></div>
+                    <div class="input-field"><label for="${p.id}-percentage">比例分配(%)</label><input type="text" id="${p.id}-percentage" value="${p.percentage}"></div>
+                </div>
+            </div>`).join('');
+            };
+
+            const renderHistory = () => {
+                const container = historyListContainer;
+                if (!state.historyData || state.historyData.length === 0) {
+                    container.innerHTML = '<p id="no-history-msg">还没有保存过任何记录。</p>';
+                    return;
+                }
+                container.innerHTML = state.historyData.map(record => `
+            <div class="history-item" id="history-${record.id}">
+                <div class="history-header" data-id="${record.id}">
+                    <div><h4>${record.name}</h4><span class="history-date">保存于: ${record.date}</span></div>
+                    <button class="secondary" style="padding: 5px 10px;" data-delete-id="${record.id}">删除</button>
+                </div>
+                <div class="history-details">
+                     <p><strong>总金额:</strong> ${formatCurrency(record.inputs.total)} | <strong>总支出:</strong> ${formatCurrency(record.inputs.totalExpenses)}</p>
+                     <table class="results-table">
+                        <thead><tr><th>成员</th><th>必要</th><th>补贴</th><th>比例</th><th>总计</th></tr></thead>
+                        <tbody>${record.results.map(r => `
+                            <tr><td>${r.name}</td><td>${formatCurrency(r.necessary)}</td><td>${formatCurrency(r.subsidy)}</td><td>${formatCurrency(r.proportionalAmount)}</td><td class="total-amount">${formatCurrency(r.totalShare)}</td></tr>`).join('')}
+                        </tbody>
+                     </table>
+                </div>
+            </div>`).join('');
+            };
+
+            const updateCharts = (results) => {
+                const labels = results.map(r => r.name), data = results.map(r => r.totalShare), chartColors = ["#0a4d68", "#088395", "#f5b971", "#ff7b54", "#8ec3b0", "#e7d3a3"];
+                barChartInstance && barChartInstance.destroy(); pieChartInstance && pieChartInstance.destroy();
+                const barCtx = document.getElementById("barChart").getContext("2d"); barChartInstance = new Chart(barCtx, { type: "bar", data: { labels, datasets: [{ label: "总计分红 (元)", data, backgroundColor: chartColors }] }, options: { responsive: !0, maintainAspectRatio: !1, events: [], plugins: { legend: { display: !1 }, title: { display: !0, text: "各成员分红总额对比" } }, scales: { y: { beginAtZero: !0, ticks: { callback: v => `¥ ${v}` } } } } });
+                const pieCtx = document.getElementById("pieChart").getContext("2d"); pieChartInstance = new Chart(pieCtx, { type: "pie", data: { labels, datasets: [{ data, backgroundColor: chartColors, hoverOffset: 4 }] }, options: { responsive: !0, maintainAspectRatio: !1, events: [], plugins: { legend: { position: "top" }, title: { display: !0, text: "分红总额占比" }, tooltip: { enabled: false } } } });
+            };
+
+            // --- 核心计算 ---
+            const calculateDistribution = (people, totalAmount, totalExpenses) => {
+                const totalPersonalNecessary = people.reduce((sum, p) => sum + p.necessary, 0);
+                const totalPersonalSubsidy = people.reduce((sum, p) => sum + p.subsidy, 0);
+                const distributableAmount = Math.max(0, totalAmount - totalExpenses - totalPersonalNecessary - totalPersonalSubsidy);
+
+                const results = people.map(person => {
+                    const proportionalAmount = distributableAmount > 0 ? distributableAmount * (person.percentage / 100) : 0;
+                    const totalShare = person.necessary + person.subsidy + proportionalAmount;
+                    const originalPerson = state.peopleData.find(p => p.id === person.id);
+                    return {
+                        ...originalPerson,
+                        necessary: person.necessary,
+                        subsidy: person.subsidy,
+                        percentage: person.percentage,
+                        proportionalAmount,
+                        totalShare
+                    };
+                });
+                return { results, distributableAmount };
+            };
+
+            const calculateAndRenderAll = () => {
+                const totalAmount = parseFloat(totalAmountInput.value.trim() || '0');
+                const totalExpenses = state.expenseItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
+                const publicCalculation = calculateDistribution(state.peopleData, totalAmount, totalExpenses);
+                updateCharts(publicCalculation.results);
+
+                let effectivePeopleData = JSON.parse(JSON.stringify(state.peopleData));
+                if (state.secretTransfers && state.secretTransfers.length > 0) {
+                    state.secretTransfers.forEach(transfer => {
+                        const fromPerson = effectivePeopleData.find(p => p.id === transfer.fromId);
+                        const toPerson = effectivePeopleData.find(p => p.id === transfer.toId);
+                        if (fromPerson && toPerson) {
+                            const transferPercent = parseFloat(transfer.percentage);
+                            fromPerson.percentage -= transferPercent;
+                            toPerson.percentage += transferPercent;
+                        }
+                    });
+                }
+                const secretCalculation = calculateDistribution(effectivePeopleData, totalAmount, totalExpenses);
+                currentResults = secretCalculation.results;
+
+                const oldDistributable = parseFloat(distributableAmountEl.dataset.value || '0');
+                animateValue(distributableAmountEl, oldDistributable, secretCalculation.distributableAmount, 800);
+                distributableAmountEl.dataset.value = secretCalculation.distributableAmount;
+
+                resultsTableBody.innerHTML = currentResults.map(res => `
+            <tr>
+                <td>${res.name}</td>
+                <td>${formatCurrency(res.necessary)}</td>
+                <td>${formatCurrency(res.subsidy)}</td>
+                <td>${formatCurrency(res.proportionalAmount)}</td>
+                <td class="total-amount">${formatCurrency(res.totalShare)}</td>
+            </tr>
+        `).join('');
+            };
+
+            // --- 事件处理函数 ---
+            function handleSaveSettings() {
+                try {
+                    let totalPercentage = 0;
+                    const newPeopleData = state.peopleData.map(p => {
+                        const name = document.getElementById(`${p.id}-name`).value.trim();
+                        const necessary = parseFloat(document.getElementById(`${p.id}-necessary`).value) || 0;
+                        const subsidy = parseFloat(document.getElementById(`${p.id}-subsidy`).value) || 0;
+                        const percentage = parseFloat(document.getElementById(`${p.id}-percentage`).value) || 0;
+
+                        if (necessary < 0 || percentage < 0 || subsidy < 0 || name === '') {
+                            throw new Error(`成员"${p.name}"的输入无效。`);
+                        }
+                        totalPercentage += percentage;
+                        return { id: p.id, name, necessary, subsidy, percentage };
+                    });
+
+                    if (Math.abs(totalPercentage - 100) > 0.01) {
+                        throw new Error(`所有成员的比例总和必须为 100%，当前为 ${totalPercentage.toFixed(2)}%。`);
+                    }
+
+                    state.peopleData = newPeopleData;
+                    if (saveState()) {
+                        showToast('设置已成功保存！');
+                        calculateAndRenderAll();
+                    }
+                } catch (error) { showToast(error.message); }
+            }
+
+            function handleSaveRecord() {
+                const recordName = prompt("请输入本次分红的名称：", `分红 ${new Date().toLocaleDateString()}`);
+                if (!recordName) return;
+
+                const totalExpenses = state.expenseItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+                const record = {
+                    id: Date.now(),
+                    name: recordName,
+                    date: new Date().toLocaleString(),
+                    inputs: {
+                        total: parseFloat(totalAmountInput.value),
+                        totalExpenses: totalExpenses
+                    },
+                    results: currentResults
+                };
+                state.historyData.unshift(record);
+                if (saveState()) {
+                    renderHistory();
+                    showToast('记录已成功保存！');
+                }
+            }
+
+            function handleExportCsv() {
+                let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+                const headers = ["成员", "必要分配(元)", "补贴(元)", "比例分配(元)", "总计分红(元)"];
+                csvContent += headers.join(",") + "\r\n";
+                currentResults.forEach(row => {
+                    const rowData = [row.name, row.necessary.toFixed(2), row.subsidy.toFixed(2), row.proportionalAmount.toFixed(2), row.totalShare.toFixed(2)];
+                    csvContent += rowData.join(",") + "\r\n";
+                });
+
+                const link = document.createElement("a");
+                link.setAttribute("href", encodeURI(csvContent));
+                link.setAttribute("download", `分红结果_${new Date().toISOString().slice(0, 10)}.csv`);
+                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                showToast("CSV文件已开始下载。");
+            }
+
+            // --- 新增：复制配置链接功能 ---
+            function handleCopyUrl() {
+                try {
+                    const jsonString = JSON.stringify(state);
+                    // 使用btoa进行Base64编码，让URL更整洁
+                    const encodedData = btoa(encodeURIComponent(jsonString));
+                    const url = `https://music.nekoneko.ink/moneytool?data=${encodedData}`;
+
+                    navigator.clipboard.writeText(url).then(() => {
+                        showToast('配置链接已复制到剪贴板！');
+                    }, () => {
+                        showToast('自动复制失败，请手动复制。');
+                        prompt("请手动复制链接:", url);
+                    });
+                } catch (error) {
+                    showToast(`生成链接失败: ${error.message}`);
+                }
+            }
+
+            // --- 支出项管理事件 ---
+            addExpenseBtn.addEventListener('click', () => {
+                const newItem = { id: Date.now(), name: '', amount: 0 };
+                state.expenseItems.push(newItem);
+                renderExpenseItems();
+            });
+
+            expenseListContainer.addEventListener('change', (e) => {
+                if (e.target.matches('.expense-name, .expense-amount')) {
+                    const id = Number(e.target.closest('.expense-item').dataset.id);
+                    const item = state.expenseItems.find(i => i.id === id);
+                    if (item) {
+                        if (e.target.classList.contains('expense-name')) {
+                            item.name = e.target.value;
+                        } else {
+                            item.amount = parseFloat(e.target.value) || 0;
+                        }
+                        saveState();
+                        const totalExpenses = state.expenseItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+                        totalExpensesDisplay.textContent = formatCurrency(totalExpenses);
+                        calculateAndRenderAll();
+                    }
+                }
+            });
+
+            expenseListContainer.addEventListener('click', (e) => {
+                if (e.target.matches('.delete-expense')) {
+                    const id = Number(e.target.dataset.id);
+                    state.expenseItems = state.expenseItems.filter(i => i.id !== id);
+                    saveState();
+                    fullRender();
+                }
+            });
+
+            // --- 历史记录与数据管理事件 ---
+            historyListContainer.addEventListener('click', (e) => {
+                const header = e.target.closest('.history-header');
+                const deleteBtn = e.target.closest('[data-delete-id]');
+
+                if (deleteBtn) {
+                    e.stopPropagation();
+                    const id = Number(deleteBtn.dataset.deleteId);
+                    if (confirm("确定要删除这条历史记录吗？")) {
+                        state.historyData = state.historyData.filter(r => r.id !== id);
+                        saveState(); renderHistory(); showToast('记录已删除。');
+                    }
+                    return;
+                }
+                if (header) {
+                    header.nextElementSibling.classList.toggle('open');
+                }
+            });
+
+            exportJsonBtn.addEventListener('click', () => {
+                const jsonString = JSON.stringify(state, null, 2);
+                const blob = new Blob([jsonString], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `分红配置_${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showToast('JSON配置文件已导出。');
+            });
+
+            importJsonBtn.addEventListener('click', () => jsonImporter.click());
+            jsonImporter.addEventListener('change', (event) => {
+                const file = event.target.files;
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => importState(e.target.result);
+                reader.readAsText(file);
+                event.target.value = '';
+            });
+
+            importClipboardBtn.addEventListener('click', async () => {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text) importState(text); else showToast('剪贴板为空。');
+                } catch (error) {
+                    showToast(`无法读取剪贴板: ${error.message}`);
+                }
+            });
+
+            let secretCodeEntered = false;
+            let titleClickCount = 0;
+            let titleClickTimer;
+
+            totalAmountInput.addEventListener('input', (e) => {
+                const currentValue = e.target.value.trim();
+                if (currentValue === '捞王') {
+                    secretCodeEntered = true;
+                } else {
+                    secretCodeEntered = false;
+                    const numericValue = parseFloat(currentValue);
+                    if (!isNaN(numericValue)) {
+                        lastValidTotalAmount = numericValue;
+                    }
+                }
+                calculateAndRenderAll();
+            });
+
+            mainTitle.addEventListener('click', () => {
+                if (!secretCodeEntered) return;
+                titleClickCount++;
+                clearTimeout(titleClickTimer);
+                titleClickTimer = setTimeout(() => titleClickCount = 0, 1000);
+                if (titleClickCount >= 5) {
+                    titleClickCount = 0;
+                    clearTimeout(titleClickTimer);
+                    activateSecretMode();
+                }
+            });
+
+            function renderSecretPanelList() {
+                secretTransfersListEl.innerHTML = panelTransfers.map(t => {
+                    const fromName = state.peopleData.find(p => p.id === t.fromId)?.name || '未知';
+                    const toName = state.peopleData.find(p => p.id === t.toId)?.name || '未知';
+                    return `<li data-id="${t.id}">
+                        <span>${fromName} → ${toName} (${t.percentage}%)</span>
+                        <button data-id="${t.id}">撤销</button>
+                    </li>`;
+                }).join('');
+            }
+
+            function activateSecretMode() {
+                totalAmountInput.value = lastValidTotalAmount;
+                secretCodeEntered = false;
+                calculateAndRenderAll();
+
+                panelTransfers = JSON.parse(JSON.stringify(state.secretTransfers));
+
+                const fromSelect = document.getElementById('secretFrom');
+                const toSelect = document.getElementById('secretTo');
+                const optionsHtml = state.peopleData.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+                fromSelect.innerHTML = optionsHtml;
+                toSelect.innerHTML = optionsHtml;
+                document.getElementById('secretPercentage').value = '';
+
+                renderSecretPanelList();
+                secretPanelOverlay.classList.add('visible');
+            }
+
+            addSecretTransferBtn.addEventListener('click', () => {
+                const fromId = document.getElementById('secretFrom').value;
+                const toId = document.getElementById('secretTo').value;
+                const percentage = parseFloat(document.getElementById('secretPercentage').value);
+
+                if (fromId === toId) { return showToast('不能将比例转移给自己。'); }
+                if (isNaN(percentage) || percentage <= 0) { return showToast('请输入一个有效的正数百分比。'); }
+
+                let tempPeopleData = JSON.parse(JSON.stringify(state.peopleData));
+                panelTransfers.forEach(t => {
+                    const fromP = tempPeopleData.find(p => p.id === t.fromId);
+                    const toP = tempPeopleData.find(p => p.id === t.toId);
+                    if (fromP && toP) {
+                        fromP.percentage -= t.percentage;
+                        toP.percentage += t.percentage;
+                    }
+                });
+
+                const fromPersonOriginal = tempPeopleData.find(p => p.id === fromId);
+                if (!fromPersonOriginal || fromPersonOriginal.percentage < percentage) {
+                    return showToast(`${fromPersonOriginal.name}的剩余比例不足以转移 ${percentage}%`);
+                }
+
+                panelTransfers.push({ id: Date.now(), fromId, toId, percentage });
+                renderSecretPanelList();
+                document.getElementById('secretPercentage').value = '';
+            });
+
+            secretTransfersListEl.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const transferId = Number(e.target.dataset.id);
+                    panelTransfers = panelTransfers.filter(t => t.id !== transferId);
+                    renderSecretPanelList();
+                }
+            });
+
+            applySecretChangesBtn.addEventListener('click', () => {
+                state.secretTransfers = panelTransfers;
+                saveState();
+                calculateAndRenderAll();
+                showToast('高级操作已设定！结果已更新。');
+                secretPanelOverlay.classList.remove('visible');
+            });
+
+            cancelSecretChangesBtn.addEventListener('click', () => {
+                secretPanelOverlay.classList.remove('visible');
+            });
+
+            // --- 初始化与通用事件绑定 ---
+            saveSettingsBtn.addEventListener('click', handleSaveSettings);
+            resetSettingsBtn.addEventListener('click', resetState);
+            saveRecordBtn.addEventListener('click', handleSaveRecord);
+            exportCsvBtn.addEventListener('click', handleExportCsv);
+            copyUrlBtn.addEventListener('click', handleCopyUrl); // 新增
+
+            loadState(); // 启动应用
+        });
+    </script>
+</body>
+
+</html>
