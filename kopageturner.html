@@ -3,60 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KOReader 无线控制器 v2</title>
+    <title>KOReader 无线控制器</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* 默认是夜间模式颜色 */
-            --bg-color: #1a1a1a;
-            --card-color: #2c2c2c;
-            --primary-text-color: #e0e0e0;
-            --secondary-text-color: #9e9e9e;
+            --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+            --ease-in-out-cubic: cubic-bezier(0.65, 0, 0.35, 1);
+            
+            /* 夜间模式颜色 */
+            --bg-color: #121212;
+            --card-color: #1e1e1e;
+            --primary-text-color: #e1e1e1;
+            --secondary-text-color: #8b8b8b;
             --accent-color: #00bcd4;
-            --shadow-color: rgba(0, 0, 0, 0.4);
+            --accent-glow: rgba(0, 188, 212, 0.3);
+            --shadow-color: rgba(0, 0, 0, 0.5);
             --success-color: #4CAF50;
             --error-color: #F44336;
         }
 
         html[data-theme='light'] {
-            --bg-color: #f4f4f9;
+            --bg-color: #f0f2f5;
             --card-color: #ffffff;
-            --primary-text-color: #212121;
-            --secondary-text-color: #757575;
+            --primary-text-color: #1f2937;
+            --secondary-text-color: #6b7280;
             --accent-color: #0097a7;
+            --accent-glow: rgba(0, 151, 167, 0.2);
             --shadow-color: rgba(0, 0, 0, 0.1);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        html, body {
-            height: 100%;
-            font-family: 'Noto Sans SC', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--primary-text-color);
-            transition: background-color 0.3s, color 0.3s;
-            -webkit-tap-highlight-color: transparent;
-        }
-
+        html { font-family: 'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        
         body {
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--primary-text-color);
+            transition: background-color 0.4s, color 0.4s;
+            -webkit-tap-highlight-color: transparent;
+            padding: 20px 0;
+        }
+
+        /* 入场动画 */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animated {
+            animation: fadeInUp 0.8s var(--ease-out-quint) both;
         }
         
-        /* 模式切换按钮 */
         .theme-toggle {
-            position: absolute;
+            position: fixed;
             top: 20px;
             right: 20px;
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             background-color: var(--card-color);
             border: none;
             border-radius: 50%;
@@ -64,246 +74,248 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 20px;
             color: var(--primary-text-color);
-            box-shadow: 0 4px 8px var(--shadow-color);
-            transition: transform 0.2s, background-color 0.3s;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            transition: all 0.3s var(--ease-in-out-cubic);
+            z-index: 100;
         }
-        .theme-toggle:active {
-            transform: scale(0.9);
-        }
+        .theme-toggle:active { transform: scale(0.9); }
+        .theme-toggle .svg-icon { transition: opacity 0.3s, transform 0.4s var(--ease-in-out-cubic); }
+        .theme-toggle .sun-icon.hidden, .theme-toggle .moon-icon.hidden { opacity: 0; transform: rotate(-90deg) scale(0.5); }
 
-        .container {
+        main {
             width: 100%;
             max-width: 800px;
             padding: 20px;
             text-align: center;
         }
-
+        
         h1 {
-            font-weight: 500;
-            margin-bottom: 20px;
-            color: var(--primary-text-color);
+            font-weight: 700;
+            font-size: 2.25rem;
+            margin-bottom: 24px;
+            animation-delay: 0.1s;
         }
         
-        .ip-container {
-            margin-bottom: 30px;
+        .ip-form {
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 10px;
+            margin-bottom: 35px;
+            animation-delay: 0.2s;
         }
 
         .ip-input {
             background-color: var(--card-color);
-            border: 1px solid var(--secondary-text-color);
-            border-radius: 8px;
-            padding: 12px 15px;
+            border: 1px solid color-mix(in srgb, var(--secondary-text-color) 40%, transparent);
+            border-radius: 12px;
+            padding: 14px 18px;
             color: var(--primary-text-color);
-            font-size: 16px;
-            width: 200px;
-            transition: all 0.3s;
+            font-size: 1rem;
+            width: 220px;
+            transition: all 0.3s var(--ease-in-out-cubic);
         }
-
         .ip-input:focus {
             outline: none;
             border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 30%, transparent);
+            box-shadow: 0 0 0 4px var(--accent-glow);
         }
 
         .save-btn {
-            background-color: var(--accent-color);
+            background-image: linear-gradient(135deg, var(--accent-color) 0%, color-mix(in srgb, var(--accent-color) 80%, black) 100%);
             border: none;
-            border-radius: 8px;
-            padding: 12px 20px;
+            border-radius: 12px;
+            padding: 14px 22px;
             color: #fff;
-            font-size: 16px;
+            font-size: 1rem;
             font-weight: 500;
             cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
+            transition: all 0.3s var(--ease-in-out-cubic);
+            box-shadow: 0 4px 15px -5px color-mix(in srgb, var(--accent-color) 60%, transparent);
         }
-
-        .save-btn:hover {
-            background-color: color-mix(in srgb, var(--accent-color) 90%, black);
-        }
-
-        .save-btn:active {
-            transform: scale(0.95);
-        }
+        .save-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px -5px var(--accent-color); }
+        .save-btn:active { transform: translateY(0) scale(0.95); }
 
         .controls {
             display: flex;
             justify-content: center;
-            gap: 25px;
+            gap: 30px;
             flex-wrap: wrap;
-            margin-bottom: 30px;
+            margin-bottom: 35px;
+            animation-delay: 0.3s;
         }
 
         .control-card {
-            width: 250px;
-            height: 180px;
+            width: 260px;
+            height: 190px;
             background-color: var(--card-color);
-            border-radius: 20px;
+            border-radius: 24px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             cursor: pointer;
             user-select: none;
-            box-shadow: 0 10px 20px var(--shadow-color);
-            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
-                        box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
-                        background-color 0.3s;
+            box-shadow: 0 10px 30px -10px var(--shadow-color);
+            background-image: none;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s var(--ease-out-quint);
         }
-
+        .control-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: radial-gradient(circle at 50% -20%, color-mix(in srgb, var(--accent-color) 20%, transparent), transparent 70%);
+            opacity: 0;
+            transition: opacity 0.5s var(--ease-out-quint);
+        }
         .control-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 35px var(--shadow-color);
+            transform: translateY(-12px);
+            box-shadow: 0 20px 40px -15px var(--shadow-color);
         }
+        .control-card:hover::before { opacity: 1; }
+        .control-card:active { transform: translateY(-4px) scale(0.97); }
 
-        .control-card:active {
-            transform: translateY(-2px) scale(0.98);
-            box-shadow: 0 8px 15px var(--shadow-color);
-        }
-
-        .card-icon { font-size: 48px; line-height: 1; }
-        .card-text { font-size: 24px; font-weight: 300; margin-top: 15px; }
+        .card-icon { color: var(--accent-color); }
+        .card-text { font-size: 1.5rem; font-weight: 400; margin-top: 15px; }
         
-        .divider {
-            width: 80%;
-            max-width: 400px;
-            height: 1px;
-            background-color: var(--secondary-text-color);
-            margin: 0 auto 30px;
-            opacity: 0.5;
-        }
+        .divider { width: 80%; max-width: 400px; height: 1px; background-color: color-mix(in srgb, var(--secondary-text-color) 40%, transparent); margin: 0 auto 30px; animation-delay: 0.4s; }
 
         .function-area {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 40px;
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; animation-delay: 0.5s;
         }
         
         .function-btn {
-            background-color: var(--card-color);
+            display: flex; align-items: center; gap: 8px;
+            background-color: transparent;
             border: 1px solid color-mix(in srgb, var(--secondary-text-color) 50%, transparent);
             color: var(--secondary-text-color);
             border-radius: 12px;
             padding: 10px 18px;
-            font-size: 14px;
+            font-size: 0.875rem;
             cursor: pointer;
-            transition: all 0.2s ease-in-out;
+            transition: all 0.3s var(--ease-in-out-cubic);
         }
-
         .function-btn:hover {
             color: var(--accent-color);
             border-color: var(--accent-color);
+            background-color: var(--accent-glow);
             transform: translateY(-2px);
         }
+        .function-btn:active { transform: scale(0.95) translateY(0); }
         
-        .function-btn:active {
-            transform: scale(0.95);
-        }
+        .svg-icon { width: 1.2em; height: 1.2em; vertical-align: middle; }
 
         .status-message {
             position: fixed;
             bottom: 30px;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translate(-50%, 150%);
             padding: 12px 25px;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 12px;
+            font-size: 1rem;
             font-weight: 500;
             color: #fff;
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.5s, visibility 0.5s;
-            z-index: 100;
+            transition: all 0.5s var(--ease-in-out-cubic);
+            z-index: 1000;
         }
-        .status-message.show { opacity: 1; visibility: visible; }
+        .status-message.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
         .status-message.success { background-color: var(--success-color); }
         .status-message.error { background-color: var(--error-color); }
         
         footer {
-            position: absolute;
-            bottom: 10px;
-            width: 100%;
-            text-align: center;
-            font-size: 12px;
+            margin-top: 20px;
+            padding: 10px;
+            font-size: 0.75rem;
             color: var(--secondary-text-color);
+            text-align: center;
+            animation-delay: 0.6s;
         }
-
     </style>
 </head>
 <body>
-    <button id="themeToggle" class="theme-toggle">☀️</button>
+    <button id="themeToggle" class="theme-toggle" aria-label="切换主题">
+        <svg class="svg-icon sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <svg class="svg-icon moon-icon hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+    </button>
 
-    <div class="container">
-        <h1>KOReader 无线控制器</h1>
+    <main>
+        <h1 class="animated">KOReader 无线控制器</h1>
         
-        <div class="ip-container">
-            <input type="text" id="ipInput" class="ip-input" placeholder="输入阅读器IP地址">
-            <button id="saveBtn" class="save-btn">保存</button>
-        </div>
+        <form id="ipForm" class="ip-form animated" onsubmit="event.preventDefault();">
+            <input type="text" id="ipInput" class="ip-input" placeholder="输入阅读器IP地址" autocomplete="off">
+            <button type="submit" id="saveBtn" class="save-btn">保存</button>
+        </form>
 
-        <div class="controls">
+        <div class="controls animated">
             <div class="control-card" data-endpoint="/koreader/event/GotoViewRel/-1" data-success-msg="‹ 上一页">
-                <div class="card-icon">‹</div>
+                <div class="card-icon"><svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
                 <div class="card-text">上一页</div>
             </div>
             <div class="control-card" data-endpoint="/koreader/event/GotoViewRel/1" data-success-msg="下一页 ›">
-                <div class="card-icon">›</div>
+                <div class="card-icon"><svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
                 <div class="card-text">下一页</div>
             </div>
         </div>
         
-        <div class="divider"></div>
+        <div class="divider animated"></div>
 
-        <div class="function-area">
-            <button class="function-btn" data-endpoint="/koreader/event/ShowFlDialog" data-success-msg="已发送前光调节请求">调整前光</button>
-            <button class="function-btn" data-endpoint="/koreader/event/ShowToc" data-success-msg="已发送目录请求">展示目录</button>
-            <button class="function-btn" data-endpoint="/koreader/event/ShowBookmark" data-success-msg="已发送书签请求">展示书签</button>
-            <button class="function-btn" data-endpoint="/koreader/event/ShowBookStatus" data-success-msg="已发送书籍状态请求">书籍状态</button>
-            <button class="function-btn" data-endpoint="/koreader/event/FullRefresh" data-success-msg="已发送刷新命令">完全刷新</button>
-            <button class="function-btn" data-endpoint="/koreader/event/InfoWifiOff" data-success-msg="已发送关闭网络命令">关闭网络</button>
+        <div class="function-area animated">
+            <button class="function-btn" data-endpoint="/koreader/event/ShowFlDialog" data-success-msg="已发送前光调节请求"><svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.09 14.37a5 5 0 0 1-6.18 0M12 2v10m4.24-4.24L12 12m-4.24-4.24L12 12M12 12l2.49 2.49m-4.98-2.49L12 12M12 12l-2.49 2.49M7.51 16.51L12 12m4.98 4.51L12 12"></path></svg>调整前光</button>
+            <button class="function-btn" data-endpoint="/koreader/event/ShowToc" data-success-msg="已发送目录请求"><svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>目录</button>
+            <button class="function-btn" data-endpoint="/koreader/event/ShowBookmark" data-success-msg="已发送书签请求"><svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>书签</button>
+            <button class="function-btn" data-endpoint="/koreader/event/ShowBookStatus" data-success-msg="已发送书籍状态请求"><svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>状态</button>
+            <button class="function-btn" data-endpoint="/koreader/event/FullRefresh" data-success-msg="已发送刷新命令"><svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>刷新</button>
+            <button class="function-btn" data-endpoint="/koreader/event/InfoWifiOff" data-success-msg="已发送关闭网络命令"><svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>关闭网络</button>
         </div>
-    </div>
+    </main>
 
-    <div id="statusMessage" class="status-message"></div>
+    <footer class="animated">提示：请确保您已在 KOReader 的“开发者选项”中开启了“HTTP 调试服务器”。</footer>
     
-    <footer>提示：请确保您已在 KOReader 的“开发者选项”中开启了“HTTP 调试服务器”。</footer>
+    <div id="statusMessage" class="status-message"></div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const ipForm = document.getElementById('ipForm');
             const ipInput = document.getElementById('ipInput');
-            const saveBtn = document.getElementById('saveBtn');
             const statusMessage = document.getElementById('statusMessage');
             const themeToggle = document.getElementById('themeToggle');
+            const sunIcon = document.querySelector('.sun-icon');
+            const moonIcon = document.querySelector('.moon-icon');
             const htmlEl = document.documentElement;
 
             let currentIp = '';
             let statusTimeout;
 
-            // --- 主题切换逻辑 ---
-            const applyTheme = (theme) => {
-                htmlEl.setAttribute('data-theme', theme);
-                themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
-                localStorage.setItem('koreader_theme', theme);
+            const showStatus = (message, type, duration = 2500) => {
+                clearTimeout(statusTimeout);
+                statusMessage.textContent = message;
+                statusMessage.className = `status-message ${type} show`;
+                statusTimeout = setTimeout(() => {
+                    statusMessage.classList.remove('show');
+                }, duration);
             };
 
-            themeToggle.addEventListener('click', () => {
-                const newTheme = htmlEl.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-                applyTheme(newTheme);
-            });
+            const sendRequest = async (endpoint, successMsg) => {
+                if (!currentIp) {
+                    showStatus('请先输入并保存IP地址！', 'error');
+                    ipInput.focus();
+                    return;
+                }
+                const url = `http://${currentIp}:8080${endpoint}`;
+                try {
+                    await fetch(url, { mode: 'no-cors' });
+                    showStatus(successMsg, 'success');
+                } catch (error) {
+                    console.error('Request failed:', error);
+                    showStatus('请求失败！请检查IP、网络及调试服务器。', 'error');
+                }
+            };
 
-            // 初始化主题：优先使用localStorage，其次使用系统偏好
-            const savedTheme = localStorage.getItem('koreader_theme');
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
-
-            // --- IP 保存逻辑 ---
             const saveIp = () => {
                 const ip = ipInput.value.trim();
                 if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
@@ -314,63 +326,55 @@
                     showStatus('请输入有效的IP地址', 'error');
                 }
             };
-            
-            saveBtn.addEventListener('click', saveIp);
-            ipInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveIp(); });
 
-            const savedIp = localStorage.getItem('koreader_ip');
-            if (savedIp) {
-                ipInput.value = savedIp;
-                currentIp = savedIp;
-            }
-
-            // --- 通用请求发送逻辑 ---
-            const sendRequest = async (endpoint, successMsg) => {
-                if (!currentIp) {
-                    showStatus('请先输入并保存IP地址！', 'error');
-                    ipInput.focus();
-                    return;
+            const applyTheme = (theme) => {
+                htmlEl.setAttribute('data-theme', theme);
+                if (theme === 'dark') {
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                } else {
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
                 }
-                
-                const url = `http://${currentIp}:8080${endpoint}`;
-
-                try {
-                    await fetch(url, { mode: 'no-cors' });
-                    showStatus(successMsg, 'success');
-                } catch (error) {
-                    console.error('Request failed:', error);
-                    showStatus('请求失败！请检查IP、网络及调试服务器设置。', 'error');
-                }
+                localStorage.setItem('koreader_theme', theme);
             };
 
-            // --- 事件监听器绑定 ---
-            document.querySelectorAll('.control-card, .function-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const endpoint = btn.dataset.endpoint;
-                    const successMsg = btn.dataset.successMsg;
-                    sendRequest(endpoint, successMsg);
+            const initializeApp = () => {
+                const savedTheme = localStorage.getItem('koreader_theme');
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+
+                const savedIp = localStorage.getItem('koreader_ip');
+                if (savedIp) {
+                    ipInput.value = savedIp;
+                    currentIp = savedIp;
+                    setTimeout(() => showStatus(`已加载IP: ${savedIp}`, 'success', 2000), 800);
+                }
+
+                themeToggle.addEventListener('click', () => {
+                    const newTheme = htmlEl.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                    applyTheme(newTheme);
                 });
-            });
 
-            // 键盘左右键翻页
-            document.addEventListener('keydown', (e) => {
-                if (document.activeElement === ipInput) return; // 焦点在输入框时不翻页
-                if (e.key === 'ArrowLeft') {
-                    sendRequest('/koreader/event/GotoViewRel/-1', '‹ 上一页');
-                } else if (e.key === 'ArrowRight') {
-                    sendRequest('/koreader/event/GotoViewRel/1', '下一页 ›');
-                }
-            });
+                ipForm.addEventListener('submit', saveIp);
 
-            // --- 状态消息显示 ---
-            const showStatus = (message, type) => {
-                clearTimeout(statusTimeout);
-                statusMessage.textContent = message;
-                statusMessage.className = `status-message ${type} show`;
-                statusTimeout = setTimeout(() => {
-                    statusMessage.classList.remove('show');
-                }, 2500);
+                document.querySelectorAll('[data-endpoint]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        sendRequest(btn.dataset.endpoint, btn.dataset.successMsg);
+                    });
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (document.activeElement === ipInput) return;
+                    if (e.key === 'ArrowLeft') {
+                        document.querySelector('.control-card[data-endpoint*="-1"]').click();
+                    } else if (e.key === 'ArrowRight') {
+                        document.querySelector('.control-card[data-endpoint*="1"]').click();
+                    }
+                });
             };
+
+            initializeApp();
         });
     </script>
 </body>
