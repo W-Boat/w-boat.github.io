@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Name2048 - 终极定制版</title>
+<style>
+    :root {
+        --grid-size: 4;
+        --cell-size: 20vmin;
+        --cell-gap: 2vmin;
+        --theme-color-dark: #8f7a66;
+        --theme-color-light: #9f8b77;
+        --background-color: #faf8ef;
+        --text-color: #776e65;
+    }
+    
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background: var(--background-color);
+        color: var(--text-color);
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100dvh;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    .main-container {
+        width: 90%;
+        max-width: 500px;
+        text-align: center;
+    }
+
+    /* --- Config Screen --- */
+    .config-container {
+        padding: 20px;
+        border: 2px solid #bbada0;
+        border-radius: 10px;
+        background: #fdfcfa;
+    }
+    .config-container h1 { font-size: clamp(28px, 7vmin, 40px); }
+    .config-field { margin-bottom: 20px; text-align: left;}
+    .config-field label { font-weight: bold; display: block; margin-bottom: 8px; }
+    .config-field input[type="text"], .config-field input[type="range"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+    #pinyin-inputs-container { display: flex; gap: 10px; }
+    .pinyin-input { flex: 1; text-transform: capitalize; }
+    
+    .mode-switch { display: flex; align-items: center; gap: 10px; }
+    .toggle-switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+    .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: var(--theme-color-dark); }
+    input:checked + .slider:before { transform: translateX(26px); }
+
+    #difficulty-label span { font-weight: normal; color: #999; }
+    
+    #start-btn {
+        background: var(--theme-color-dark);
+        color: white;
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 5px;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    #start-btn:hover { background: var(--theme-color-light); }
+    
+    /* --- Game Screen --- */
+    .game-section { display: none; } /* Initially hidden */
+    .heading { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: calc(var(--cell-size) * var(--grid-size) + var(--cell-gap) * (var(--grid-size) - 1)); margin-bottom: 20px; }
+    h1.title { font-size: clamp(32px, 8vmin, 56px); font-weight: bold; margin: 0; }
+    .scores-container { display: flex; gap: 8px; }
+    .score-container { background: #bbada0; padding: 10px 20px; font-size: clamp(12px, 3vmin, 16px); border-radius: 5px; color: #eee4da; text-align: center; min-width: 50px; }
+    #score, #best-score { font-size: clamp(18px, 5vmin, 25px); font-weight: bold; color: white; }
+    
+    #game-board { position: relative; background: #bbada0; border-radius: 6px; width:  calc(var(--cell-size) * var(--grid-size) + var(--cell-gap) * (var(--grid-size) - 1)); height: calc(var(--cell-size) * var(--grid-size) + var(--cell-gap) * (var(--grid-size) - 1)); padding: var(--cell-gap); display: grid; grid-template-rows: repeat(var(--grid-size), var(--cell-size)); grid-template-columns: repeat(var(--grid-size), var(--cell-size)); gap: var(--cell-gap); box-sizing: content-box; touch-action: none; }
+    .grid-cell { background-color: rgba(238, 228, 218, 0.35); border-radius: 5px; }
+    .tile { /* Styles from previous version */ }
+
+    /* --- Share Section --- */
+    .share-container { margin-top: 20px; text-align: left; }
+    #share-link-container { display: flex; gap: 5px; }
+    #share-link-input { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px; background: #f0f0f0; }
+    .copy-btn { padding: 8px 12px; border: none; background: var(--theme-color-dark); color: white; border-radius: 3px; cursor: pointer; }
+
+    /* Tile and Message styles from v3.0 */
+    .tile { --x: 0; --y: 0; position: absolute; display: flex; justify-content: center; align-items: center; width: var(--cell-size); height: var(--cell-size); top: calc(var(--y) * (var(--cell-size) + var(--cell-gap)) + var(--cell-gap)); left: calc(var(--x) * (var(--cell-size) + var(--cell-gap)) + var(--cell-gap)); font-weight: bold; border-radius: 5px; color: var(--text-color); font-size: 7.5vmin; line-height: 1; transition: left 150ms ease-in-out, top 150ms ease-in-out; }
+    .tile.tile-2    { background: #eee4da; }
+    .tile.tile-4    { background: #ede0c8; }
+    .tile.tile-8    { background: #f2b179; color: #f9f6f2; }
+    .tile.tile-16   { background: #f59563; color: #f9f6f2; font-size: 6.5vmin;}
+    .tile.tile-32   { background: #f67c5f; color: #f9f6f2; font-size: 6.5vmin;}
+    .tile.tile-64   { background: #f65e3b; color: #f9f6f2; font-size: 5vmin;}
+    .tile.tile-128  { background: #edcf72; color: #f9f6f2; font-size: 5vmin; }
+    .tile.tile-256  { background: #edcc61; color: #f9f6f2; font-size: 4vmin; }
+    .tile.tile-512  { background: #edc850; color: #f9f6f2; font-size: 4vmin; }
+    .tile.tile-1024 { background: #3c3a32; color: #f9f6f2; font-size: 4vmin; }
+    .tile.tile-2048 { background: #3c3a32; color: #f9f6f2; font-size: 4vmin; }
+    .tile.tile-new { animation: appear 200ms ease 150ms; animation-fill-mode: backwards; }
+    .tile.tile-merged { animation: pop 200ms ease; }
+    @keyframes appear { from { transform: scale(0); } to { transform: scale(1); } }
+    @keyframes pop { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+    .game-message { display: none; position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: rgba(238, 228, 218, 0.73); z-index: 100; flex-direction: column; justify-content: center; align-items: center; animation: fade-in 0.5s ease; }
+    .game-message.show { display: flex; }
+    .game-message p { font-size: clamp(40px, 10vmin, 60px); font-weight: bold; margin: 0 0 20px 0; }
+    .game-message.game-won { background: rgba(237, 207, 114, 0.73); color: #f9f6f2; }
+    .game-message.game-won p { color: #f9f6f2; }
+    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div class="main-container">
+
+    <div class="config-container">
+        <h1>Name2048 定制</h1>
+        <div class="config-field">
+            <label for="name-input">输入名字 (2-4个字)</label>
+            <input type="text" id="name-input" value="魏熙泽" maxlength="4" placeholder="例如: 张三">
+        </div>
+        <div class="config-field">
+            <label>模式</label>
+            <div class="mode-switch">
+                <span>汉字</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="mode-toggle">
+                    <span class="slider"></span>
+                </label>
+                <span>拼音</span>
+            </div>
+        </div>
+        <div class="config-field" id="pinyin-config" style="display: none;">
+             <label>输入对应拼音</label>
+             <div id="pinyin-inputs-container"></div>
+        </div>
+        <div class="config-field">
+            <label for="difficulty-slider" id="difficulty-label">难度 <span id="difficulty-value-text">(高级方块概率: 10%)</span></label>
+            <input type="range" id="difficulty-slider" min="1" max="50" value="10">
+        </div>
+        <button id="start-btn">开始游戏</button>
+        <div class="share-container">
+            <label>分享你的专属游戏</label>
+            <button id="generate-link-btn" style="width: 100%; margin-top: 5px; padding: 10px; border-radius: 5px; border:none; background-color: var(--theme-color-light); color: white; cursor: pointer;">1. 生成链接</button>
+            <div id="share-link-container" style="margin-top: 10px;">
+                <input type="text" id="share-link-input" readonly placeholder="点击上方按钮生成">
+                <button class="copy-btn" id="copy-link-btn">复制</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-section">
+        <div class="heading">
+            <h1 class="title">合成</h1>
+            <div class="scores-container">
+                <div class="score-container">分数<br><span id="score">0</span></div>
+                <div class="score-container">最佳<br><span id="best-score">0</span></div>
+            </div>
+        </div>
+        <div id="game-board"></div>
+        <button id="back-to-config-btn" style="margin-top: 20px; padding: 10px 20px; border:none; border-radius: 5px; background: var(--theme-color-dark); color: white; font-weight: bold; cursor: pointer;">返回重新设置</button>
+    </div>
+
+</div>
+
+<script>
+// The Grid, Cell, Tile and Game classes are similar to v3.0, but will be adapted
+// We will introduce a new GameManager class to handle UI and setup
+// Paste the JS from v3.0 here, and we'll start modifying it.
+
+// Classes (Grid, Cell, Tile, Game) will be instantiated by GameManager. 
+// For brevity, these are assumed to be present and are the same as v3.0
+// But we will make small but crucial changes inside GameManager
+class Grid {
+    constructor(boardElement) {
+        boardElement.innerHTML = ''; // Clear for new game
+        this.cells = [];
+        for (let i = 0; i < 16; i++) {
+            const cellElement = document.createElement("div");
+            cellElement.classList.add("grid-cell");
+            boardElement.appendChild(cellElement);
+            const x = i % 4, y = Math.floor(i / 4);
+            this.cells.push(new Cell(cellElement, x, y));
+        }
+        this.cellsByColumn = this.cells.reduce((acc, cell) => { acc[cell.x] = acc[cell.x] || []; acc[cell.x][cell.y] = cell; return acc; }, []);
+        this.cellsByRow = this.cells.reduce((acc, cell) => { acc[cell.y] = acc[cell.y] || []; acc[cell.y][cell.x] = cell; return acc; }, []);
+    }
+    get emptyCells() { return this.cells.filter(cell => cell.tile == null); }
+    randomEmptyCell() { return this.emptyCells[Math.floor(Math.random() * this.emptyCells.length)]; }
+}
+class Cell {
+    constructor(el, x, y) { this.el = el; this.x = x; this.y = y; this._tile = null; this._mergeTile = null; }
+    get tile() { return this._tile; }
+    set tile(value) { this._tile = value; if (value == null) return; this._tile.x = this.x; this._tile.y = this.y; }
+    get mergeTile() { return this._mergeTile; }
+    set mergeTile(value) { this._mergeTile = value; if (value == null) return; this._mergeTile.x = this.x; this._mergeTile.y = this.y; }
+    canAccept(tile) { return (this.tile == null || (this.mergeTile == null && this.tile.value === tile.value)); }
+    merge() {
+        if (this.tile == null || this.mergeTile == null) return;
+        this.tile.value += this.mergeTile.value;
+        this.mergeTile.remove();
+        this.mergeTile = null;
+    }
+}
+class Tile {
+    constructor(container, gameConfig, value) {
+        this.gameConfig = gameConfig;
+        this.domElement = document.createElement("div");
+        this.domElement.classList.add("tile");
+        container.append(this.domElement);
+        this.value = value || (Math.random() < this.gameConfig.difficulty ? 4 : 2);
+        this.x = -1; this.y = -1;
+    }
+    get value() { return this._value; }
+    set value(v) {
+        this._value = v;
+        const textValue = this.gameConfig.tileMap[v] || v.toString();
+        this.domElement.textContent = textValue;
+        let fontSize = "7vmin";
+        if(textValue.length >= 4) fontSize = "3.5vmin";
+        else if(textValue.length === 3) fontSize = "5vmin";
+        else if (textValue.length === 2) fontSize = "6.5vmin";
+        this.domElement.style.fontSize = fontSize;
+        this.domElement.className = `tile tile-${v}`;
+    }
+    set x(value) { this.domElement.style.setProperty("--x", value); }
+    set y(value) { this.domElement.style.setProperty("--y", value); }
+    remove() { this.domElement.remove(); }
+    waitForTransition() { return new Promise(resolve => this.domElement.addEventListener("transitionend", resolve, { once: true }));}
+}
+
+class Game {
+    // Game logic, very similar to v3.0, but configured by GameManager
+    constructor(gameConfig) {
+        this.gameConfig = gameConfig;
+        this.boardElement = document.getElementById("game-board");
+        this.tileContainer = document.createElement('div');
+        this.tileContainer.classList.add('tile-container');
+        this.boardElement.appendChild(this.tileContainer);
+        
+        this.scoreDisplay = document.getElementById("score");
+        this.bestScoreDisplay = document.getElementById("best-score");
+        this.messageContainer = this.createMessageContainer();
+        this.boardElement.appendChild(this.messageContainer);
+
+        this.grid = new Grid(this.boardElement);
+        this.score = 0; this.won = false; this.isMoving = false; this.keepPlaying = false;
+        
+        this.updateScore(0, true);
+        this.grid.randomEmptyCell().tile = new Tile(this.tileContainer, this.gameConfig);
+        this.grid.randomEmptyCell().tile = new Tile(this.tileContainer, this.gameConfig);
+        this.setupInput();
+    }
+    
+    createMessageContainer() {
+        const messageContainer = document.createElement('div');
+        messageContainer.classList.add('game-message');
+        messageContainer.innerHTML = `<p></p><div class="lower">
+                <button class="keep-playing-button" style="padding: 10px 15px; border-radius:5px; border:none; cursor:pointer; display:none; margin-bottom: 10px;">继续挑战</button>
+            </div>`;
+        return messageContainer;
+    }
+    
+    // ... all other game methods (handleMove, playSound, etc.) are the same as v3.0 ...
+    setupAudio() { if (this.audioCtx && this.audioCtx.state !== 'closed') return; this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    playSound(type) { if (!this.audioCtx) return; if(this.audioCtx.state === 'suspended') this.audioCtx.resume(); const o=this.audioCtx.createOscillator(), g=this.audioCtx.createGain(); o.connect(g);g.connect(this.audioCtx.destination);if(type==='merge'){o.type='sine';o.frequency.setValueAtTime(440,this.audioCtx.currentTime);g.gain.setValueAtTime(0.3,this.audioCtx.currentTime)}else{o.type='triangle';o.frequency.setValueAtTime(261.6,this.audioCtx.currentTime);g.gain.setValueAtTime(0.1,this.audioCtx.currentTime)}g.gain.exponentialRampToValueAtTime(1e-4,this.audioCtx.currentTime+0.2);o.start();o.stop(this.audioCtx.currentTime+0.2); }
+    updateScore(points, initial = false) { if(!initial) this.score += points; this.scoreDisplay.textContent = this.score; let best=localStorage.getItem('name2048-best') || 0; if (this.score > best) { best = this.score; localStorage.setItem('name2048-best', best); } this.bestScoreDisplay.textContent = best; }
+    setupInput() { if(this.inputSetup) return; window.addEventListener("keydown", this.handleKeydown.bind(this)); let sX=0, sY=0; this.boardElement.addEventListener('touchstart', e=>{if(this.isMoving)return;sX=e.touches[0].clientX;sY=e.touches[0].clientY},{passive:true});this.boardElement.addEventListener('touchmove',e=>{if(this.isMoving)return;e.preventDefault()},{passive:false});this.boardElement.addEventListener('touchend',e=>{if(this.isMoving)return;const dX=e.changedTouches[0].clientX-sX,dY=e.changedTouches[0].clientY-sY;this.handleSwipe(dX,dY)});this.inputSetup = true; }
+    handleSwipe(dX,dY){ if(Math.abs(dX)<20&&Math.abs(dY)<20)return;this.setupAudio();this.handleMove(Math.abs(dX)>Math.abs(dY)?(dX>0?"ArrowRight":"ArrowLeft"):(dY>0?"ArrowDown":"ArrowUp"))}
+    handleKeydown(e){ this.setupAudio(); this.handleMove(e.key); }
+    async handleMove(key){if(this.isMoving)return;let groups;switch(key){case"ArrowUp":groups=this.grid.cellsByColumn;break;case"ArrowDown":groups=this.grid.cellsByColumn.map(c=>[...c].reverse());break;case"ArrowLeft":groups=this.grid.cellsByRow;break;case"ArrowRight":groups=this.grid.cellsByRow.map(r=>[...r].reverse());break;default:return}this.isMoving=!0;const promises=[];let moved=!1;groups.forEach(group=>{for(let i=1;i<group.length;i++){const cell=group[i];if(cell.tile==null)continue;let lastValidCell;for(let j=i-1;j>=0;j--){if(!group[j].canAccept(cell.tile))break;lastValidCell=group[j]}if(lastValidCell!=null){moved=!0;promises.push(cell.tile.waitForTransition());if(lastValidCell.tile!=null){lastValidCell.mergeTile=cell.tile}else{lastValidCell.tile=cell.tile}cell.tile=null}}});if(!moved){this.isMoving=!1;return}this.playSound('move');await Promise.all(promises);let merged=!1;this.grid.cells.forEach(cell=>{if(cell.tile&&cell.mergeTile){cell.merge();merged=!0;this.updateScore(cell.tile.value);if(!this.won&&cell.tile.value===this.gameConfig.winValue)this.winGame();cell.tile.domElement.classList.add("tile-merged")}});if(merged)this.playSound('merge');this.grid.randomEmptyCell().tile=new Tile(this.tileContainer,this.gameConfig);if(!this.canMoveAny()){await new Promise(r=>setTimeout(r,200));if(!this.won||(this.won&&this.keepPlaying))this.loseGame()}this.isMoving=!1}
+    canMoveAny(){return this.grid.emptyCells.length > 0 || this.grid.cells.some(cell=>{if(cell.tile==null)return!1;const{x,y,tile}=cell;const rN=this.grid.cellsByRow[y][x+1],dN=this.grid.cellsByColumn[x][y+1];return(rN?.canAccept(tile))||(dN?.canAccept(tile))})}
+    winGame(){this.won=!0;setTimeout(()=>{this.messageContainer.querySelector('p').textContent='成功合成!';this.messageContainer.classList.add('show','game-won');const btn=this.messageContainer.querySelector(".keep-playing-button");btn.style.display='block';btn.onclick=()=>{this.messageContainer.classList.remove('show');this.keepPlaying=!0;this.isMoving=!1};this.isMoving=!0},300)}
+    loseGame(){this.messageContainer.querySelector('p').textContent='游戏结束!';this.messageContainer.classList.add('show')}
+}
+
+class GameManager {
+    constructor() {
+        // UI Elements
+        this.configContainer = document.querySelector('.config-container');
+        this.gameSection = document.querySelector('.game-section');
+        this.nameInput = document.getElementById('name-input');
+        this.modeToggle = document.getElementById('mode-toggle');
+        this.pinyinConfig = document.getElementById('pinyin-config');
+        this.pinyinContainer = document.getElementById('pinyin-inputs-container');
+        this.difficultySlider = document.getElementById('difficulty-slider');
+        this.difficultyLabel = document.getElementById('difficulty-value-text');
+        this.startBtn = document.getElementById('start-btn');
+        this.gameTitle = document.querySelector('.game-section .title');
+        this.backBtn = document.getElementById('back-to-config-btn');
+        
+        // Sharing Elements
+        this.generateLinkBtn = document.getElementById('generate-link-btn');
+        this.shareLinkInput = document.getElementById('share-link-input');
+        this.copyLinkBtn = document.getElementById('copy-link-btn');
+
+        this.gameInstance = null;
+        this.setupEventListeners();
+        this.checkForUrlParams();
+    }
+    
+    setupEventListeners() {
+        this.nameInput.addEventListener('input', () => this.updatePinyinFields());
+        this.modeToggle.addEventListener('change', () => this.togglePinyinConfig());
+        this.difficultySlider.addEventListener('input', () => this.updateDifficultyLabel());
+        this.startBtn.addEventListener('click', () => this.startGame());
+        this.backBtn.addEventListener('click', () => this.showConfig());
+
+        this.generateLinkBtn.addEventListener('click', () => this.generateShareLink());
+        this.copyLinkBtn.addEventListener('click', () => this.copyShareLink());
+    }
+
+    updatePinyinFields() {
+        const name = this.nameInput.value.trim().replace(/\s+/g, '');
+        this.nameInput.value = name; // Sanitize input
+        this.pinyinContainer.innerHTML = '';
+        if (name.length < 2 || name.length > 4) {
+            // Can add validation message here
+            return;
+        }
+
+        const examplePinyins = ["Wei", "Xi", "Ze", "Shen"];
+        for(let i=0; i < name.length; i++) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = name[i];
+            input.className = 'pinyin-input';
+            input.value = examplePinyins[i] || '';
+            this.pinyinContainer.appendChild(input);
+        }
+    }
+
+    togglePinyinConfig() {
+        this.pinyinConfig.style.display = this.modeToggle.checked ? 'block' : 'none';
+    }
+
+    updateDifficultyLabel() {
+        const value = this.difficultySlider.value;
+        this.difficultyLabel.textContent = `(高级方块概率: ${value}%)`;
+    }
+    
+    showConfig() {
+        this.gameSection.style.display = 'none';
+        this.configContainer.style.display = 'block';
+    }
+
+    generateSynthesisPath(nameChars, pinyins, isPinyinMode) {
+        const items = isPinyinMode ? pinyins : nameChars;
+        const len = items.length;
+        const tileMap = {};
+        let winValue = 0;
+        
+        items.forEach((item, i) => tileMap[Math.pow(2, i + 1)] = item);
+
+        if (len === 2) { // A, B -> AB
+            tileMap[8] = items.join(''); winValue = 8;
+        } else if (len === 3) { // A, B, C -> AB, BC -> ABC
+            tileMap[16] = items[0] + items[1];
+            tileMap[32] = items[1] + items[2];
+            tileMap[64] = items.join(''); winValue = 64;
+        } else if (len === 4) { // A,B,C,D -> AB, CD -> ABCD
+            tileMap[32] = items[0] + items[1];
+            tileMap[64] = items[2] + items[3];
+            tileMap[128] = items.join(''); winValue = 128;
+        }
+        return { tileMap, winValue };
+    }
+
+    startGame() {
+        const name = this.nameInput.value.trim();
+        if(name.length < 2 || name.length > 4) { alert("请输入2-4个字的名字"); return; }
+        
+        const pinyinInputs = Array.from(this.pinyinContainer.querySelectorAll('input'));
+        const pinyins = pinyinInputs.map(p => p.value.trim()).filter(Boolean);
+
+        const isPinyinMode = this.modeToggle.checked;
+        if (isPinyinMode && pinyins.length !== name.length) { alert("请为每个汉字填写拼音"); return; }
+        
+        const { tileMap, winValue } = this.generateSynthesisPath(name.split(''), pinyins, isPinyinMode);
+        
+        this.gameConfig = {
+            name,
+            pinyins,
+            isPinyinMode,
+            difficulty: this.difficultySlider.value / 100,
+            tileMap,
+            winValue,
+        };
+        
+        this.gameTitle.textContent = `合成'${isPinyinMode ? pinyins.join('') : name}'`;
+        this.configContainer.style.display = 'none';
+        this.gameSection.style.display = 'block';
+
+        if (this.gameInstance) {
+            // Clean up old instance if any
+        }
+        this.gameInstance = new Game(this.gameConfig);
+    }
+    
+    generateShareLink() {
+        const name = this.nameInput.value.trim();
+        const pinyinInputs = Array.from(this.pinyinContainer.querySelectorAll('input'));
+        const pinyins = pinyinInputs.map(p => p.value.trim());
+
+        const configToShare = {
+            v: 4, // version
+            name,
+            pinyins,
+            mode: this.modeToggle.checked ? 'pinyin' : 'char',
+            diff: this.difficultySlider.value,
+        };
+        
+        try {
+            const jsonString = JSON.stringify(configToShare);
+            const base64String = btoa(encodeURIComponent(jsonString));
+            const url = `${window.location.origin}${window.location.pathname}#${base64String}`;
+            this.shareLinkInput.value = url;
+            alert('链接已生成!');
+        } catch (e) {
+            console.error("Error generating link:", e);
+            alert('生成链接失败!');
+        }
+    }
+    
+    copyShareLink() {
+        if(!this.shareLinkInput.value) { alert('请先生成链接'); return; }
+        this.shareLinkInput.select();
+        document.execCommand('copy');
+        alert('已复制到剪贴板!');
+    }
+    
+    checkForUrlParams() {
+        try {
+            const hash = window.location.hash.substring(1);
+            if (!hash) { this.initializeDefault(); return; };
+            
+            const jsonString = decodeURIComponent(atob(hash));
+            const config = JSON.parse(jsonString);
+
+            this.nameInput.value = config.name || "魏熙泽";
+            this.modeToggle.checked = config.mode === 'pinyin';
+            this.difficultySlider.value = config.diff || 10;
+            
+            this.updatePinyinFields(); // This creates the inputs
+            
+            if(config.mode === 'pinyin' && config.pinyins) {
+                 const pinyinInputs = this.pinyinContainer.querySelectorAll('input');
+                 config.pinyins.forEach((p, i) => { if(pinyinInputs[i]) pinyinInputs[i].value = p; });
+            }
+            
+            this.togglePinyinConfig();
+            this.updateDifficultyLabel();
+
+        } catch (e) {
+            console.error("Failed to parse URL params, loading default.", e);
+            this.initializeDefault();
+        }
+    }
+    
+    initializeDefault() {
+        this.updatePinyinFields();
+        this.togglePinyinConfig();
+        this.updateDifficultyLabel();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => new GameManager());
+</script>
+
+</body>
+</html>
