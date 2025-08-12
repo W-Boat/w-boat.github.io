@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KOReader 无线控制器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-color: #2c2c2c;
+            --primary-text-color: #e0e0e0;
+            --secondary-text-color: #9e9e9e;
+            --accent-color: #00bcd4;
+            --success-color: #4CAF50;
+            --error-color: #F44336;
+            --shadow-color: rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-weight: 500;
+            margin-bottom: 20px;
+            color: var(--primary-text-color);
+        }
+        
+        /* IP输入区域 */
+        .ip-container {
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ip-input {
+            background-color: var(--card-color);
+            border: 1px solid var(--secondary-text-color);
+            border-radius: 8px;
+            padding: 12px 15px;
+            color: var(--primary-text-color);
+            font-size: 16px;
+            width: 200px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .ip-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.3);
+        }
+
+        .save-btn {
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .save-btn:hover {
+            background-color: #00acc1;
+        }
+
+        .save-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 控制卡片区域 */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap; /* 在小屏幕上换行 */
+        }
+
+        .control-card {
+            width: 280px;
+            height: 200px;
+            background-color: var(--card-color);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none; /* 防止文本被选中 */
+            box-shadow: 0 10px 20px var(--shadow-color);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                        box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .control-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 35px var(--shadow-color);
+        }
+
+        .control-card:active {
+            transform: translateY(-2px) scale(0.98);
+            box-shadow: 0 8px 15px var(--shadow-color);
+        }
+
+        .card-icon {
+            font-size: 48px;
+            line-height: 1;
+        }
+
+        .card-text {
+            font-size: 24px;
+            font-weight: 300;
+            margin-top: 15px;
+        }
+        
+        /* 状态提示信息 */
+        .status-message {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #fff;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s, visibility 0.5s;
+        }
+
+        .status-message.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .status-message.success {
+            background-color: var(--success-color);
+        }
+
+        .status-message.error {
+            background-color: var(--error-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>KOReader 无线控制器</h1>
+        
+        <div class="ip-container">
+            <input type="text" id="ipInput" class="ip-input" placeholder="输入阅读器IP地址">
+            <button id="saveBtn" class="save-btn">保存</button>
+        </div>
+
+        <div class="controls">
+            <div class="control-card" id="prevBtn">
+                <div class="card-icon">‹</div>
+                <div class="card-text">上一页</div>
+            </div>
+            <div class="control-card" id="nextBtn">
+                <div class="card-icon">›</div>
+                <div class="card-text">下一页</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="statusMessage" class="status-message"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const ipInput = document.getElementById('ipInput');
+            const saveBtn = document.getElementById('saveBtn');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const statusMessage = document.getElementById('statusMessage');
+
+            let currentIp = '';
+
+            // 页面加载时，尝试从localStorage读取IP
+            const savedIp = localStorage.getItem('koreader_ip');
+            if (savedIp) {
+                ipInput.value = savedIp;
+                currentIp = savedIp;
+                showStatus('已加载已保存的IP地址', 'success');
+            }
+
+            // 保存IP地址
+            const saveIp = () => {
+                const ip = ipInput.value.trim();
+                if (ip) {
+                    currentIp = ip;
+                    localStorage.setItem('koreader_ip', ip);
+                    showStatus(`IP地址已保存: ${currentIp}`, 'success');
+                } else {
+                    showStatus('请输入有效的IP地址', 'error');
+                }
+            };
+
+            saveBtn.addEventListener('click', saveIp);
+            // 在输入框中按回车键也保存
+            ipInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    saveIp();
+                }
+            });
+
+
+            // 发送翻页请求的函数
+            const sendRequest = async (direction) => {
+                if (!currentIp) {
+                    showStatus('请先输入并保存IP地址！', 'error');
+                    return;
+                }
+                
+                const url = `http://${currentIp}:8080/koreader/event/GotoViewRel/${direction}`;
+
+                try {
+                    // 使用 fetch API 发送请求
+                    // mode: 'no-cors' 模式允许我们发送请求，但无法读取响应内容。
+                    // 这对于KOReader的API是完美的，因为它不需要返回任何内容。
+                    const response = await fetch(url, { mode: 'no-cors' });
+                    
+                    // 在 no-cors 模式下，我们无法检查 response.ok 或 status。
+                    // 但只要请求没有因网络错误（如CORS策略、DNS错误）而被拒绝，
+                    // catch块就不会执行，我们可以乐观地认为请求已发送。
+                    showStatus(direction === 1 ? '下一页 ›' : '‹ 上一页', 'success');
+
+                } catch (error) {
+                    console.error('请求失败:', error);
+                    showStatus('请求失败！请检查IP和网络连接。', 'error');
+                }
+            };
+
+            prevBtn.addEventListener('click', () => sendRequest(-1));
+            nextBtn.addEventListener('click', () => sendRequest(1));
+
+            // 左右方向键控制
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName.toLowerCase() === 'input') {
+                    return; // 如果焦点在输入框里，则不翻页
+                }
+                if (e.key === 'ArrowLeft') {
+                    sendRequest(-1);
+                } else if (e.key === 'ArrowRight') {
+                    sendRequest(1);
+                }
+            });
+
+
+            // 显示状态消息的函数
+            let statusTimeout;
+            const showStatus = (message, type) => {
+                clearTimeout(statusTimeout);
+                statusMessage.textContent = message;
+                statusMessage.className = `status-message ${type}`;
+                statusMessage.classList.add('show');
+                statusTimeout = setTimeout(() => {
+                    statusMessage.classList.remove('show');
+                }, 2000);
+            };
+        });
+    </script>
+</body>
+</html>
