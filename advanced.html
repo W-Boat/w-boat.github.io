@@ -1,39 +1,30 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>阅读控制器 Advanced</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>阅读控制器</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📖</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <style>
         :root {
             --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
             --ease-in-out-cubic: cubic-bezier(0.65, 0, 0.35, 1);
-            --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
-            --ease-in-out-quart: cubic-bezier(0.77, 0, 0.175, 1);
-            
+
             --bg-color: #121212;
             --card-color: #1e1e1e;
             --primary-text-color: #e1e1e1;
             --secondary-text-color: #8b8b8b;
-            --accent-color: #0b8392; /* 默认主题色 */
-            --accent-glow: rgba(11, 131, 146, 0.3);
+            --accent-color: #00bcd4;
+            --accent-glow: rgba(0, 188, 212, 0.3);
             --shadow-color: rgba(0, 0, 0, 0.5);
             --success-color: #4CAF50;
             --error-color: #F44336;
             --warn-color: #e53935;
-            --border-color: rgba(255, 255, 255, 0.1);
-            
-            /* 主题色变量 */
-            --theme-hue: 187; /* 默认青色 */
-            --theme-saturation: 80%;
-            --theme-lightness: 30%;
-            
-            /* 移动端适配 */
-            --control-card-width: 260px;
-            --control-card-height: 190px;
+            --warn-confirm-color: #ff9800;
         }
 
         html[data-theme='light'] {
@@ -41,1056 +32,924 @@
             --card-color: #ffffff;
             --primary-text-color: #1f2937;
             --secondary-text-color: #6b7280;
-            --accent-color: hsl(var(--theme-hue), var(--theme-saturation), var(--theme-lightness));
-            --accent-glow: hsla(var(--theme-hue), var(--theme-saturation), var(--theme-lightness), 0.2);
+            --accent-color: #0097a7;
+            --accent-glow: rgba(0, 151, 167, 0.2);
             --shadow-color: rgba(0, 0, 0, 0.1);
-            --border-color: rgba(0, 0, 0, 0.1);
         }
-
-        /* E-Ink Mode Overrides */
-        html[data-display-mode='eink'] {
-            --bg-color: #ffffff;
-            --card-color: #ffffff;
-            --primary-text-color: #000000;
-            --secondary-text-color: #000000;
-            --accent-color: #000000;
-            --accent-glow: rgba(0,0,0,0);
-            --shadow-color: rgba(0,0,0,0.2);
-            --success-color: #000000;
-            --error-color: #000000;
-            --border-color: #000000;
-        }
-        html[data-display-mode='eink'] * {
-            transition: none !important;
-            animation: none !important;
-            box-shadow: none !important;
-            border-width: 2px !important;
-        }
-        html[data-display-mode='eink'] .save-btn { background: #000 !important; color: #fff !important; }
-        html[data-display-mode='eink'] .status-message { background-color: #fff !important; color: #000 !important; border: 2px solid #000 !important; }
-        html[data-display-mode='eink'] .selected-btn-pill { background-color: #000 !important; color: #fff !important; }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html { font-family: 'Noto Sans SC', system-ui, sans-serif; }
-        
+        html { font-family: 'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         body {
-            display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh;
-            background-color: var(--bg-color); color: var(--primary-text-color);
-            transition: background-color 0.4s, color 0.4s; -webkit-tap-highlight-color: transparent; padding: 20px 0;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            min-height: 100vh; background-color: var(--bg-color); color: var(--primary-text-color);
+            transition: background-color 0.4s, color 0.4s; -webkit-tap-highlight-color: transparent;
+            padding: 20px 0;
         }
-
-        /* --- Global UI Components --- */
-        .svg-icon { width: 1em; height: 1em; vertical-align: -0.15em; margin-right: 4px; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
-        @keyframes slideInLeft { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes slideInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .animated { animation: fadeInUp 0.8s var(--ease-out-quint) both; }
-        .pulse { animation: pulse 0.5s var(--ease-out-quint); }
-        .float { animation: float 3s ease-in-out infinite; }
-        
-        /* --- Header & Toggles --- */
-        .header-controls { position: fixed; top: 20px; right: 20px; display: flex; gap: 12px; z-index: 100; }
-        .icon-toggle {
-            width: 44px; height: 44px; background-color: var(--card-color); border: none; border-radius: 50%;
-            cursor: pointer; display: flex; justify-content: center; align-items: center; color: var(--primary-text-color);
-            box-shadow: 0 4px 12px var(--shadow-color); transition: all 0.3s var(--ease-in-out-cubic);
-            position: relative; overflow: hidden;
-        }
-        .icon-toggle:active { transform: scale(0.9); }
-        .icon-toggle::before {
-            content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0;
-            background: var(--accent-glow); border-radius: 50%; transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-        .icon-toggle:active::before {
-            width: 200px; height: 200px;
-        }
-        .icon-toggle .svg-icon { margin-right: 0; }
-        
-        /* --- Main Content --- */
-        main { width: 100%; max-width: 800px; padding: 20px; text-align: center; }
-        main[data-mode="kobo"] #koreaderFunctions { display: none; }
-        main[data-mode="koreader"] .kobo-only { display: none; }
-        
-        h1 { font-weight: 700; font-size: 2.25rem; margin-bottom: 20px; animation-delay: 0.1s; }
-        h1::after {
-            content: ''; display: block; width: 60px; height: 4px; background: var(--accent-color);
-            margin: 10px auto 0; border-radius: 2px;
-            animation: fadeIn 0.5s 0.6s both, pulse 2s 1s infinite;
-        }
 
-        /* IP输入框相关样式 */
-        .ip-display { 
-            display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 35px; 
-            animation-delay: 0.3s; 
+        .theme-toggle-container { position: fixed; top: 15px; right: 15px; z-index: 101; }
+        .theme-toggle {
+            cursor: pointer; width: 48px; height: 48px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; background-color: var(--card-color);
+            box-shadow: 0 4px 12px var(--shadow-color); transition: all 0.3s ease;
         }
-        .ip-display span { 
-            background-color: var(--card-color); border: 1px solid var(--border-color);
-            border-radius: 12px; padding: 14px 18px; color: var(--primary-text-color); font-size: 1rem; width: 220px;
-            transition: all 0.3s var(--ease-in-out-cubic);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        .theme-toggle:active { transform: scale(0.9); }
+        .theme-toggle input { display: none; }
+        .theme-toggle .icon { color: var(--primary-text-color); transition: all 0.5s cubic-bezier(.18,.89,.32,1.28); }
+        .theme-toggle .sun { transform: scale(1) rotate(0deg); }
+        html[data-theme='dark'] .theme-toggle .sun { transform: scale(0) rotate(-90deg); }
+        .theme-toggle .moon { position: absolute; transform: scale(0) rotate(90deg); }
+        html[data-theme='dark'] .theme-toggle .moon { transform: scale(1) rotate(0deg); }
+
+        main { width: 100%; max-width: 800px; padding: 20px; text-align: center; }
+        main[data-mode="kobo"] .koreader-only { display: none !important; }
+        main[data-mode="koreader"] .kobo-only { display: none !important; }
+        
+        h1 { font-weight: 700; font-size: 2.25rem; }
+        
+        .title-container {
+            display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 8px;
         }
-        .ip-form { display: none; justify-content: center; align-items: center; gap: 10px; margin-bottom: 35px; animation-delay: 0.3s; }
+        .lock-theme-btn {
+            background: none; border: none; cursor: pointer; color: var(--secondary-text-color);
+            padding: 5px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s;
+        }
+        .lock-theme-btn.locked, .lock-theme-btn:hover { color: var(--accent-color); }
+        .lock-theme-btn .svg-icon { width: 24px; height: 24px; }
+        
+        #theme-info { margin-bottom: 20px; animation-delay: 0.15s; }
+        #theme-info .name { font-size: 1.1rem; font-weight: 500; color: var(--primary-text-color); margin-bottom: 4px; }
+        #theme-info .description { font-size: 0.8rem; color: var(--secondary-text-color); }
+        
+        .mode-switcher {
+            display: inline-flex; position: relative; background-color: color-mix(in srgb, var(--card-color) 50%, var(--bg-color));
+            border-radius: 12px; padding: 4px; margin-bottom: 24px; animation-delay: 0.2s;
+        }
+        .mode-switcher .glider {
+            position: absolute; top: 4px; height: calc(100% - 8px); width: 100px;
+            background-color: var(--card-color); border-radius: 9px;
+            box-shadow: 0 2px 8px -2px var(--shadow-color);
+            transition: transform 0.4s var(--ease-in-out-cubic);
+        }
+        .mode-switcher button {
+            background: none; border: none; color: var(--secondary-text-color); font-size: 0.9rem; font-weight: 500;
+            padding: 10px 20px; width: 100px; cursor: pointer; position: relative; z-index: 1;
+            transition: color 0.4s var(--ease-in-out-cubic);
+        }
+        .mode-switcher button.active { color: var(--primary-text-color); }
+
+        .ip-form { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 35px; animation-delay: 0.3s; }
         .ip-input {
-            background-color: var(--card-color); border: 1px solid var(--border-color);
+            background-color: var(--card-color); border: 1px solid color-mix(in srgb, var(--secondary-text-color) 40%, transparent);
             border-radius: 12px; padding: 14px 18px; color: var(--primary-text-color); font-size: 1rem; width: 220px;
             transition: all 0.3s var(--ease-in-out-cubic);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
         .ip-input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px var(--accent-glow); }
         .save-btn {
-            background: var(--accent-color); border: none; border-radius: 12px; padding: 14px 22px; color: #fff; font-size: 1rem; font-weight: 500;
-            cursor: pointer; transition: all 0.3s var(--ease-in-out-cubic);
-            box-shadow: 0 4px 12px var(--accent-glow);
-            position: relative; overflow: hidden;
-            display: flex; align-items: center; gap: 6px;
+            background-image: linear-gradient(135deg, var(--accent-color) 0%, color-mix(in srgb, var(--accent-color) 80%, black) 100%);
+            border: none; border-radius: 12px; padding: 14px 22px; color: #fff; font-size: 1rem; font-weight: 500; cursor: pointer;
+            transition: all 0.3s var(--ease-in-out-cubic); box-shadow: 0 4px 15px -5px color-mix(in srgb, var(--accent-color) 60%, transparent);
         }
-        .save-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px var(--accent-glow); }
-        .save-btn:active { transform: translateY(0); }
-        .save-btn::before {
-            content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0;
-            background: rgba(255,255,255,0.2); border-radius: 50%; transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-        .save-btn:active::before {
-            width: 300px; height: 300px;
-        }
-        .edit-ip-btn {
-            background: var(--card-color); border: 1px solid var(--border-color); border-radius: 12px; 
-            padding: 14px 22px; color: var(--primary-text-color); font-size: 1rem; font-weight: 500;
-            cursor: pointer; transition: all 0.3s var(--ease-in-out-cubic);
-            display: flex; align-items: center; gap: 6px;
-        }
-        .edit-ip-btn:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 4px 12px var(--shadow-color);
-        }
-        .edit-ip-btn:active { transform: translateY(0); }
+        .save-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px -5px var(--accent-color); }
+        .save-btn:active { transform: translateY(0) scale(0.95); }
 
         .controls { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; margin-bottom: 35px; animation-delay: 0.4s; }
         .control-card {
-            width: var(--control-card-width); height: var(--control-card-height); background-color: var(--card-color); border-radius: 24px;
+            width: 260px; height: 190px; background-color: var(--card-color); border-radius: 24px;
             display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; user-select: none;
             box-shadow: 0 10px 30px -10px var(--shadow-color); position: relative; overflow: hidden;
             transition: all 0.4s var(--ease-out-quint);
-            border: 1px solid var(--border-color);
         }
-        .control-card:active { transform: translateY(-4px) scale(0.97); }
-        .control-card::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--accent-glow); opacity: 0; transition: opacity 0.3s;
-        }
-        .control-card:hover::before { opacity: 0.3; }
-        .card-icon { color: var(--accent-color); font-size: 64px; transition: transform 0.3s; }
-        .control-card:hover .card-icon { transform: scale(1.1); }
-        .card-text { font-size: 1.5rem; font-weight: 400; margin-top: 15px; }
         
-        #functionArea {
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
+        main:not([data-click-effect="ripple"]) .control-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background-image: radial-gradient(circle at 50% -20%, var(--accent-glow), transparent 70%);
+            opacity: 0; transition: opacity 0.5s var(--ease-out-quint);
+        }
+        main:not([data-click-effect="ripple"]) .control-card:hover::before { opacity: 1; }
+        
+        .control-card .ripple {
+            position: absolute; background: var(--accent-glow); border-radius: 50%;
+            transform: scale(0); animation: ripple-effect 0.6s linear; pointer-events: none;
+        }
+        @keyframes ripple-effect { to { transform: scale(4); opacity: 0; } }
+
+        .control-card:hover { transform: translateY(-12px); box-shadow: 0 20px 40px -15px var(--shadow-color); }
+        .control-card:active { transform: translateY(-4px) scale(0.97); transition-duration: 0.1s; }
+        .card-icon { color: var(--accent-color); z-index: 1;}
+        .card-text { font-size: 1.5rem; font-weight: 400; margin-top: 15px; z-index: 1;}
+        
+        .divider { width: 80%; max-width: 400px; height: 1px; background-color: color-mix(in srgb, var(--secondary-text-color) 40%, transparent); margin: 0 auto 30px; animation-delay: 0.5s; }
+
+        .slider-controls { display: flex; flex-direction: column; gap: 20px; margin-bottom: 30px; padding: 0 20px; animation-delay: 0.55s; }
+        .slider-container { display: flex; align-items: center; gap: 15px; }
+        .slider-container .svg-icon { color: var(--secondary-text-color); flex-shrink: 0; }
+        .slider-container input[type="range"] {
+            -webkit-appearance: none; appearance: none; width: 100%; height: 8px; background-color: color-mix(in srgb, var(--secondary-text-color) 25%, transparent);
+            border-radius: 4px; outline: none; transition: background-color 0.3s;
+        }
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 20px; height: 20px; background-color: var(--accent-color);
+            border-radius: 50%; cursor: pointer; box-shadow: 0 0 8px var(--accent-glow);
+        }
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 20px; height: 20px; background-color: var(--accent-color); border-radius: 50%; cursor: pointer;
+            box-shadow: 0 0 8px var(--accent-glow); border: none;
+        }
+
+        .function-area {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; animation-delay: 0.6s;
             transition: opacity 0.4s, transform 0.4s;
         }
         .function-btn {
             display: flex; align-items: center; gap: 8px; background-color: transparent;
-            border: 1px solid var(--border-color); color: var(--secondary-text-color); border-radius: 12px;
+            border: 1px solid color-mix(in srgb, var(--secondary-text-color) 50%, transparent);
+            color: var(--secondary-text-color); border-radius: 12px; padding: 10px 18px; font-size: 0.875rem;
             cursor: pointer; transition: all 0.3s var(--ease-in-out-cubic);
-            position: relative; overflow: hidden;
         }
-        /* Button Size Styles */
-        #functionArea[data-size="small"] .function-btn { padding: 8px 14px; font-size: 0.8rem; }
-        #functionArea[data-size="medium"] .function-btn { padding: 10px 18px; font-size: 0.875rem; }
-        #functionArea[data-size="large"] .function-btn { padding: 12px 22px; font-size: 1rem; }
+        .function-btn:hover { color: var(--accent-color); border-color: var(--accent-color); background-color: var(--accent-glow); transform: translateY(-2px); }
+        .function-btn:active { transform: scale(0.95) translateY(0); }
+        .function-btn.toggled-on {
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+            background-color: var(--accent-glow);
+        }
 
-        .function-btn:hover { 
-            color: var(--accent-color); border-color: var(--accent-color); background-color: var(--accent-glow); 
-            transform: translateY(-2px); 
-        }
-        .function-btn:active { transform: translateY(0) scale(0.98); }
         .function-btn.warn-btn { border-color: color-mix(in srgb, var(--warn-color) 50%, transparent); color: var(--warn-color); }
         .function-btn.warn-btn:hover { border-color: var(--warn-color); background-color: color-mix(in srgb, var(--warn-color) 15%, transparent); }
-        .function-btn::before {
-            content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0;
-            background: var(--accent-glow); border-radius: 50%; transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-        .function-btn:active::before {
-            width: 300px; height: 300px;
-        }
         
-        /* Kobo关闭按钮优化 */
-        .kobo-close-btn {
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            background-color: var(--card-color); border: 1px solid var(--border-color);
-            color: var(--secondary-text-color); border-radius: 12px;
-            cursor: pointer; transition: all 0.3s var(--ease-in-out-cubic);
-            position: relative; overflow: hidden;
-            padding: 12px 24px; font-size: 1rem; font-weight: 500;
-            margin: 20px auto; max-width: 200px;
+        .function-btn.confirm-state {
+            border-color: var(--warn-confirm-color) !important; color: var(--warn-confirm-color) !important;
+            background-color: color-mix(in srgb, var(--warn-confirm-color) 15%, transparent) !important;
+            animation: pulse 1s infinite;
         }
-        .kobo-close-btn:hover { 
-            color: var(--warn-color); border-color: var(--warn-color); 
-            background-color: color-mix(in srgb, var(--warn-color) 15%, transparent);
-            transform: translateY(-2px); 
-        }
-        .kobo-close-btn:active { transform: translateY(0) scale(0.98); }
-        .kobo-close-btn::before {
-            content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0;
-            background: var(--accent-glow); border-radius: 50%; transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-        .kobo-close-btn:active::before {
-            width: 300px; height: 300px;
-        }
+        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.03);} 100% {transform: scale(1);} }
         
+        .svg-icon { width: 1.2em; height: 1.2em; vertical-align: middle; }
+
         .status-message {
-            position: fixed; bottom: 30px; left: 50%; transform: translate(-50%, 150%);
-            padding: 12px 24px; border-radius: 12px;
-            font-size: 0.95rem; font-weight: 500; display: flex; align-items: center; gap: 10px;
-            background-color: var(--card-color); color: var(--primary-text-color); 
-            box-shadow: 0 5px 20px var(--shadow-color);
-            opacity: 0; visibility: hidden; transition: all 0.5s var(--ease-in-out-cubic); z-index: 2000;
-            border: 1px solid var(--border-color);
+            position: fixed; bottom: 30px; left: 50%; transform: translate(-50%, 150%); padding: 12px 25px;
+            border-radius: 12px; font-size: 1rem; font-weight: 500; color: #fff; opacity: 0; visibility: hidden;
+            transition: all 0.5s var(--ease-in-out-cubic); z-index: 1000;
         }
         .status-message.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
-        .status-message .svg-icon { color: var(--accent-color); }
-        .status-message.success .svg-icon { color: var(--success-color); }
-        .status-message.error .svg-icon { color: var(--error-color); }
+        .status-message.success { background-color: var(--success-color); }
+        .status-message.error { background-color: var(--error-color); }
         
-        footer { margin-top: 20px; padding: 10px; font-size: 0.75rem; color: var(--secondary-text-color); text-align: center; }
-        #eink-mode-link { background: none; border: none; color: var(--secondary-text-color); text-decoration: underline; cursor: pointer; }
-        #normal-mode-link { background: none; border: none; color: var(--secondary-text-color); text-decoration: underline; cursor: pointer; }
+        footer { margin-top: 20px; padding: 10px; font-size: 0.75rem; color: var(--secondary-text-color); text-align: center; animation-delay: 0.7s; }
 
-        /* --- Settings Modal --- */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6);
-            display: flex; justify-content: center; align-items: center; z-index: 1000;
-            opacity: 0; visibility: hidden; transition: opacity 0.4s, visibility 0.4s;
+        /* Settings Modal */
+        #settingsModal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);
+            display: flex; justify-content: center; align-items: center; z-index: 2000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s;
         }
-        .modal-overlay.visible { opacity: 1; visibility: visible; }
-        .modal-content {
-            background-color: var(--bg-color); color: var(--primary-text-color); width: 90%; max-width: 600px;
-            max-height: 85vh; border-radius: 20px; box-shadow: 0 15px 50px rgba(0,0,0,0.3);
-            display: flex; flex-direction: column; transform: scale(0.95);
-            transition: transform 0.4s var(--ease-out-quint);
+        #settingsModal.show { opacity: 1; visibility: visible; }
+        .settings-content {
+            background-color: var(--card-color); color: var(--primary-text-color); width: 90%; max-width: 600px; max-height: 85vh;
+            border-radius: 20px; box-shadow: 0 10px 40px var(--shadow-color); padding: 25px;
+            transform: scale(0.95); transition: transform 0.3s var(--ease-out-quint); text-align: left;
+            display: flex; flex-direction: column;
         }
-        .modal-overlay.visible .modal-content { transform: scale(1); }
-        .modal-header { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { flex-grow: 1; overflow-y: auto; padding: 20px; }
-        .modal-body h3 { font-size: 1rem; font-weight: 500; color: var(--secondary-text-color); margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
-        .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .setting-input { 
-            background-color: var(--card-color); border: 1px solid var(--border-color); border-radius: 8px; 
-            padding: 8px 12px; color: var(--primary-text-color); 
+        #settingsModal.show .settings-content { transform: scale(1); }
+        .settings-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .settings-header h2 { font-size: 1.5rem; }
+        .settings-close-btn { background: none; border: none; font-size: 2rem; color: var(--secondary-text-color); cursor: pointer; }
+        .settings-body { overflow-y: auto; padding-right: 15px; }
+        .settings-section { margin-bottom: 30px; }
+        .settings-section h3 { font-size: 1.1rem; color: var(--accent-color); margin-bottom: 15px; border-bottom: 1px solid var(--accent-glow); padding-bottom: 8px;}
+        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+        .form-group label { margin-bottom: 8px; font-weight: 500; color: var(--secondary-text-color); }
+        .settings-input {
+            background-color: var(--bg-color); border: 1px solid color-mix(in srgb, var(--secondary-text-color) 40%, transparent);
+            border-radius: 8px; padding: 10px 14px; color: var(--primary-text-color); font-size: 0.9rem;
+            transition: all 0.3s var(--ease-in-out-cubic);
         }
-
-        /* Custom Checkbox */
-        .custom-checkbox { position: relative; display: inline-block; width: 44px; height: 24px; }
-        .custom-checkbox input { opacity: 0; width: 0; height: 0; }
-        .checkbox-slider {
-            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: var(--card-color); border: 1px solid var(--border-color);
-            border-radius: 24px; transition: background-color 0.3s;
-        }
-        .checkbox-slider:before {
-            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 2px;
-            background-color: var(--secondary-text-color); border-radius: 50%;
-            transition: transform 0.3s var(--ease-in-out-cubic), background-color 0.3s;
-        }
-        input:checked + .checkbox-slider { background-color: var(--accent-color); }
-        input:checked + .checkbox-slider:before { background-color: white; transform: translateX(18px); }
-
-        /* Custom Range Slider */
-        input[type="range"] { 
-            -webkit-appearance: none; appearance: none; width: 100%; height: 8px; 
-            background: var(--card-color); border-radius: 5px; outline: none; border: 1px solid var(--border-color); 
-        }
-        input[type="range"]::-webkit-slider-thumb { 
-            -webkit-appearance: none; appearance: none; width: 20px; height: 20px; 
-            background: var(--accent-color); cursor: pointer; border-radius: 50%; 
-        }
-        input[type="range"]::-moz-range-thumb { 
-            width: 20px; height: 20px; background: var(--accent-color); cursor: pointer; 
-            border-radius: 50%; border: none; 
-        }
-
-        /* Button Customizer */
-        #selectedButtons { 
-            display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; border: 1px solid var(--border-color); 
-            border-radius: 12px; min-height: 50px; margin-bottom: 15px; 
-            background-color: var(--card-color);
-            margin-top: 10px;
-        }
-        .selected-btn-pill { 
-            display: flex; align-items: center; gap: 6px; background-color: var(--accent-color); color: white; 
-            padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: grab; user-select: none; 
-        }
-        .selected-btn-pill.dragging { opacity: 0.5; }
-        .remove-btn { background: none; border: none; color: white; cursor: pointer; font-weight: bold; }
-        #availableButtons .category-grid { 
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; 
-            margin-top: 10px;
-        }
-        .available-btn {
-            background-color: var(--card-color); border: 1px solid transparent; color: var(--primary-text-color);
-            width: 100%; text-align: left; padding: 10px; border-radius: 8px; cursor: pointer;
-            transition: all 0.2s;
+        .settings-input:focus { outline: none; border-color: var(--accent-color); }
+        .function-lists { display: flex; gap: 20px; }
+        .function-list-container { flex: 1; }
+        .function-list { min-height: 200px; background: var(--bg-color); border-radius: 8px; padding: 10px; list-style-type: none; }
+        .function-list li {
+            padding: 10px; background: var(--card-color); border-radius: 6px; margin-bottom: 8px; cursor: move;
             display: flex; align-items: center; gap: 8px;
+            border: 1px solid transparent; transition: border-color 0.2s;
         }
-        .available-btn:hover { 
-            border-color: var(--accent-color); background-color: var(--accent-glow); 
-        }
-        .available-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        .config-buttons button { 
-            background-color: var(--card-color); border: 1px solid var(--border-color); color: var(--primary-text-color); 
-            padding: 8px 16px; border-radius: 8px; cursor: pointer; 
-        }
-        #importConfigInput { display: none; }
-
-        /* Slider Popup */
-        #sliderPopup {
-            position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--card-color);
-            padding: 20px; border-top-left-radius: 20px; border-top-right-radius: 20px;
-            box-shadow: 0 -10px 40px var(--shadow-color); z-index: 1500;
-            transform: translateY(100%); transition: transform 0.4s var(--ease-in-out-cubic);
-        }
-        #sliderPopup.visible { transform: translateY(0); }
-        
-        /* Theme Color Picker */
-        .color-picker {
-            display: flex; align-items: center; gap: 10px;
-        }
-        .color-preview {
-            width: 30px; height: 30px; border-radius: 50%; background-color: var(--accent-color);
-            border: 2px solid var(--border-color);
-        }
-        .color-slider-container {
-            flex: 1;
-        }
-        .color-sliders {
-            display: flex; flex-direction: column; gap: 5px;
-        }
-        .color-slider-label {
-            display: flex; justify-content: space-between; font-size: 0.8rem;
-        }
-        
-        /* Animation Classes */
-        .bounce-in {
-            animation: bounceIn 0.6s var(--ease-out-back);
-        }
-        @keyframes bounceIn {
-            0% { transform: scale(0.8); opacity: 0; }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        
-        /* Tab切换动画 */
-        .tab-content {
-            display: none;
-            animation: fadeIn 0.4s ease-in-out;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        
-        /* 拖拽优化 */
-        .drag-placeholder {
-            border: 2px dashed var(--accent-color);
-            border-radius: 20px;
-            width: 100px;
-            height: 30px;
-        }
-        
-        /* 移动端适配 */
-        @media (max-width: 768px) {
-            .controls {
-                gap: 15px;
-            }
-            .control-card {
-                width: calc(50vw - 30px);
-                height: calc(35vw - 30px);
-                min-width: 140px;
-                min-height: 100px;
-            }
-            .card-icon {
-                font-size: 40px;
-            }
-            .card-text {
-                font-size: 1.2rem;
-            }
-            .ip-display span, .ip-input {
-                width: 100%;
-                max-width: 220px;
-            }
-            .ip-form {
-                width: 100%;
-                max-width: 300px;
-            }
-            #functionArea {
-                gap: 8px;
-            }
-            .function-btn {
-                padding: 8px 12px;
-                font-size: 0.8rem;
-            }
-            .header-controls {
-                top: 10px;
-                right: 10px;
-            }
-            h1 {
-                font-size: 1.8rem;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .control-card {
-                width: calc(50vw - 20px);
-                height: calc(35vw - 20px);
-                min-width: 120px;
-                min-height: 90px;
-            }
-            .card-icon {
-                font-size: 32px;
-            }
-            .card-text {
-                font-size: 1rem;
-            }
-            .function-btn {
-                padding: 6px 10px;
-                font-size: 0.75rem;
-            }
-        }
-        
-        /* 大尺寸翻页键 */
-        @media (min-width: 1200px) {
-            :root {
-                --control-card-width: 300px;
-                --control-card-height: 220px;
-            }
-            .card-icon {
-                font-size: 72px;
-            }
-            .card-text {
-                font-size: 1.8rem;
-            }
-        }
+        .function-list li.sortable-ghost { opacity: 0.4; background: var(--accent-glow); }
+        .function-list .svg-icon { color: var(--secondary-text-color); }
     </style>
 </head>
 <body>
-    <div class="header-controls">
-        <button id="modeToggleBtn" class="icon-toggle" aria-label="切换模式">
-            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
-            </svg>
-        </button>
-        <button id="settingsBtn" class="icon-toggle" aria-label="打开设置">
-            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.438.995s.145.755.438.995l1.003.827c.424.35.534.954.26 1.431l-1.296 2.247a1.125 1.125 0 01-1.37.49l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.313-.686-.645-.87a6.52 6.52 0 01-.22-.127c-.324-.196-.72-.257-1.075-.124l-1.217.456a1.125 1.125 0 01-1.37-.49l-1.296-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.437-.995s-.145-.755-.437-.995l-1.004-.827a1.125 1.125 0 01-.26-1.431l1.296-2.247a1.125 1.125 0 011.37-.49l1.217.456c.355.133.75.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.645-.869l.213-1.281z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-        </button>
-        <button id="themeToggle" class="icon-toggle" aria-label="切换主题">
-            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-            </svg>
-        </button>
+    <div class="theme-toggle-container">
+        <label class="theme-toggle" for="themeToggleCheckbox" aria-label="切换主题">
+            <input type="checkbox" id="themeToggleCheckbox">
+            <svg class="svg-icon sun icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg class="svg-icon moon icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </label>
     </div>
 
-    <main id="mainContent">
-        <h1 class="animated">阅读控制器 Advanced</h1>
-        
-        <div id="ipSection">
-            <div class="ip-display animated" id="ipDisplay">
-                <span id="ipDisplayText">未设置IP地址</span>
-                <button id="editIpBtn" class="edit-ip-btn">
-                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                    </svg>
-                    编辑
-                </button>
-            </div>
-            <form id="ipForm" class="ip-form animated" onsubmit="event.preventDefault();">
-                <input type="text" id="ipInput" class="ip-input" placeholder="输入设备IP地址" autocomplete="off">
-                <button type="submit" id="saveBtn" class="save-btn">
-                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
-                    </svg>
-                    保存
-                </button>
-            </form>
+    <main id="mainContent" data-mode="koreader">
+        <div class="title-container animated">
+             <h1 class="animated">阅读控制器</h1>
+             <button id="lockThemeBtn" class="lock-theme-btn animated" aria-label="锁定/解锁主题色">
+                <svg id="lockIcon" class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <svg id="unlockIcon" class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+             </button>
         </div>
+        
+        <div id="theme-info" class="animated">
+            <h3 class="name"></h3>
+            <p class="description"></p>
+        </div>
+        
+        <div class="mode-switcher animated">
+            <div class="glider"></div>
+            <button id="modeBtnKoreader" class="active">KOReader</button>
+            <button id="modeBtnKobo">Kobo</button>
+        </div>
+
+        <form id="ipForm" class="ip-form animated" onsubmit="event.preventDefault();">
+            <input type="text" id="ipInput" class="ip-input" placeholder="输入设备IP地址" autocomplete="off">
+            <button type="submit" id="saveBtn" class="save-btn">保存</button>
+        </form>
 
         <div class="controls animated">
             <div class="control-card" data-action="prev" data-success-msg="‹ 上一页">
-                <div class="card-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 64px; height: 64px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                    </svg>
-                </div>
+                <div class="card-icon"><svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
                 <div class="card-text">上一页</div>
             </div>
             <div class="control-card" data-action="next" data-success-msg="下一页 ›">
-                <div class="card-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 64px; height: 64px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
-                </div>
+                <div class="card-icon"><svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
                 <div class="card-text">下一页</div>
             </div>
         </div>
         
-        <div id="koreaderFunctions" class="animated" style="animation-delay: 0.5s;">
-            <div style="width: 80%; max-width: 400px; height: 1px; background-color: var(--border-color); margin: 0 auto 30px;"></div>
-            <div id="functionArea"></div>
-        </div>
+        <div class="divider animated"></div>
         
-        <div class="function-area kobo-only animated" style="animation-delay: 0.6s;">
-             <button class="kobo-close-btn" data-action="/exit" data-success-msg="已发送关闭服务器命令">
-                <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" />
-                </svg>
-                关闭服务器
-             </button>
+        <div id="sliderControls" class="slider-controls animated koreader-only"></div>
+
+        <div id="functionArea" class="function-area animated">
+            <!-- Dynamically generated buttons will go here -->
         </div>
     </main>
 
-    <footer id="footer" class="animated"></footer>
-    
-    <div id="statusMessage" class="status-message"></div>
-
-    <div id="settingsModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>设置</h2>
-                <button id="closeSettingsBtn" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--secondary-text-color);">&times;</button>
+    <div id="settingsModal">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h2>控制器设置</h2>
+                <button class="settings-close-btn">&times;</button>
             </div>
-            <div class="modal-body">
-                <h3>通用</h3>
-                <div class="setting-item">
-                    <label for="koreaderPortInput">KOReader 端口</label>
-                    <input type="number" id="koreaderPortInput" class="setting-input" style="width: 80px;">
+            <div class="settings-body">
+                <div class="settings-section">
+                    <h3>网络设置 (KOReader)</h3>
+                    <div class="form-group">
+                        <label for="koreaderPortInput">KOReader 端口</label>
+                        <input type="number" id="koreaderPortInput" class="settings-input" placeholder="默认 8080">
+                    </div>
                 </div>
-                <div class="setting-item">
-                    <label for="autoNightMode">自动进入夜间模式</label>
-                    <label class="custom-checkbox">
-                        <input type="checkbox" id="autoNightMode">
-                        <span class="checkbox-slider"></span>
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <label for="hideTab">隐藏标签页</label>
-                    <label class="custom-checkbox">
-                        <input type="checkbox" id="hideTab">
-                        <span class="checkbox-slider"></span>
-                    </label>
-                </div>
-                
-                <h3>主题与外观</h3>
-                <div class="setting-item">
-                    <label>按钮大小</label>
-                    <input type="range" id="buttonSizeSlider" min="0" max="2" value="1" style="width: 120px;">
-                </div>
-                <div class="setting-item eink-hidden">
-                    <label>主题色</label>
-                    <div class="color-picker">
-                        <div class="color-preview" id="colorPreview"></div>
-                        <div class="color-slider-container">
-                            <div class="color-sliders">
-                                <div>
-                                    <div class="color-slider-label">
-                                        <span>色调</span>
-                                        <span id="hueValue">187</span>
-                                    </div>
-                                    <input type="range" id="hueSlider" min="0" max="360" value="187">
-                                </div>
-                                <div>
-                                    <div class="color-slider-label">
-                                        <span>饱和度</span>
-                                        <span id="saturationValue">80%</span>
-                                    </div>
-                                    <input type="range" id="saturationSlider" min="0" max="100" value="80">
-                                </div>
-                                <div>
-                                    <div class="color-slider-label">
-                                        <span>亮度</span>
-                                        <span id="lightnessValue">30%</span>
-                                    </div>
-                                    <input type="range" id="lightnessSlider" min="0" max="100" value="30">
-                                </div>
-                            </div>
+                <div class="settings-section">
+                    <h3>功能按钮管理 (KOReader)</h3>
+                    <p style="font-size: 0.8rem; color: var(--secondary-text-color); margin-bottom: 15px;">从左侧拖动到右侧以添加功能按钮，在右侧排序。最多添加6个。</p>
+                    <div class="function-lists">
+                        <div class="function-list-container">
+                            <h4>可用功能</h4>
+                            <ul id="available-functions" class="function-list"></ul>
+                        </div>
+                        <div class="function-list-container">
+                            <h4>当前功能 (最多6个)</h4>
+                            <ul id="active-functions" class="function-list"></ul>
                         </div>
                     </div>
                 </div>
-                
-                <h3>KOReader</h3>
-                <div style="margin-top: 15px;"></div> <!-- 增加标题与按钮间距 -->
-                <h3>快捷按钮 (拖拽排序, 最多 <span id="maxButtons"></span> 个)</h3>
-                <div id="selectedButtons" class="koreader-only"></div>
-                <div id="availableButtons" class="koreader-only"></div>
-                
-                <h3>配置管理</h3>
-                <div class="setting-item config-buttons">
-                    <label>备份与恢复</label>
-                    <div>
-                        <button id="importConfigBtn">导入</button>
-                        <button id="exportConfigBtn" style="margin-left:10px;">导出</button>
-                        <input type="file" id="importConfigInput" accept=".json">
-                    </div>
-                </div>
+                <!-- Custom actions can be added here in the future -->
+            </div>
+             <div class="settings-footer" style="text-align: right; margin-top: 20px;">
+                <button id="saveSettingsBtn" class="save-btn">保存并关闭</button>
             </div>
         </div>
     </div>
-    
-    <div id="sliderPopup">
-        <h4 id="sliderTitle"></h4>
-        <input type="range" id="sliderControl" min="0" max="100" value="50">
-    </div>
+
+    <footer id="footer" class="animated"></footer>
+    <div id="statusMessage" class="status-message"></div>
 
     <script>
-    const MAX_BUTTONS = 8;
-    const ALL_COMMANDS = { /* same command list as before */ };
-    // --- Data & Constants --- (Shortened for brevity, full list is in the script)
-    const ALL_COMMANDS_FULL = {
-        "文件与历史": [ 
-            { id: 'home', name: '文件管理器', endpoint: '/koreader/event/Home', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z M9 5a2 2 0 012-2h2a2 2 0 012 2v2H9V5z' }, 
-            { id: 'open_last', name: '打开之前文档', endpoint: '/koreader/event/OpenLastDoc', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' }, 
-            { id: 'history', name: '历史记录', endpoint: '/koreader/event/ShowHist', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' }, 
-            { id: 'collections', name: '收藏', endpoint: '/koreader/event/ShowColl', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z' } 
-        ],
-        "阅读与导航": [ 
-            { id: 'toc', name: '目录', endpoint: '/koreader/event/ShowToc', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' }, 
-            { id: 'bookmarks', name: '书签', endpoint: '/koreader/event/ShowBookmark', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z' }, 
-            { id: 'book_status', name: '书籍状态', endpoint: '/koreader/event/ShowBookStatus', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' }, 
-            { id: 'dictionary', name: '查询词典', endpoint: '/koreader/event/ShowDictionaryLookup', icon: 'M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9' }, 
-            { id: 'open_next_file', name: '下一册', endpoint: '/koreader/event/OpenNextOrPreviousFileInFolder', icon: 'M14 5l7 7m0 0l-7 7m7-7H3' }, 
-            { id: 'open_prev_file', name: '上一册', endpoint: '/koreader/event/OpenNextOrPreviousFileInFolder/true', icon: 'M10 19l-7-7m0 0l7-7m-7 7h18' } 
-        ],
-        "屏幕与灯光": [ 
-            { id: 'show_fl', name: '调节前光', endpoint: '/koreader/event/ShowFlDialog', icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z' }, 
-            { id: 'toggle_fl', name: '开关前光', endpoint: '/koreader/event/ToggleFrontlight', icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z' }, 
-            { id: 'set_fl_intensity', name: '亮度', endpoint: '/koreader/event/SetFlIntensity/', type: 'slider', min: 0, max: 100, icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z' }, 
-            { id: 'set_fl_warmth', name: '色温', endpoint: '/koreader/event/SetFlWarmth/', type: 'slider', min: 0, max: 100, icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z' }, 
-            { id: 'toggle_night_mode', name: '夜间模式', endpoint: '/koreader/event/ToggleNightMode', icon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z' }, 
-            { id: 'full_refresh', name: '全屏刷新', endpoint: '/koreader/event/FullRefresh', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' }, 
-            { id: 'screenshot', name: '截图', endpoint: '/koreader/event/Screenshot', icon: 'M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z' } 
-        ],
-        "设备控制": [ 
-            { id: 'toggle_wifi', name: '开关 Wi-Fi', endpoint: '/koreader/event/ToggleWifi', icon: 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0' }, 
-            { id: 'exit_screensaver', name: '退出屏保', endpoint: '/koreader/event/ExitScreensaver', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' }, 
-            { id: 'suspend', name: '睡眠', endpoint: '/koreader/event/RequestSuspend', icon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z' }, 
-            { id: 'restart_koreader', name: '重启 KOReader', endpoint: '/koreader/event/Restart', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' }, 
-            { id: 'power_off', name: '关机', endpoint: '/koreader/event/RequestPowerOff', icon: 'M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-4.586-4.586A2 2 0 0013.586 2H6zm10 11a1 1 0 10-2 0v3a1 1 0 102 0v-3z' }, 
-            { id: 'exit_koreader', name: '退出 KOReader', endpoint: '/koreader/event/Exit', icon: 'M6 18L18 6M6 6l12 12' } 
-        ]
-    };
-    const ALL_COMMANDS_FLAT = Object.values(ALL_COMMANDS_FULL).flat();
-    const BUTTON_SIZES = ['small', 'medium', 'large'];
+        const traditionalColors = [
+            { "name": "春日樱花", "description": "灵感来自春天盛开的樱花，温柔而浪漫", "colors": [{ "name": "粉红", "hex": "#FFB3B3" }, { "name": "素白", "hex": "#FFFFFF" }, { "name": "青竹", "hex": "#95B89C" }, { "name": "浅紫", "hex": "#E6D4E8" }], "category": "四季" },
+            { "name": "江南水乡", "description": "描绘了传统水墨画中的江南意境，宁静而致远", "colors": [{ "name": "墨黑", "hex": "#2C3135" }, { "name": "青瓦", "hex": "#5D7B8B" }, { "name": "粉墙", "hex": "#F5F0E6" }, { "name": "苔绿", "hex": "#8B9E77" }], "category": "山水" },
+            { "name": "元宵佳节", "description": "元宵节的喜庆与温馨，灯火与月色交相辉映", "colors": [{ "name": "灯笼红", "hex": "#FF4D4D" }, { "name": "金黄", "hex": "#FFD700" }, { "name": "紫色", "hex": "#9B4F96" }, { "name": "月白", "hex": "#F2ECDE" }], "category": "节日" },
+            { "name": "竹林清韵", "description": "竹林深处的宁静与清雅，充满了文人气息", "colors": [{ "name": "竹青", "hex": "#789262" }, { "name": "竹白", "hex": "#F0F5E5" }, { "name": "墨绿", "hex": "#2C4A3E" }, { "name": "茶褐", "hex": "#6B4423" }], "category": "山水" },
+            { "name": "秋日金黄", "description": "秋天的金黄与温暖，收获与成熟的象征", "colors": [{ "name": "秋叶金", "hex": "#DAA520" }, { "name": "枫红", "hex": "#8B2323" }, { "name": "橙褐", "hex": "#CD853F" }, { "name": "暖棕", "hex": "#8B4513" }], "category": "四季" },
+            { "name": "中秋月夜", "description": "中秋佳节的皓月清辉，团圆与思念的交织", "colors": [{ "name": "月白", "hex": "#E9E7EF" }, { "name": "深蓝", "hex": "#1C2841" }, { "name": "桂花黄", "hex": "#FFC773" }, { "name": "青灰", "hex": "#7D8B99" }], "category": "节日" },
+            { "name": "碧海青天", "description": "碧蓝的大海与晴朗的天空，开阔而壮丽", "colors": [{ "name": "海蓝", "hex": "#1E90FF" }, { "name": "天青", "hex": "#87CEFA" }, { "name": "沙黄", "hex": "#F4A460" }, { "name": "白浪", "hex": "#FFFFFF" }], "category": "山水" },
+            { "name": "莲池清影", "description": "莲花盛开的池塘，清新怡人，象征着纯洁与高雅", "colors": [{ "name": "莲红", "hex": "#FF69B4" }, { "name": "池蓝", "hex": "#00BFFF" }, { "name": "荷绿", "hex": "#32CD32" }, { "name": "泥褐", "hex": "#8B4513" }], "category": "花卉" },
+            { "name": "紫禁宫韵", "description": "紫禁城的皇家色彩与庄严，彰显帝王之气 ", "colors": [{ "name": "紫禁红", "hex": "#8B0000" }, { "name": "宫廷金", "hex": "#FFD700" }, { "name": "玉蓝", "hex": "#4169E1" }, { "name": "御灰", "hex": "#696969" }], "category": "建筑" },
+            { "name": "青花瓷韵", "description": "青花瓷的经典蓝白配色，淡雅而高贵", "colors": [{ "name": "青花蓝", "hex": "#0000CD" }, { "name": "瓷白", "hex": "#F0F8FF" }, { "name": "墨黑", "hex": "#000000" }, { "name": "釉灰", "hex": "#708090" }], "category": "艺术" },
+            { "name": "红楼梦境", "description": "《红楼梦》中的古典色彩，充满了诗意与哀愁", "colors": [{ "name": "黛青", "hex": "#5D8AA8" }, { "name": "绛紫", "hex": "#8B008B" }, { "name": "烟白", "hex": "#F5F5F5" }, { "name": "琥珀黄", "hex": "#FFBF00" }], "category": "文化" },
+            { "name": "水墨丹青", "description": "水墨画中的淡雅色彩，意境悠远 ", "colors": [{ "name": "墨黑", "hex": "#2F3542" }, { "name": "丹朱", "hex": "#FF4500" }, { "name": "云灰", "hex": "#B0C4DE" }, { "name": "雪白", "hex": "#FFFFFF" }], "category": "艺术" },
+            { "name": "电子墨水", "description": "电子墨水屏的经典黑白配色，简约而富有科技感", "colors": [{ "name": "纯黑", "hex": "#000000" }, { "name": "纸白", "hex": "#FDF6E3" }, { "name": "灰阶", "hex": "#93A1A1" }, { "name": "深灰", "hex": "#586E75" }], "category": "科技" },
+            { "name": "极简主义", "description": "现代极简设计的素雅配色，强调功能与形式的统一", "colors": [{ "name": "炭黑", "hex": "#2E2E2E" }, { "name": "月白", "hex": "#F8F8F8" }, { "name": "银灰", "hex": "#B0B0B0" }, { "name": "暖灰", "hex": "#D8D8D8" }], "category": "现代" },
+            { "name": "冬日雪景", "description": "大雪纷飞后的静谧世界，纯洁而安宁", "colors": [{ "name": "雪白", "hex": "#FFFAFA" }, { "name": "冰蓝", "hex": "#ADD8E6" }, { "name": "枯枝", "hex": "#8B7355" }, { "name": "炭灰", "hex": "#4F4F4F" }], "category": "四季" },
+            { "name": "大漠孤烟", "description": "描绘沙漠的广阔与苍凉，充满了西域风情", "colors": [{ "name": "沙黄", "hex": "#EDC9AF" }, { "name": "驼色", "hex": "#A88462" }, { "name": "落日红", "hex": "#FF4500" }, { "name": "天青", "hex": "#87CEEB" }], "category": "山水" },
+            { "name": "端午安康", "description": "端午节的色彩，艾草与龙舟竞渡的活力 ", "colors": [{ "name": "艾草绿", "hex": "#6B8E23" }, { "name": "雄黄", "hex": "#FFC773" }, { "name": "龙舟红", "hex": "#DC143C" }, { "name": "糯米白", "hex": "#F5F5DC" }], "category": "节日" },
+            { "name": "国色天香", "description": "牡丹花的华贵与艳丽，被誉为花中之王", "colors": [{ "name": "牡丹粉", "hex": "#FFC0CB" }, { "name": "富贵紫", "hex": "#DA70D6" }, { "name": "金蕊黄", "hex": "#FFD700" }, { "name": "墨绿", "hex": "#2F4F4F" }], "category": "花卉" },
+            { "name": "徽派建筑", "description": "白墙黑瓦的徽派建筑，朴素而典雅", "colors": [{ "name": "粉墙", "hex": "#F0EAD6" }, { "name": "黛瓦", "hex": "#36454F" }, { "name": "木雕", "hex": "#8B4513" }, { "name": "石板青", "hex": "#778899" }], "category": "建筑" },
+            { "name": "敦煌飞天", "description": "敦煌壁画中飞天仙女的色彩，充满了宗教艺术的神秘感 ", "colors": [{ "name": "赭石", "hex": "#A52A2A" }, { "name": "石绿", "hex": "#008080" }, { "name": "铅白", "hex": "#F0FFF0" }, { "name": "宝蓝", "hex": "#4169E1" }], "category": "艺术" },
+            { "name": "丝绸之路", "description": "丝绸之路上各种文明交融的色彩", "colors": [{ "name": "驼色", "hex": "#D2B48C" }, { "name": "西域蓝", "hex": "#264de4" }, { "name": "葡萄紫", "hex": "#800080" }, { "name": "金箔", "hex": "#FFD700" }], "category": "文化" },
+            { "name": "赛博都市", "description": "未来都市的霓虹灯光与科技感", "colors": [{ "name": "赛博紫", "hex": "#8A2BE2" }, { "name": "霓虹蓝", "hex": "#00FFFF" }, { "name": "激光粉", "hex": "#FF00FF" }, { "name": "金属黑", "hex": "#1C1C1C" }], "category": "科技" },
+            { "name": "莫兰迪色", "description": "带有高级灰调的现代配色，柔和而宁静", "colors": [{ "name": "雾霾蓝", "hex": "#B0C4DE" }, { "name": "豆沙粉", "hex": "#DDA0DD" }, { "name": "燕麦色", "hex": "#D2B48C" }, { "name": "橄榄绿", "hex": "#808000" }], "category": "现代" },
+            { "name": "赤壁丹霞", "description": "赤壁之战的壮烈与丹霞地貌的瑰丽", "colors": [{ "name": "丹霞红", "hex": "#FF4500" }, { "name": "岩石褐", "hex": "#A0522D" }, { "name": "江水蓝", "hex": "#4682B4" }, { "name": "雾霭灰", "hex": "#B0C4DE" }], "category": "山水" },
+            { "name": "清明时节", "description": "清明踏青，烟雨蒙蒙的追思之情", "colors": [{ "name": "柳绿", "hex": "#9ACD32" }, { "name": "杏花粉", "hex": "#FFB6C1" }, { "name": "烟雨灰", "hex": "#778899" }, { "name": "纸鸢白", "hex": "#F5F5F5" }], "category": "节日" },
+            { "name": "傲雪寒梅", "description": "梅花在严寒中绽放，象征坚韧不拔", "colors": [{ "name": "梅红", "hex": "#DC143C" }, { "name": "雪白", "hex": "#FFFFFF" }, { "name": "枯枝褐", "hex": "#8B4513" }, { "name": "寒空灰", "hex": "#DCDCDC" }], "category": "花卉" },
+            { "name": "苏州园林", "description": "精致典雅的苏州园林，移步换景，意蕴无穷", "colors": [{ "name": "湖石青", "hex": "#778899" }, { "name": "翠竹绿", "hex": "#008000" }, { "name": "锦鲤红", "hex": "#FF4500" }, { "name": "月洞门白", "hex": "#FDF5E6" }], "category": "建筑" },
+            { "name": "京剧脸谱", "description": "京剧脸谱的夸张色彩，象征人物性格", "colors": [{ "name": "忠义红", "hex": "#FF0000" }, { "name": "刚毅黑", "hex": "#000000" }, { "name": "勇猛蓝", "hex": "#0000FF" }, { "name": "神仙金", "hex": "#FFD700" }], "category": "艺术" },
+            { "name": "活字印刷", "description": "活字印刷术的墨色与纸张的古朴质感", "colors": [{ "name": "墨色", "hex": "#3C3C3C" }, { "name": "纸白", "hex": "#FDFBF5" }, { "name": "印泥朱", "hex": "#B22222" }, { "name": "木活字", "hex": "#DEB887" }], "category": "文化" },
+            { "name": "深空探索", "description": "浩瀚宇宙的神秘与对未知的探索", "colors": [{ "name": "深空黑", "hex": "#000020" }, { "name": "星云紫", "hex": "#9370DB" }, { "name": "星光银", "hex": "#C0C0C0" }, { "name": "推进器蓝", "hex": "#1E90FF" }], "category": "科技" },
+            { "name": "新中式", "description": "传统中式与现代审美的结合，简约而不失韵味", "colors": [{ "name": "水墨灰", "hex": "#696969" }, { "name": "原木色", "hex": "#DEB887" }, { "name": "留白", "hex": "#F8F8FF" }, { "name": "靛蓝", "hex": "#4B0082" }], "category": "现代" },
+            { "name": "赤色系", "description": "充满活力与热情的红色系 ", "colors": [{ "name": "胭脂", "hex": "#9D2933" }, { "name": "朱红", "hex": "#FF4C00" }, { "name": "妃色", "hex": "#ED5736" }, { "name": "桃红", "hex": "#F47983" }], "category": "色系" },
+            { "name": "黄色系", "description": "明亮、温暖的黄色系，象征尊贵与希望 ", "colors": [{ "name": "杏黄", "hex": "#FFA631" }, { "name": "鹅黄", "hex": "#FFF143" }, { "name": "秋香色", "hex": "#D9B611" }, { "name": "琥珀", "hex": "#CA6924" }], "category": "色系" },
+            { "name": "绿色系", "description": "代表生命、自然与和平的绿色系", "colors": [{ "name": "豆绿", "hex": "#9ED048" }, { "name": "松柏绿", "hex": "#21A675" }, { "name": "竹青", "hex": "#789262" }, { "name": "艾绿", "hex": "#A4B9A1" }], "category": "色系" },
+            { "name": "蓝色系", "description": "沉静、广阔的蓝色系，如同天空与海洋 ", "colors": [{ "name": "天青", "hex": "#5496A6" }, { "name": "宝蓝", "hex": "#4B5CC4" }, { "name": "靛蓝", "hex": "#065279" }, { "name": "月白", "hex": "#D6ECF0" }], "category": "色系" },
+            { "name": "紫色系", "description": "神秘而高贵的紫色系，兼具热情与冷静", "colors": [{ "name": "青莲", "hex": "#801DAE" }, { "name": "丁香", "hex": "#CCA4E3" }, { "name": "绛紫", "hex": "#815476" }, { "name": "雪青", "hex": "#B0A4E3" }], "category": "色系" },
+            { "name": "黑色系", "description": "庄重、神秘的黑色系，是力量与深邃的象征", "colors": [{ "name": "墨", "hex": "#50616D" }, { "name": "玄", "hex": "#622A1D" }, { "name": "乌", "hex": "#7F7572" }, { "name": "淄", "hex": "#3A393B" }], "category": "色系" },
+            { "name": "白色系", "description": "纯洁、简约的白色系，充满了无限可能 ", "colors": [{ "name": "鱼肚白", "hex": "#FCEFE8" }, { "name": "象牙白", "hex": "#FFFBF0" }, { "name": "月白", "hex": "#D6ECF0" }, { "name": "雪白", "hex": "#F0FCFF" }], "category": "色系" },
+            { "name": "灰色系", "description": "中性、沉稳的灰色系，谦和而低调", "colors": [{ "name": "银灰", "hex": "#C0C0C0" }, { "name": "铁灰", "hex": "#717171" }, { "name": "烟灰", "hex": "#8D8D8D" }, { "name": "芦灰", "hex": "#C8C8C8" }], "category": "色系" },
+            { "name": "立春", "description": "万物复苏，春季的开始 ", "colors": [{ "name": "天缥", "hex": "#D5EBE1" }, { "name": "嫩鹅黄", "hex": "#FFF5C3" }, { "name": "迎春", "hex": "#FFF200" }, { "name": "解冻", "hex": "#B8E0E6" }], "category": "节气" },
+            { "name": "春分", "description": "昼夜等长，春意正浓", "colors": [{ "name": "桃夭", "hex": "#F6BEC8" }, { "name": "青梅", "hex": "#B3D5A4" }, { "name": "油菜花", "hex": "#FFD700" }, { "name": "燕羽", "hex": "#5A5A5A" }], "category": "节气" },
+            { "name": "立夏", "description": "夏日伊始，万物生长", "colors": [{ "name": "朱明", "hex": "#FF4D4F" }, { "name": "槐序", "hex": "#C3D9A5" }, { "name": "樱桃", "hex": "#C93756" }, { "name": "麦浪", "hex": "#E6D8A3" }], "category": "节气" },
+            { "name": "夏至", "description": "白昼最长，盛夏光年", "colors": [{ "name": "菡萏", "hex": "#FF7979" }, { "name": "苍翠", "hex": "#519A73" }, { "name": "雷雨", "hex": "#A8C6D8" }, { "name": "蝉翼", "hex": "#F5F5DC" }], "category": "节气" },
+            { "name": "立秋", "description": "秋季开始，暑去凉来", "colors": [{ "name": "梧桐", "hex": "#A88F6E" }, { "name": "兰秋", "hex": "#D2D8A4" }, { "name": "禾麻", "hex": "#F5DEB3" }, { "name": "玉簪", "hex": "#E0EEE0" }], "category": "节气" },
+            { "name": "秋分", "description": "昼夜等长，秋色平分", "colors": [{ "name": "蟹壳青", "hex": "#BACAC6" }, { "name": "柿红", "hex": "#FF5733" }, { "name": "稻香", "hex": "#F5DA81" }, { "name": "霜降", "hex": "#E6E6FA" }], "category": "节气" },
+            { "name": "立冬", "description": "冬季伊始，万物收藏", "colors": [{ "name": "玄英", "hex": "#3A3F51" }, { "name": "茶褐", "hex": "#6B4423" }, { "name": "芦花", "hex": "#EAE0C8" }, { "name": "冰灰", "hex": "#B0B8C1" }], "category": "节气" },
+            { "name": "冬至", "description": "黑夜最长，一阳复始", "colors": [{ "name": "亚岁", "hex": "#2D3047" }, { "name": "红炉", "hex": "#E25822" }, { "name": "寒梅", "hex": "#B0171F" }, { "name": "深雪", "hex": "#F0F8FF" }], "category": "节气" },
+            { "name": "塞北秋风", "description": "北方秋季的辽阔与壮美", "colors": [{ "name": "胡杨金", "hex": "#DAA520" }, { "name": "草原枯黄", "hex": "#BDB76B" }, { "name": "苍穹蓝", "hex": "#87CEEB" }, { "name": "戈壁灰", "hex": "#A9A9A9" }], "category": "风物" },
+            { "name": "雨后青山", "description": "雨水洗涤后的山峦，清新明净", "colors": [{ "name": "山青", "hex": "#6B8E23" }, { "name": "云雾白", "hex": "#F5FFFA" }, { "name": "湿岩", "hex": "#696969" }, { "name": "新苔", "hex": "#7CFC00" }], "category": "风物" },
+            { "name": "晓雾晨光", "description": "清晨薄雾中透出的第一缕阳光", "colors": [{ "name": "晨曦金", "hex": "#FFFACD" }, { "name": "薄雾紫", "hex": "#E6E6FA" }, { "name": "远山黛", "hex": "#5A5A5A" }, { "name": "天水碧", "hex": "#ADD8E6" }], "category": "风物" },
+            { "name": "龙泉青瓷", "description": "龙泉青瓷温润如玉的釉色", "colors": [{ "name": "梅子青", "hex": "#85C4A8" }, { "name": "粉青", "hex": "#B5CAA0" }, { "name": "开片纹", "hex": "#F0F0F0" }, { "name": "铁胎色", "hex": "#4B4B4B" }], "category": "器物" },
+            { "name": "和田美玉", "description": "和田玉的温润与内敛", "colors": [{ "name": "羊脂白", "hex": "#F0EAD6" }, { "name": "糖玉", "hex": "#B87333" }, { "name": "墨玉", "hex": "#36454F" }, { "name": "碧玉", "hex": "#8FBC8F" }], "category": "器物" },
+            { "name": "紫砂壶", "description": "紫砂壶的古朴与沉静", "colors": [{ "name": "紫泥", "hex": "#5A3A34" }, { "name": "红泥", "hex": "#A0522D" }, { "name": "绿泥", "hex": "#A2B978" }, { "name": "段泥", "hex": "#E6D4A5" }], "category": "器物" },
+            { "name": "喜悦", "description": "充满欢乐与积极情绪的色彩", "colors": [{ "name": "欢快黄", "hex": "#FFD700" }, { "name": "活力橙", "hex": "#FFA500" }, { "name": "热情红", "hex": "#FF4500" }, { "name": "希望绿", "hex": "#32CD32" }], "category": "情绪" },
+            { "name": "宁静", "description": "带来平和与安宁感觉的色彩", "colors": [{ "name": "静谧蓝", "hex": "#B0E0E6" }, { "name": "安神紫", "hex": "#D8BFD8" }, { "name": "柔和灰", "hex": "#D3D3D3" }, { "name": "疗愈绿", "hex": "#98FB98" }], "category": "情绪" },
+            { "name": "忧郁", "description": "表达深沉与思索情绪的色彩", "colors": [{ "name": "深海蓝", "hex": "#000080" }, { "name": "暗夜紫", "hex": "#483D8B" }, { "name": "阴雨灰", "hex": "#696969" }, { "name": "冷杉绿", "hex": "#006400" }], "category": "情绪" },
+            { "name": "桂林山水", "description": "“山水甲天下”的桂林，奇秀的喀斯特地貌", "colors": [{ "name": "漓江水", "hex": "#90C3D4" }, { "name": "象鼻山", "hex": "#9C9C9C" }, { "name": "竹筏", "hex": "#C8A97E" }, { "name": "渔火", "hex": "#FF4500" }], "category": "山水" },
+            { "name": "七夕乞巧", "description": "七夕节的浪漫与星空下的愿望", "colors": [{ "name": "银河", "hex": "#C0C0C0" }, { "name": "鹊桥", "hex": "#A9A9A9" }, { "name": "乞巧红", "hex": "#FF69B4" }, { "name": "星空紫", "hex": "#483D8B" }], "category": "节日" },
+            { "name": "岁寒三友", "description": "松、竹、梅，象征坚毅品格", "colors": [{ "name": "松针绿", "hex": "#228B22" }, { "name": "翠竹青", "hex": "#00A36C" }, { "name": "寒梅红", "hex": "#B22222" }, { "name": "苍劲褐", "hex": "#8B4513" }], "category": "花卉" },
+            { "name": "客家土楼", "description": "福建客家土楼的独特形态与夯土色彩", "colors": [{ "name": "夯土黄", "hex": "#D2B48C" }, { "name": "青瓦灰", "hex": "#708090" }, { "name": "灯笼红", "hex": "#FF6347" }, { "name": "糯米白", "hex": "#F5F5DC" }], "category": "建筑" },
+            { "name": "皮影戏", "description": "古老的民间艺术，光影中的故事", "colors": [{ "name": "影人黑", "hex": "#2F4F4F" }, { "name": "幕布白", "hex": "#FFF8DC" }, { "name": "灯火黄", "hex": "#FFD700" }, { "name": "故事红", "hex": "#DC143C" }], "category": "艺术" },
+            { "name": "茶道一味", "description": "品茶的意境，宁静致远", "colors": [{ "name": "茶汤色", "hex": "#C8A064" }, { "name": "紫砂", "hex": "#5A3A34" }, { "name": "茶叶绿", "hex": "#556B2F" }, { "name": "茶烟", "hex": "#F5F5F5" }], "category": "文化" },
+            { "name": "金石篆刻", "description": "印章上的朱与石的色彩对比", "colors": [{ "name": "印泥朱", "hex": "#C82A2A" }, { "name": "石料青", "hex": "#849184" }, { "name": "墨拓黑", "hex": "#333333" }, { "name": "边款白", "hex": "#FFFFFF" }], "category": "艺术" },
+            { "name": "苗族蜡染", "description": "贵州苗族传统手工艺的蓝白之美", "colors": [{ "name": "靛蓝", "hex": "#3E4989" }, { "name": "胚布白", "hex": "#F4F0E6" }, { "name": "蜂蜡黄", "hex": "#F7D88F" }, { "name": "山石灰", "hex": "#A8A8A8" }], "category": "文化" },
+            { "name": "张掖丹霞", "description": "甘肃张掖丹霞地貌的斑斓色彩", "colors": [{ "name": "丹霞红", "hex": "#D95850" }, { "name": "彩丘黄", "hex": "#F5D747" }, { "name": "褶皱灰", "hex": "#A1A1A1" }, { "name": "山峦褐", "hex": "#8A593A" }], "category": "山水" },
+            { "name": "重阳登高", "description": "重阳节登高望远，赏菊饮酒 ", "colors": [{ "name": "茱萸红", "hex": "#E54D2E" }, { "name": "菊花黄", "hex": "#FFC857" }, { "name": "秋山黛", "hex": "#687864" }, { "name": "天空蓝", "hex": "#87CEFA" }], "category": "节日" },
+            { "name": "岁寒知松柏", "description": "松柏历经寒冬依然苍翠，品格高洁", "colors": [{ "name": "苍松", "hex": "#3C5A3E" }, { "name": "翠柏", "hex": "#4D6E46" }, { "name": "霜雪", "hex": "#E6F0F2" }, { "name": "山石", "hex": "#8E8E8E" }], "category": "风物" },
+            { "name": "黄河之水", "description": "黄河的浑厚与奔腾不息", "colors": [{ "name": "河泥黄", "hex": "#C2B280" }, { "name": "浪涛白", "hex": "#F5F5F5" }, { "name": "岸边绿", "hex": "#6B8E23" }, { "name": "天空灰", "hex": "#B0C4DE" }], "category": "山水" },
+            { "name": "春节序曲", "description": "春节期间喜庆热闹的景象", "colors": [{ "name": "爆竹红", "hex": "#FF0000" }, { "name": "春联墨", "hex": "#000000" }, { "name": "饺子白", "hex": "#FDF5E6" }, { "name": "烟花金", "hex": "#FFD700" }], "category": "节日" },
+            { "name": "潇湘夜雨", "description": "湖南潇湘地区的夜雨意境，朦胧而富有诗意", "colors": [{ "name": "夜雨蓝", "hex": "#2F4F4F" }, { "name": "湘竹绿", "hex": "#7BCFA6" }, { "name": "江雾灰", "hex": "#778899" }, { "name": "渔火暖", "hex": "#FFA07A" }], "category": "山水" },
+            { "name": "千里江山", "description": "《千里江山图》的壮丽青绿山水", "colors": [{ "name": "石青", "hex": "#1685A9" }, { "name": "石绿", "hex": "#169A4C" }, { "name": "赭石", "hex": "#A0522D" }, { "name": "泥金", "hex": "#DAA520" }], "category": "艺术" },
+            { "name": "唐三彩", "description": "唐代多彩釉陶器的瑰丽色泽", "colors": [{ "name": "赭黄", "hex": "#D2691E" }, { "name": "翠绿", "hex": "#008000" }, { "name": "钴蓝", "hex": "#3A5FCD" }, { "name": "陶白", "hex": "#FFF8DC" }], "category": "器物" },
+            { "name": "昭陵六骏", "description": "唐太宗昭陵六骏石刻的力量与动感", "colors": [{ "name": "石刻灰", "hex": "#A9A9A9" }, { "name": "战袍红", "hex": "#B22222" }, { "name": "青铜锈", "hex": "#5F9EA0" }, { "name": "疆场黄", "hex": "#F0E68C" }], "category": "文化" },
+            { "name": "宋代汝窑", "description": "汝窑瓷器的天青色，雨过天青云破处", "colors": [{ "name": "天青", "hex": "#8CBABC" }, { "name": "卵白", "hex": "#F0F8FF" }, { "name": "芝麻钉", "hex": "#696969" }, { "name": "开片纹理", "hex": "#E0E0E0" }], "category": "器物" },
+            { "name": "明式家具", "description": "明代家具的简约线条与木材本色", "colors": [{ "name": "黄花梨", "hex": "#D2691E" }, { "name": "紫檀", "hex": "#4C221B" }, { "name": "藤编", "hex": "#D2B48C" }, { "name": "榫卯", "hex": "#A0522D" }], "category": "器物" },
+            { "name": "清代宫廷", "description": "清代宫廷服饰的繁复与华丽", "colors": [{ "name": "明黄", "hex": "#FFD700" }, { "name": "宝蓝", "hex": "#4169E1" }, { "name": "石青", "hex": "#778899" }, { "name": "朱红", "hex": "#FF4500" }], "category": "文化" },
+            { "name": "民国风情", "description": "中西合璧的民国时代，旗袍与爵士乐", "colors": [{ "name": "旗袍蓝", "hex": "#4682B4" }, { "name": "胭脂粉", "hex": "#DB7093" }, { "name": "留声机黑", "hex": "#1C1C1C" }, { "name": "旧画报黄", "hex": "#FAFAD2" }], "category": "文化" },
+            { "name": "禅意", "description": "追求内心平静与简约生活的禅宗美学", "colors": [{ "name": "枯山水灰", "hex": "#C2C2C2" }, { "name": "青苔绿", "hex": "#6E8B3D" }, { "name": "竹影", "hex": "#A2B59D" }, { "name": "澄明", "hex": "#F9F9F9" }], "category": "情绪" },
+            { "name": "武侠", "description": "江湖恩怨、侠骨柔情的武侠世界", "colors": [{ "name": "侠客青", "hex": "#5F9EA0" }, { "name": "剑锋银", "hex": "#E6E8FA" }, { "name": "血色残阳", "hex": "#FF6347" }, { "name": "夜行衣黑", "hex": "#2F4F4F" }], "category": "情绪" },
+            { "name": "浪漫", "description": "充满爱与柔情的浪漫氛围", "colors": [{ "name": "玫瑰粉", "hex": "#FFC0CB" }, { "name": "薰衣草紫", "hex": "#E6E6FA" }, { "name": "烛光黄", "hex": "#FFFACD" }, { "name": "情书白", "hex": "#FFF5EE" }], "category": "情绪" },
+            { "name": "童趣", "description": "天真烂漫，属于童年的斑斓色彩", "colors": [{ "name": "天空蓝", "hex": "#87CEEB" }, { "name": "柠檬黄", "hex": "#FFF44F" }, { "name": "草地绿", "hex": "#7CFC00" }, { "name": "棒棒糖红", "hex": "#FF69B4" }], "category": "情绪" },
+            { "name": "收获", "description": "象征丰收与满足的色彩", "colors": [{ "name": "麦浪金", "hex": "#FFD700" }, { "name": "高粱红", "hex": "#C04040" }, { "name": "南瓜橙", "hex": "#FF7518" }, { "name": "大地褐", "hex": "#8B4513" }], "category": "情绪" },
+            { "name": "希望", "description": "预示着光明未来的积极色彩", "colors": [{ "name": "朝阳红", "hex": "#FF6A6A" }, { "name": "新芽绿", "hex": "#ADFF2F" }, { "name": "天青蓝", "hex": "#E0FFFF" }, { "name": "明亮黄", "hex": "#FFFFE0" }], "category": "情绪" },
+            { "name": "活力", "description": "充满能量与动感的色彩", "colors": [{ "name": "活力橙", "hex": "#FF8C00" }, { "name": "运动蓝", "hex": "#1E90FF" }, { "name": "荧光绿", "hex": "#00FF7F" }, { "name": "激情红", "hex": "#FF0000" }], "category": "情绪" },
+            { "name": "复古", "description": "怀旧而经典的复古风格", "colors": [{ "name": "墨绿", "hex": "#006400" }, { "name": "酒红", "hex": "#8B0000" }, { "name": "姜黄", "hex": "#DAA520" }, { "name": "藏蓝", "hex": "#00008B" }], "category": "情绪" },
+            { "name": "未来感", "description": "充满科技与想象的未来色彩", "colors": [{ "name": "金属银", "hex": "#E6E6FA" }, { "name": "量子蓝", "hex": "#4D4DFF" }, { "name": "AI紫", "hex": "#C5A5FF" }, { "name": "流光白", "hex": "#F0F8FF" }], "category": "情绪" },
+            { "name": "暮山如烟", "description": "黄昏时远山如烟的朦胧美", "colors": [{ "name": "暮紫", "hex": "#9D8BAA" }, { "name": "灰褐", "hex": "#7D716C" }, { "name": "雾白", "hex": "#F2F0ED" }, { "name": "黛青", "hex": "#5F758B" }], "category": "山水" },
+            { "name": "松风听雪", "description": "松林间听雪落的静谧意境", "colors": [{ "name": "松绿", "hex": "#4B6653" }, { "name": "雪白", "hex": "#FFFFFF" }, { "name": "墨灰", "hex": "#3E3E3E" }, { "name": "炭黑", "hex": "#1E1E1E" }], "category": "四季" },
+            { "name": "荷塘月色", "description": "朱自清笔下的荷塘月夜", "colors": [{ "name": "月灰", "hex": "#D8D8D8" }, { "name": "荷粉", "hex": "#FFD1DC" }, { "name": "夜蓝", "hex": "#2C3E50" }, { "name": "叶绿", "hex": "#4CAF50" }], "category": "文学" },
+            { "name": "梅雪争春", "description": "梅花与雪争艳的冬日景致", "colors": [{ "name": "梅红", "hex": "#C2185B" }, { "name": "雪白", "hex": "#FFFFFF" }, { "name": "冷灰", "hex": "#B0BEC5" }, { "name": "枝褐", "hex": "#5D4037" }], "category": "花卉" },
+            { "name": "杏花春雨", "description": "江南春日杏花微雨的柔情", "colors": [{ "name": "杏粉", "hex": "#FFB6C1" }, { "name": "雨青", "hex": "#A7C7E7" }, { "name": "泥灰", "hex": "#8D8C8A" }, { "name": "竹青", "hex": "#6B8E23" }], "category": "四季" },
+            { "name": "渔舟唱晚", "description": "夕阳下渔舟归港的宁静画面", "colors": [{ "name": "晚霞红", "hex": "#E57373" }, { "name": "水蓝", "hex": "#4FC3F7" }, { "name": "船褐", "hex": "#795548" }, { "name": "天灰", "hex": "#90A4AE" }], "category": "山水" },
+            { "name": "霜叶红于二月花", "description": "杜牧诗中深秋红叶的壮美", "colors": [{ "name": "枫赤", "hex": "#B71C1C" }, { "name": "石褐", "hex": "#6D4C41" }, { "name": "云白", "hex": "#FFFFFF" }, { "name": "岩灰", "hex": "#757575" }], "category": "文学" },
+            { "name": "寒江独钓", "description": "柳宗元《江雪》中的孤寂意境", "colors": [{ "name": "寒江蓝", "hex": "#303F9F" }, { "name": "雪白", "hex": "#FFFFFF" }, { "name": "蓑衣棕", "hex": "#8D6E63" }, { "name": "墨黑", "hex": "#000000" }], "category": "文学" },
+            { "name": "云想衣裳", "description": "李白诗中云霞般华美的服饰", "colors": [{ "name": "云锦红", "hex": "#D32F2F" }, { "name": "霞紫", "hex": "#8E24AA" }, { "name": "银灰", "hex": "#C0C0C0" }, { "name": "素绢白", "hex": "#FAFAFA" }], "category": "文化" },
+            { "name": "金风玉露", "description": "秦观词中七夕相逢的浪漫", "colors": [{ "name": "金风黄", "hex": "#FBC02D" }, { "name": "玉露蓝", "hex": "#1976D2" }, { "name": "月白", "hex": "#F5F5F5" }, { "name": "绛紫", "hex": "#7B1FA2" }], "category": "节日" },
+            { "name": "落花无言", "description": "司空图《诗品》中的淡泊意境", "colors": [{ "name": "落粉", "hex": "#F8BBD0" }, { "name": "旧纸黄", "hex": "#FFF3E0" }, { "name": "墨痕灰", "hex": "#757575" }, { "name": "枯枝褐", "hex": "#5D4037" }], "category": "文学" },
+            { "name": "曲水流觞", "description": "兰亭雅集的文人风雅", "colors": [{ "name": "溪水蓝", "hex": "#4FC3F7" }, { "name": "竹青", "hex": "#66BB6A" }, { "name": "素袍白", "hex": "#FFFFFF" }, { "name": "砚黑", "hex": "#212121" }], "category": "文化" },
+            { "name": "孤云独去闲", "description": "李白诗中的悠然心境", "colors": [{ "name": "天青", "hex": "#87CEEB" }, { "name": "云白", "hex": "#FFFFFF" }, { "name": "远山灰", "hex": "#90A4AE" }, { "name": "墨点黑", "hex": "#212121" }], "category": "文学" },
+            { "name": "小楼一夜听春雨", "description": "陆游诗中的江南春夜", "colors": [{ "name": "雨青", "hex": "#B2EBF2" }, { "name": "墙灰", "hex": "#E0E0E0" }, { "name": "灯黄", "hex": "#FFF176" }, { "name": "瓦黑", "hex": "#424242" }], "category": "文学" },
+            { "name": "明月松间照", "description": "王维诗中的山居清幽", "colors": [{ "name": "松绿", "hex": "#4CAF50" }, { "name": "月白", "hex": "#ECEFF1" }, { "name": "石青", "hex": "#546E7A" }, { "name": "夜蓝", "hex": "#1A237E" }], "category": "文学" },
+            { "name": "大漠孤烟直", "description": "王维笔下的边塞壮阔", "colors": [{ "name": "沙黄", "hex": "#FFC107" }, { "name": "烟灰", "hex": "#757575" }, { "name": "天蓝", "hex": "#2196F3" }, { "name": "驼褐", "hex": "#8D6E63" }], "category": "山水" },
+            { "name": "长河落日圆", "description": "边塞落日的苍茫景象", "colors": [{ "name": "落日橙", "hex": "#FF5722" }, { "name": "河水蓝", "hex": "#03A9F4" }, { "name": "沙金", "hex": "#FFD54F" }, { "name": "岩褐", "hex": "#6D4C41" }], "category": "山水" },
+            { "name": "千山鸟飞绝", "description": "《江雪》中的极致孤寂", "colors": [{ "name": "雪白", "hex": "#FFFFFF" }, { "name": "山灰", "hex": "#9E9E9E" }, { "name": "墨黑", "hex": "#000000" }, { "name": "冰蓝", "hex": "#B3E5FC" }], "category": "文学" },
+            { "name": "桃花流水", "description": "陶渊明《桃花源记》的意境", "colors": [{ "name": "桃粉", "hex": "#FF80AB" }, { "name": "水绿", "hex": "#4DB6AC" }, { "name": "土黄", "hex": "#FFCC80" }, { "name": "叶青", "hex": "#66BB6A" }], "category": "文学" },
+            { "name": "梧桐细雨", "description": "李清照词中的愁绪", "colors": [{ "name": "梧桐绿", "hex": "#7CB342" }, { "name": "雨灰", "hex": "#BDBDBD" }, { "name": "深褐", "hex": "#4E342E" }, { "name": "素白", "hex": "#FFFFFF" }], "category": "文学" },
+            { "name": "烛影摇红", "description": "古典诗词中的夜宴情调", "colors": [{ "name": "烛红", "hex": "#B71C1C" }, { "name": "金焰", "hex": "#FFD54F" }, { "name": "暗金", "hex": "#FFA000" }, { "name": "夜黑", "hex": "#121212" }], "category": "文化" },
+            { "name": "画堂春深", "description": "深闺庭院的春日气息", "colors": [{ "name": "海棠红", "hex": "#EC407A" }, { "name": "墙粉", "hex": "#F48FB1" }, { "name": "窗棂褐", "hex": "#5D4037" }, { "name": "地砖灰", "hex": "#9E9E9E" }], "category": "建筑" },
+            { "name": "玉阶生白露", "description": "李白诗中的秋夜清冷", "colors": [{ "name": "玉阶灰", "hex": "#CFD8DC" }, { "name": "露珠白", "hex": "#FFFFFF" }, { "name": "夜蓝", "hex": "#1565C0" }, { "name": "裙紫", "hex": "#7B1FA2" }], "category": "文学" },
+            { "name": "斜阳草树", "description": "辛弃疾词中的田园暮色", "colors": [{ "name": "斜阳橙", "hex": "#FF8A65" }, { "name": "草绿", "hex": "#81C784" }, { "name": "泥土褐", "hex": "#6D4C41" }, { "name": "天灰", "hex": "#B0BEC5" }], "category": "文学" },
+            { "name": "一蓑烟雨", "description": "苏轼词中的旷达心境", "colors": [{ "name": "烟雨青", "hex": "#80DEEA" }, { "name": "蓑衣黄", "hex": "#FFF176" }, { "name": "山灰", "hex": "#90A4AE" }, { "name": "水蓝", "hex": "#4FC3F7" }], "category": "文学" },
+            { "name": "星垂平野阔", "description": "杜甫诗中的夜空壮美", "colors": [{ "name": "夜空黑", "hex": "#121212" }, { "name": "星白银", "hex": "#FFFFFF" }, { "name": "地灰", "hex": "#616161" }, { "name": "远青", "hex": "#4DB6AC" }], "category": "文学" },
+            { "name": "江枫渔火", "description": "张继《枫桥夜泊》的意境", "colors": [{ "name": "枫红", "hex": "#D32F2F" }, { "name": "渔火橙", "hex": "#FF8F00" }, { "name": "江蓝", "hex": "#1976D2" }, { "name": "夜黑", "hex": "#000000" }], "category": "文学" },
+            { "name": "春水碧于天", "description": "韦庄词中的江南春景", "colors": [{ "name": "春水蓝", "hex": "#87CEFA" }, { "name": "天青", "hex": "#B2EBF2" }, { "name": "柳绿", "hex": "#8BC34A" }, { "name": "云白", "hex": "#FFFFFF" }], "category": "文学" },
+            { "name": "醉里挑灯看剑", "description": "辛弃疾的豪情与悲壮", "colors": [{ "name": "剑银", "hex": "#CFD8DC" }, { "name": "灯黄", "hex": "#FFF176" }, { "name": "酒红", "hex": "#C62828" }, { "name": "夜黑", "hex": "#121212" }], "category": "文学" },
+            { "name": "小桥流水人家", "description": "马致远笔下的江南村落", "colors": [{ "name": "水蓝", "hex": "#4FC3F7" }, { "name": "桥石灰", "hex": "#757575" }, { "name": "墙白", "hex": "#FFFFFF" }, { "name": "屋褐", "hex": "#5D4037" }], "category": "山水" },
+            { "name": "野渡无人舟自横", "description": "韦应物诗中的静谧渡口", "colors": [{ "name": "水青", "hex": "#80DEEA" }, { "name": "舟褐", "hex": "#8D6E63" }, { "name": "岸绿", "hex": "#66BB6A" }, { "name": "天灰", "hex": "#B0BEC5" }], "category": "文学" },
+            { "name": "山光悦鸟性", "description": "常建《题破山寺》的禅意", "colors": [{ "name": "山绿", "hex": "#66BB6A" }, { "name": "鸟羽白", "hex": "#FFFFFF" }, { "name": "寺灰", "hex": "#9E9E9E" }, { "name": "潭影蓝", "hex": "#42A5F5" }], "category": "文学" },
+            { "name": "蝉噪林逾静", "description": "王籍诗中的动静相生", "colors": [{ "name": "林绿", "hex": "#7CB342" }, { "name": "蝉黄", "hex": "#FFD54F" }, { "name": "静灰", "hex": "#BDBDBD" }, { "name": "树褐", "hex": "#5D4037" }], "category": "文学" },
+            { "name": "人面桃花相映红", "description": "崔护《题都城南庄》的浪漫", "colors": [{ "name": "人面粉", "hex": "#F8BBD0" }, { "name": "桃花红", "hex": "#EC407A" }, { "name": "春阳黄", "hex": "#FFD54F" }, { "name": "背景白", "hex": "#FFFFFF" }], "category": "文学" },
+            { "name": "葡萄美酒夜光杯", "description": "王翰《凉州词》的豪情", "colors": [{ "name": "葡萄紫", "hex": "#8E24AA" }, { "name": "酒红", "hex": "#B71C1C" }, { "name": "夜光银", "hex": "#CFD8DC" }, { "name": "杯金", "hex": "#FFD700" }], "category": "文化" },
+            { "name": "春风拂槛露华浓", "description": "李白诗中的华美春景", "colors": [{ "name": "槛红", "hex": "#D32F2F" }, { "name": "露珠白", "hex": "#FFFFFF" }, { "name": "华金", "hex": "#FFD700" }, { "name": "叶绿", "hex": "#66BB6A" }], "category": "文学" },
+            { "name": "孤帆远影碧空尽", "description": "李白送别诗的辽阔意境", "colors": [{ "name": "帆白", "hex": "#FFFFFF" }, { "name": "水蓝", "hex": "#4FC3F7" }, { "name": "远青", "hex": "#80DEEA" }, { "name": "天蓝", "hex": "#2196F3" }], "category": "文学" },
+            { "name": "海上生明月", "description": "张九龄《望月怀远》的意境", "colors": [{ "name": "海蓝", "hex": "#1976D2" }, { "name": "月白", "hex": "#ECEFF1" }, { "name": "夜黑", "hex": "#121212" }, { "name": "波银", "hex": "#B0BEC5" }], "category": "文学" },
+            { "name": "白云深处有人家", "description": "杜牧笔下的山居人家", "colors": [{ "name": "云白", "hex": "#FFFFFF" }, { "name": "山青", "hex": "#4CAF50" }, { "name": "屋褐", "hex": "#795548" }, { "name": "石灰", "hex": "#9E9E9E" }], "category": "山水" },
+            { "name": "接天莲叶无穷碧", "description": "杨万里笔下的夏日荷塘", "colors": [{ "name": "莲叶绿", "hex": "#4CAF50" }, { "name": "荷花粉", "hex": "#FF80AB" }, { "name": "天蓝", "hex": "#2196F3" }, { "name": "水波蓝", "hex": "#81D4FA" }], "category": "花卉" },
+            { "name": "日照香炉生紫烟", "description": "李白笔下的庐山奇景", "colors": [{ "name": "紫烟", "hex": "#9E96C7" }, { "name": "日金", "hex": "#FFD700" }, { "name": "石青", "hex": "#546E7A" }, { "name": "雾白", "hex": "#F5F5F5" }], "category": "山水" },
+            { "name": "大江东去", "description": "苏轼《赤壁怀古》的豪迈", "colors": [{ "name": "江蓝", "hex": "#1976D2" }, { "name": "浪白", "hex": "#FFFFFF" }, { "name": "崖褐", "hex": "#795548" }, { "name": "天灰", "hex": "#90A4AE" }], "category": "文学" },
+            { "name": "小荷才露尖尖角", "description": "杨万里笔下的初夏生机", "colors": [{ "name": "荷尖粉", "hex": "#FF80AB" }, { "name": "荷叶绿", "hex": "#81C784" }, { "name": "水蓝", "hex": "#81D4FA" }, { "name": "天青", "hex": "#B2EBF2" }], "category": "花卉" },
+            { "name": "人间四月芳菲尽", "description": "白居易诗中的春末夏初", "colors": [{ "name": "残粉", "hex": "#F48FB1" }, { "name": "新绿", "hex": "#81C784" }, { "name": "天蓝", "hex": "#4FC3F7" }, { "name": "土褐", "hex": "#795548" }], "category": "文学" },
+            { "name": "柴门闻犬吠", "description": "刘长卿诗中的山居夜归", "colors": [{ "name": "柴门褐", "hex": "#8D6E63" }, { "name": "犬黑", "hex": "#212121" }, { "name": "雪白", "hex": "#FFFFFF" }, { "name": "屋灰", "hex": "#9E9E9E" }], "category": "文学" },
+            { "name": "采菊东篱下", "description": "陶渊明的隐逸生活", "colors": [{ "name": "菊黄", "hex": "#FFB300" }, { "name": "篱竹绿", "hex": "#66BB6A" }, { "name": "土褐", "hex": "#795548" }, { "name": "天蓝", "hex": "#4FC3F7" }], "category": "文学" },
+            { "name": "山高月小", "description": "《后赤壁赋》中的清冷意境", "colors": [{ "name": "山灰", "hex": "#757575" }, { "name": "月白", "hex": "#ECEFF1" }, { "name": "夜黑", "hex": "#121212" }, { "name": "水蓝", "hex": "#42A5F5" }], "category": "文学" },
+            { "name": "清泉石上流", "description": "王维诗中的山间清流", "colors": [{ "name": "清泉蓝", "hex": "#81D4FA" }, { "name": "石青", "hex": "#546E7A" }, { "name": "苔绿", "hex": "#689F38" }, { "name": "叶影绿", "hex": "#7CB342" }], "category": "文学" },
+            { "name": "空山新雨后", "description": "王维笔下的雨后山林", "colors": [{ "name": "雨青", "hex": "#80DEEA" }, { "name": "叶绿", "hex": "#66BB6A" }, { "name": "山灰", "hex": "#90A4AE" }, { "name": "泥褐", "hex": "#6D4C41" }], "category": "文学" },
+            { "name": "轻罗小扇扑流萤", "description": "杜牧诗中的夏夜童趣", "colors": [{ "name": "罗粉", "hex": "#F8BBD0" }, { "name": "萤黄", "hex": "#FFF176" }, { "name": "夜蓝", "hex": "#1565C0" }, { "name": "扇白", "hex": "#FFFFFF" }], "category": "文学" },
+            { "name": "千里共婵娟", "description": "苏轼《水调歌头》的思念", "colors": [{ "name": "月白", "hex": "#ECEFF1" }, { "name": "夜蓝", "hex": "#1565C0" }, { "name": "云灰", "hex": "#B0BEC5" }, { "name": "思念紫", "hex": "#7B1FA2" }], "category": "节日" },
+            { "name": "春风又绿江南岸", "description": "王安石诗中的春意", "colors": [{ "name": "春绿", "hex": "#81C784" }, { "name": "江蓝", "hex": "#4FC3F7" }, { "name": "岸黄", "hex": "#FFF176" }, { "name": "云白", "hex": "#FFFFFF" }], "category": "文学" },
+            { "name": "山高月小，水落石出", "description": "《后赤壁赋》的哲理意境", "colors": [{ "name": "山灰", "hex": "#757575" }, { "name": "月白", "hex": "#ECEFF1" }, { "name": "水蓝", "hex": "#42A5F5" }, { "name": "石褐", "hex": "#795548" }], "category": "文学" },
+            { "name": "一川烟草，满城风絮", "description": "贺铸词中的愁绪如烟", "colors": [{ "name": "烟绿", "hex": "#80CBC4" }, { "name": "絮白", "hex": "#FFFFFF" }, { "name": "城灰", "hex": "#9E9E9E" }, { "name": "风青", "hex": "#A5D6A7" }], "category": "文学" },
+            { "name": "疏影横斜水清浅", "description": "林逋咏梅的千古名句", "colors": [{ "name": "梅枝褐", "hex": "#5D4037" }, { "name": "水蓝", "hex": "#81D4FA" }, { "name": "影灰", "hex": "#BDBDBD" }, { "name": "花粉", "hex": "#FF80AB" }], "category": "文学" },
+            { "name": "暗香浮动月黄昏", "description": "林逋笔下的幽梅意境", "colors": [{ "name": "梅粉", "hex": "#FF80AB" }, { "name": "月灰", "hex": "#ECEFF1" }, { "name": "夜黑", "hex": "#121212" }, { "name": "枝褐", "hex": "#5D4037" }], "category": "花卉" },
+            { "name": "人生若只如初见", "description": "纳兰性德词中的遗憾之美", "colors": [{ "name": "初见粉", "hex": "#F48FB1" }, { "name": "时光灰", "hex": "#9E9E9E" }, { "name": "心红", "hex": "#D32F2F" }, { "name": "月白", "hex": "#FFFFFF" }], "category": "文学" },
+            { "name": "当时只道是寻常", "description": "纳兰词中的追忆之情", "colors": [{ "name": "旧黄", "hex": "#FFF3E0" }, { "name": "纸灰", "hex": "#BDBDBD" }, { "name": "墨黑", "hex": "#212121" }, { "name": "心紫", "hex": "#8E24AA" }], "category": "文学" },
+            { "name": "山高月小，水落石出", "description": "《后赤壁赋》的哲理意境", "colors": [{ "name": "山灰", "hex": "#757575" }, { "name": "月白", "hex": "#ECEFF1" }, { "name": "水蓝", "hex": "#42A5F5" }, { "name": "石褐", "hex": "#795548" }], "category": "文学" },
+            { "name": "浮云游子意", "description": "李白送别诗的漂泊感", "colors": [{ "name": "浮云白", "hex": "#FFFFFF" }, { "name": "游子灰", "hex": "#9E9E9E" }, { "name": "远山青", "hex": "#4DB6AC" }, { "name": "天蓝", "hex": "#2196F3" }], "category": "文学" },
+            { "name": "落花流水", "description": "李煜词中的无奈与哀愁", "colors": [{ "name": "落花粉", "hex": "#F8BBD0" }, { "name": "流水蓝", "hex": "#81D4FA" }, { "name": "旧纸黄", "hex": "#FFF3E0" }, { "name": "心灰", "hex": "#757575" }], "category": "文学" },
+            { "name": "天上白玉京", "description": "李白诗中的仙界幻想", "colors": [{ "name": "玉白", "hex": "#FFFFFF" }, { "name": "金光", "hex": "#FFD700" }, { "name": "天青", "hex": "#87CEEB" }, { "name": "云紫", "hex": "#9E96C7" }], "category": "神话" },
+            { "name": "银河落九天", "description": "李白笔下的庐山瀑布", "colors": [{ "name": "银河白", "hex": "#FFFFFF" }, { "name": "天蓝", "hex": "#2196F3" }, { "name": "岩灰", "hex": "#757575" }, { "name": "水雾青", "hex": "#80DEEA" }], "category": "山水" },
+            { "name": "春风十里不如你", "description": "现代诗中的极致浪漫", "colors": [{ "name": "春风绿", "hex": "#81C784" }, { "name": "桃粉", "hex": "#FF80AB" }, { "name": "你红", "hex": "#D32F2F" }, { "name": "天蓝", "hex": "#4FC3F7" }], "category": "现代" },
+            { "name": "山有木兮木有枝", "description": "《越人歌》中的深情", "colors": [{ "name": "山绿", "hex": "#66BB6A" }, { "name": "枝褐", "hex": "#795548" }, { "name": "心红", "hex": "#D32F2F" }, { "name": "叶青", "hex": "#7CB342" }], "category": "文学" },
+            { "name": "执子之手，与子偕老", "description": "《诗经》中的永恒誓言", "colors": [{ "name": "手暖棕", "hex": "#8D6E63" }, { "name": "誓红", "hex": "#C62828" }, { "name": "天蓝", "hex": "#4FC3F7" }, { "name": "岁月灰", "hex": "#9E9E9E" }], "category": "文化" },
+            { "name": "蒹葭苍苍，白露为霜", "description": "《诗经》中的秋日思恋", "colors": [{ "name": "蒹葭黄", "hex": "#FFF176" }, { "name": "露白", "hex": "#FFFFFF" }, { "name": "霜青", "hex": "#80DEEA" }, { "name": "水蓝", "hex": "#42A5F5" }], "category": "文学" },
+            { "name": "关关雎鸠，在河之洲", "description": "《诗经》开篇的和谐之美", "colors": [{ "name": "雎鸠黑", "hex": "#212121" }, { "name": "河蓝", "hex": "#4FC3F7" }, { "name": "洲绿", "hex": "#66BB6A" }, { "name": "天青", "hex": "#87CEEB" }], "category": "文学" },
+            { "name": "桃之夭夭，灼灼其华", "description": "《诗经》中的新娘之美", "colors": [{ "name": "桃红", "hex": "#EC407A" }, { "name": "华金", "hex": "#FFD700" }, { "name": "叶绿", "hex": "#66BB6A" }, { "name": "背景白", "hex": "#FFFFFF" }], "category": "文学" },
+            { "name": "青青子衿，悠悠我心", "description": "曹操《短歌行》的思贤若渴", "colors": [{ "name": "子衿青", "hex": "#42A5F5" }, { "name": "心红", "hex": "#D32F2F" }, { "name": "夜黑", "hex": "#121212" }, { "name": "月白", "hex": "#ECEFF1" }], "category": "文学" },
+            { "name": "山无陵，江水为竭", "description": "汉乐府中的爱情誓言", "colors": [{ "name": "山灰", "hex": "#757575" }, { "name": "江蓝", "hex": "#1976D2" }, { "name": "心红", "hex": "#D32F2F" }, { "name": "天白", "hex": "#FFFFFF" }], "category": "文学" },
+            { "name": "愿得一心人，白首不相离", "description": "卓文君的爱情理想", "colors": [{ "name": "心红", "hex": "#D32F2F" }, { "name": "白首银", "hex": "#CFD8DC" }, { "name": "誓灰", "hex": "#9E9E9E" }, { "name": "天蓝", "hex": "#4FC3F7" }], "category": "文化" },
+            { "name": "红豆生南国，春来发几枝", "description": "王维诗中的相思之情", "colors": [{ "name": "红豆红", "hex": "#C62828" }, { "name": "南国绿", "hex": "#66BB6A" }, { "name": "春阳黄", "hex": "#FFF176" }, { "name": "枝褐", "hex": "#795548" }], "category": "文学" },
+            { "name": "劝君更尽一杯酒", "description": "王维送别诗的深情", "colors": [{ "name": "酒红", "hex": "#B71C1C" }, { "name": "杯金", "hex": "#FFD700" }, { "name": "柳绿", "hex": "#81C784" }, { "name": "天蓝", "hex": "#4FC3F7" }], "category": "文学" },
+            { "name": "海内存知己，天涯若比邻", "description": "王勃的豁达友情", "colors": [{ "name": "海蓝", "hex": "#1976D2" }, { "name": "心红", "hex": "#D32F2F" }, { "name": "天青", "hex": "#87CEEB" }, { "name": "邻灰", "hex": "#9E9E9E" }], "category": "文学" },
+            { "name": "天生我材必有用", "description": "李白的自信豪情", "colors": [{ "name": "天蓝", "hex": "#2196F3" }, { "name": "我材金", "hex": "#FFD700" }, { "name": "心红", "hex": "#D32F2F" }, { "name": "世灰", "hex": "#757575" }], "category": "文学" },
+            { "name": "会当凌绝顶，一览众山小", "description": "杜甫的壮志豪情", "colors": [{ "name": "绝顶白", "hex": "#FFFFFF" }, { "name": "山灰", "hex": "#9E9E9E" }, { "name": "天蓝", "hex": "#2196F3" }, { "name": "心红", "hex": "#D32F2F" }], "category": "文学" },
+            { "name": "人生得意须尽欢", "description": "李白《将进酒》的洒脱", "colors": [{ "name": "酒红", "hex": "#B71C1C" }, { "name": "金樽黄", "hex": "#FFD700" }, { "name": "欢橙", "hex": "#FF8F00" }, { "name": "夜黑", "hex": "#121212" }], "category": "文学" },
+            { "name": "此情可待成追忆", "description": "李商隐《锦瑟》的怅惘", "colors": [{ "name": "情粉", "hex": "#F8BBD0" }, { "name": "忆灰", "hex": "#9E9E9E" }, { "name": "锦紫", "hex": "#8E24AA" }, { "name": "梦蓝", "hex": "#42A5F5" }], "category": "文学" },
+            { "name": "春蚕到死丝方尽", "description": "李商隐的执着深情", "colors": [{ "name": "蚕白", "hex": "#FFFFFF" }, { "name": "丝银", "hex": "#CFD8DC" }, { "name": "心红", "hex": "#D32F2F" }, { "name": "烛灰", "hex": "#757575" }], "category": "文学" },
+            { "name": "身无彩凤双飞翼", "description": "李商隐的相思之苦", "colors": [{ "name": "凤金", "hex": "#FFD700" }, { "name": "翼灰", "hex": "#9E9E9E" }, { "name": "心红", "hex": "#D32F2F" }, { "name": "夜蓝", "hex": "#1565C0" }], "category": "文学" },
+            { "name": "天阶夜色凉如水", "description": "杜牧诗中的宫怨", "colors": [{ "name": "夜黑", "hex": "#121212" }, { "name": "阶灰", "hex": "#9E9E9E" }, { "name": "水蓝", "hex": "#42A5F5" }, { "name": "扇白", "hex": "#FFFFFF" }], "category": "文学" },
+            { "name": "停车坐爱枫林晚", "description": "杜牧对秋色的热爱", "colors": [{ "name": "枫红", "hex": "#D32F2F" }, { "name": "林绿", "hex": "#66BB6A" }, { "name": "晚霞橙", "hex": "#FF8F00" }, { "name": "天蓝", "hex": "#2196F3" }], "category": "文学" },
+            { "name": "两个黄鹂鸣翠柳", "description": "杜甫笔下的春日生机", "colors": [{ "name": "黄鹂黄", "hex": "#FFF176" }, { "name": "翠柳绿", "hex": "#66BB6A" }, { "name": "天蓝", "hex": "#4FC3F7" }, { "name": "水波蓝", "hex": "#81D4FA" }], "category": "文学" },
+            { "name": "窗含西岭千秋雪", "description": "杜甫诗中的远山雪景", "colors": [{ "name": "雪白", "hex": "#FFFFFF" }, { "name": "岭灰", "hex": "#757575" }, { "name": "天蓝", "hex": "#4FC3F7" }, { "name": "窗褐", "hex": "#795548" }], "category": "文学" },
+            { "name": "山光悦鸟性，潭影空人心", "description": "常建诗中的禅意", "colors": [{ "name": "山绿", "hex": "#66BB6A" }, { "name": "鸟白", "hex": "#FFFFFF" }, { "name": "潭蓝", "hex": "#42A5F5" }, { "name": "心灰", "hex": "#9E9E9E" }], "category": "文学" },
+            { "name": "野旷天低树，江清月近人", "description": "孟浩然的羁旅之思", "colors": [{ "name": "旷野灰", "hex": "#9E9E9E" }, { "name": "天蓝", "hex": "#4FC3F7" }, { "name": "江蓝", "hex": "#1976D2" }, { "name": "月白", "hex": "#ECEFF1" }], "category": "文学" },
+            { "name": "春风又绿江南岸", "description": "王安石诗中的春意", "colors": [{ "name": "春绿", "hex": "#81C784" }, { "name": "江蓝", "hex": "#4FC3F7" }, { "name": "岸黄", "hex": "#FFF176" }, { "name": "云白", "hex": "#FFFFFF" }], "category": "文学" },
+            { "name": "不识庐山真面目", "description": "苏轼的哲理思考", "colors": [{ "name": "山灰", "hex": "#757575" }, { "name": "雾白", "hex": "#F5F5F5" }, { "name": "天蓝", "hex": "#4FC3F7" }, { "name": "心黑", "hex": "#121212" }], "category": "文学" },
+            { "name": "一蓑烟雨任平生", "description": "苏轼的豁达人生观", "colors": [{ "name": "烟雨青", "hex": "#80DEEA" }, { "name": "蓑衣黄", "hex": "#FFF176" }, { "name": "心红", "hex": "#D32F2F" }, { "name": "平生灰", "hex": "#9E9E9E" }], "category": "文学" }
+        ];
+       
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- App State & Constants ---
+            let currentIp = '';
+            let currentMode = 'koreader';
+            let statusTimeout;
+            let koboExitConfirm = false;
+            let koboExitTimeout;
+            let themeColorLocked = false;
+            let currentThemeIndex = 0;
+            let currentClickEffect = 'glow';
+            let userSettings = {};
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const $ = (selector) => document.querySelector(selector);
-        const $$ = (selector) => document.querySelectorAll(selector);
-
-        // --- DOM Elements ---
-        const mainContent = $('#mainContent'), ipForm = $('#ipForm'), ipInput = $('#ipInput'), statusMessage = $('#statusMessage');
-        const themeToggle = $('#themeToggle'), modeToggleBtn = $('#modeToggleBtn'), ipDisplay = $('#ipDisplay'), ipDisplayText = $('#ipDisplayText');
-        const ipSection = $('#ipSection'), editIpBtn = $('#editIpBtn'), saveBtn = $('#saveBtn');
-        const footer = $('#footer'), functionArea = $('#functionArea');
-        const settingsBtn = $('#settingsBtn'), settingsModal = $('#settingsModal'), closeSettingsBtn = $('#closeSettingsBtn');
-        const koreaderPortInput = $('#koreaderPortInput'), autoNightModeCheckbox = $('#autoNightMode'), buttonSizeSlider = $('#buttonSizeSlider');
-        const selectedButtonsContainer = $('#selectedButtons'), availableButtonsContainer = $('#availableButtons');
-        const importConfigBtn = $('#importConfigBtn'), exportConfigBtn = $('#exportConfigBtn'), importConfigInput = $('#importConfigInput');
-        const sliderPopup = $('#sliderPopup'), sliderTitle = $('#sliderTitle'), sliderControl = $('#sliderControl');
-        const hideTabCheckbox = $('#hideTab');
-        // Theme color elements
-        const colorPreview = $('#colorPreview');
-        const hueSlider = $('#hueSlider'), saturationSlider = $('#saturationSlider'), lightnessSlider = $('#lightnessSlider');
-        const hueValue = $('#hueValue'), saturationValue = $('#saturationValue'), lightnessValue = $('#lightnessValue');
-
-        // --- App State ---
-        let currentIp = '', statusTimeout, sliderCommand = null, draggedItem = null;
-        let state = {
-            ip: '',
-            koreaderPort: '8080',
-            mode: 'koreader',
-            theme: 'dark',
-            autoNightMode: true,
-            hideTab: false,
-            buttonSize: 1, // 0: small, 1: medium, 2: large
-            koreaderButtons: ['home', 'open_last', 'history', 'toc', 'show_fl', 'toggle_wifi', 'full_refresh', 'suspend'],
-            themeHue: 187,
-            themeSaturation: 80,
-            themeLightness: 30
-        };
-
-        // --- State Management ---
-        const saveState = () => localStorage.setItem('controller_state', JSON.stringify(state));
-        
-        const loadState = () => {
-            const savedState = localStorage.getItem('controller_state');
-            if (savedState) state = { ...state, ...JSON.parse(savedState) };
-        };
-
-        const applyState = () => {
-            // Apply IP
-            ipInput.value = state.ip;
-            currentIp = state.ip;
-            if (state.ip) {
-                ipDisplayText.textContent = state.ip;
-                ipDisplay.style.display = 'flex';
-                ipForm.style.display = 'none';
-            } else {
-                ipDisplay.style.display = 'none';
-                ipForm.style.display = 'flex';
-            }
-            
-            // Apply other settings
-            koreaderPortInput.value = state.koreaderPort;
-            autoNightModeCheckbox.checked = state.autoNightMode;
-            hideTabCheckbox.checked = state.hideTab;
-            buttonSizeSlider.value = state.buttonSize;
-            functionArea.dataset.size = BUTTON_SIZES[state.buttonSize];
-            
-            // Apply theme color
-            hueSlider.value = state.themeHue;
-            saturationSlider.value = state.themeSaturation;
-            lightnessSlider.value = state.themeLightness;
-            updateThemeColor();
-            
-            // Apply theme (but not in eink mode)
-            if (document.documentElement.getAttribute('data-display-mode') !== 'eink') {
-                document.documentElement.setAttribute('data-theme', state.theme);
-                updateThemeToggleIcon();
-            }
-            
-            // 隐藏标签页
-            if (state.hideTab) {
-                // 标签页已移至右上角按钮，此处无操作
-            }
-            
-            applyMode(state.mode);
-            renderMainFunctionButtons();
-        };
-
-        const showStatus = (message, type, duration = 2500) => {
-            clearTimeout(statusTimeout);
-            const icons = { 
-                success: 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 
-                error: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z', 
-                info: 'M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.852l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0z' 
+            const ALL_FUNCTIONS = {
+                brightness: { id: 'brightness', name: '亮度', type: 'slider', event: '/koreader/event/SetFlIntensity/', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m4.22 4.22 1.42 1.42"/><path d="m18.36 18.36 1.42 1.42"/><path d="m4.22 19.78 1.42-1.42"/><path d="m18.36 5.64 1.42-1.42"/></svg>` },
+                warmth: { id: 'warmth', name: '色温', type: 'slider', event: '/koreader/event/SetFlWarmth/', svg: `<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4V2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M2 12h2"/><path d="M12 22v-2"/><path d="M19.07 4.93l-1.41 1.41"/><path d="M20 12h2"/><path d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>` },
+                toc: { id: 'toc', name: '目录', type: 'button', event: '/koreader/event/ShowToc', msg: '已发送目录请求', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>` },
+                refresh: { id: 'refresh', name: '刷新', type: 'button', event: '/koreader/event/FullRefresh', msg: '已发送刷新命令', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>` },
+                night_mode: { id: 'night_mode', name: '夜间模式', type: 'toggle', event: '/koreader/event/ToggleNightMode', msg: '已切换夜间模式', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>` },
+                file_manager: { id: 'file_manager', name: '文件管理', type: 'button', event: '/koreader/event/Home', msg: '已打开文件管理器', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/><path d="M9 15h6"/><path d="M9 11h6"/></svg>` },
+                last_doc: { id: 'last_doc', name: '最近阅读', type: 'button', event: '/koreader/event/OpenLastDoc', msg: '已打开最近文档', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>` },
+                suspend: { id: 'suspend', name: '睡眠', type: 'button', event: '/koreader/event/RequestSuspend', msg: '已发送睡眠请求', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M9.71 16.29a1 1 0 0 0 1.41-1.41L9.41 13H16a1 1 0 0 0 0-2h-6.59l1.71-1.71a1 1 0 0 0-1.42-1.42l-3 3a1 1 0 0 0 0 1.42l3 3.01z"></path></svg>` },
+                usb_mode: { id: 'usb_mode', name: 'USB模式', type: 'button', event: '/koreader/event/RequestUSBMS', msg: '已请求USB模式', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>` },
+                toggle_bookmark: { id: 'toggle_bookmark', name: '放/取书签', type: 'toggle', event: '/koreader/event/ToggleBookmark', msg: '已添加/取消书签', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/><line x1="12" x2="12" y1="7" y2="13"/><line x1="12" x2="12" y1="17" y2="17"/></svg>` },
+                close: { id: 'close', name: '关闭控件', type: 'button', event: '/koreader/event/Close', msg: '已发送关闭请求', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>` },
+                toggle_filebrowser: { id: 'toggle_filebrowser', name: 'FileBrowser', type: 'toggle', event: '/koreader/event/ToggleFilebrowser', msg: '已切换文件浏览器', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/><path d="M8 15h.01"/><path d="M12 15h.01"/><path d="M16 15h.01"/></svg>` },
+                show_page_browser: { id: 'show_page_browser', name: '书页速览', type: 'button', event: '/koreader/event/ShowPageBrowser', msg: '已打开书页速览', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>` },
+                show_bookmark: { id: 'show_bookmark', name: '书签', type: 'button', event: '/koreader/event/ShowBookmark', msg: '已打开书签', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/><line x1="12" x2="12" y1="7" y2="13"/><line x1="12" x2="12" y1="17" y2="17"/></svg>` },
+                goto_prev_chapter: { id: 'goto_prev_chapter', name: '上一章', type: 'button', event: '/koreader/event/GotoPrevChapter', msg: '已跳转到上一章', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>` },
+                goto_next_chapter: { id: 'goto_next_chapter', name: '下一章', type: 'button', event: '/koreader/event/GotoNextChapter', msg: '已跳转到下一章', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>` },
+                effect_toggle: { id: 'effect_toggle', name: '点击效果', type: 'button', event: 'local_toggle_effect', msg: '', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="M2 12h4"/><path d="M18 12h4"/></svg>` },
+                settings: { id: 'settings', name: '设置', type: 'button', event: 'local_open_settings', msg: '', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>` },
+                kobo_exit: { id: 'kobo_exit', name: '关闭服务', type: 'button', warn: true, event: '/exit', msg: '已发送关闭服务器命令', svg: `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>` },
             };
-            const iconType = type === 'success' ? 'success' : (type === 'error' ? 'error' : 'info');
-            statusMessage.innerHTML = `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="${icons[iconType]}" /></svg><span>${message}</span>`;
-            statusMessage.className = `status-message ${type} show`;
-            statusTimeout = setTimeout(() => statusMessage.classList.remove('show'), duration);
-        };
 
-        const sendRequest = async (endpoint, successMsg) => {
-            if (!state.ip) { showStatus('请先输入并保存IP地址！', 'error'); toggleIpForm(); return; }
-            const port = state.mode === 'koreader' ? `:${state.koreaderPort}` : ':80';
-            const url = `http://${state.ip}${port}${endpoint}`;
-            try {
-                await fetch(url, { mode: 'no-cors' });
-                if (successMsg) showStatus(successMsg, 'success');
-            } catch (error) { showStatus('请求失败！请检查IP、网络及设备服务。', 'error'); }
-        };
+            // --- DOM Elements ---
+            const getEl = (id) => document.getElementById(id);
+            const mainContent = getEl('mainContent');
+            const ipInput = getEl('ipInput');
+            const statusMessage = getEl('statusMessage');
+            const themeToggleCheckbox = getEl('themeToggleCheckbox');
+            const modeBtnKoreader = getEl('modeBtnKoreader');
+            const modeBtnKobo = getEl('modeBtnKobo');
+            const glider = document.querySelector('.mode-switcher .glider');
+            const footer = getEl('footer');
+            const lockThemeBtn = getEl('lockThemeBtn');
+            const lockIcon = getEl('lockIcon');
+            const unlockIcon = getEl('unlockIcon');
+            const themeInfoName = document.querySelector('#theme-info .name');
+            const themeInfoDesc = document.querySelector('#theme-info .description');
+            const functionArea = getEl('functionArea');
+            const sliderControls = getEl('sliderControls');
+            const settingsModal = getEl('settingsModal');
+            const koreaderPortInput = getEl('koreaderPortInput');
+            const availableFuncList = getEl('available-functions');
+            const activeFuncList = getEl('active-functions');
 
-        const updateThemeToggleIcon = () => {
-            const isDark = state.theme === 'dark';
-            themeToggle.innerHTML = isDark
-                ? `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>`
-                : `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>`;
-        };
-
-        const applyTheme = (theme) => {
-            state.theme = theme;
-            document.documentElement.setAttribute('data-theme', theme);
-            updateThemeToggleIcon();
-            saveState();
-        };
-
-        const applyMode = (mode) => {
-            state.mode = mode;
-            mainContent.setAttribute('data-mode', mode);
-            footer.innerHTML = (mode === 'koreader' ? '提示：请确保 KOReader 的"开发者选项"中开启了"HTTP 调试服务器"。' : '提示：请确保 Kobo 上已启动翻页 HTTP 服务器。') + 
-                (document.documentElement.getAttribute('data-display-mode') === 'eink' 
-                    ? ` | <button id="normal-mode-link">进入正常模式</button>` 
-                    : ` | <button id="eink-mode-link">墨水屏模式</button>`);
-            
-            // 绑定模式切换按钮事件
-            if (document.documentElement.getAttribute('data-display-mode') === 'eink') {
-                $('#normal-mode-link')?.addEventListener('click', () => {
-                    document.documentElement.removeAttribute('data-display-mode');
-                    window.location.href = window.location.href.split('?')[0]; // 移除查询参数
-                });
-            } else {
-                $('#eink-mode-link')?.addEventListener('click', () => window.location.href = '?mode=eink');
-            }
-        };
-
-        // --- Theme Color Functions ---
-        const updateThemeColor = () => {
-            document.documentElement.style.setProperty('--theme-hue', state.themeHue);
-            document.documentElement.style.setProperty('--theme-saturation', state.themeSaturation + '%');
-            document.documentElement.style.setProperty('--theme-lightness', state.themeLightness + '%');
-            colorPreview.style.backgroundColor = `hsl(${state.themeHue}, ${state.themeSaturation}%, ${state.themeLightness}%)`;
-            hueValue.textContent = state.themeHue;
-            saturationValue.textContent = state.themeSaturation + '%';
-            lightnessValue.textContent = state.themeLightness + '%';
-        };
-
-        // --- Dynamic Button & Customization Logic ---
-        const renderMainFunctionButtons = () => {
-            functionArea.innerHTML = '';
-            state.koreaderButtons.forEach(id => {
-                const command = ALL_COMMANDS_FLAT.find(c => c.id === id);
-                if (!command) return;
-                const btn = document.createElement('button');
-                btn.className = 'function-btn bounce-in';
-                btn.dataset.id = command.id;
-                btn.innerHTML = `
-                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="${command.icon}" />
-                    </svg>
-                    <span>${command.name}</span>
-                `;
-                btn.addEventListener('click', () => command.type === 'slider' ? openSliderPopup(command) : sendRequest(command.endpoint, `已发送 "${command.name}" 命令`));
-                functionArea.appendChild(btn);
-            });
-        };
-
-        const renderButtonCustomizer = () => {
-            selectedButtonsContainer.innerHTML = '';
-            state.koreaderButtons.forEach(id => {
-                const command = ALL_COMMANDS_FLAT.find(c => c.id === id);
-                if (!command) return;
-                const pill = document.createElement('div');
-                pill.className = 'selected-btn-pill';
-                pill.dataset.id = id;
-                pill.draggable = true;
-                pill.innerHTML = `
-                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="${command.icon}" />
-                    </svg>
-                    ${command.name} 
-                    <button class="remove-btn" data-id="${id}">&times;</button>
-                `;
-                selectedButtonsContainer.appendChild(pill);
-            });
-            availableButtonsContainer.innerHTML = '';
-            Object.entries(ALL_COMMANDS_FULL).forEach(([category, commands]) => {
-                const categoryTitle = document.createElement('h4');
-                categoryTitle.textContent = category;
-                const grid = document.createElement('div');
-                grid.className = 'category-grid';
-                commands.forEach(command => {
-                    const btn = document.createElement('button');
-                    btn.className = 'available-btn';
-                    btn.innerHTML = `
-                        <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="${command.icon}" />
-                        </svg>
-                        <span>${command.name}</span>
-                    `;
-                    btn.dataset.id = command.id;
-                    btn.disabled = state.koreaderButtons.includes(command.id) || state.koreaderButtons.length >= MAX_BUTTONS;
-                    grid.appendChild(btn);
-                });
-                availableButtonsContainer.appendChild(categoryTitle);
-                availableButtonsContainer.appendChild(grid);
-            });
-        };
-
-        const openSliderPopup = (command) => {
-            sliderCommand = command;
-            sliderTitle.textContent = command.name;
-            sliderControl.min = command.min || 0;
-            sliderControl.max = command.max || 100;
-            sliderControl.value = 50; // Default value
-            sliderPopup.classList.add('visible');
-        };
-
-        // --- IP Form Functions ---
-        const toggleIpForm = () => {
-            if (ipDisplay.style.display !== 'none') {
-                ipDisplay.style.display = 'none';
-                ipForm.style.display = 'flex';
-                ipInput.focus();
-            } else {
-                ipDisplay.style.display = 'flex';
-                ipForm.style.display = 'none';
-            }
-        };
-
-        // --- Drag and Drop Logic ---
-        selectedButtonsContainer.addEventListener('dragstart', e => {
-            if(e.target.classList.contains('selected-btn-pill')) {
-                draggedItem = e.target;
-                setTimeout(() => e.target.classList.add('dragging'), 0);
-            }
-        });
-        selectedButtonsContainer.addEventListener('dragend', e => {
-            if (draggedItem) {
-                draggedItem.classList.remove('dragging');
-                draggedItem = null;
-            }
-        });
-        selectedButtonsContainer.addEventListener('dragover', e => {
-            e.preventDefault();
-            const afterElement = [...selectedButtonsContainer.querySelectorAll('.selected-btn-pill:not(.dragging)')].reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offset = e.clientX - box.left - box.width / 2;
-                return offset < 0 && offset > closest.offset ? { offset: offset, element: child } : closest;
-            }, { offset: Number.NEGATIVE_INFINITY }).element;
-            
-            if (afterElement == null) {
-                selectedButtonsContainer.appendChild(draggedItem);
-            } else {
-                selectedButtonsContainer.insertBefore(draggedItem, afterElement);
-            }
-        });
-        selectedButtonsContainer.addEventListener('drop', () => {
-            const newOrder = [...selectedButtonsContainer.querySelectorAll('.selected-btn-pill')].map(pill => pill.dataset.id);
-            state.koreaderButtons = newOrder;
-            saveState();
-            renderMainFunctionButtons();
-            renderButtonCustomizer();
-        });
-
-        // --- Import/Export Logic ---
-        exportConfigBtn.addEventListener('click', () => {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "reading_controller_config.json");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
-            showStatus('配置已导出', 'info');
-        });
-        importConfigBtn.addEventListener('click', () => importConfigInput.click());
-        importConfigInput.addEventListener('change', (event) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const importedState = JSON.parse(e.target.result);
-                    if (importedState && importedState.koreaderButtons) {
-                        state = { ...state, ...importedState };
-                        saveState();
-                        applyState();
-                        showStatus('配置已成功导入！', 'success');
-                    } else { throw new Error('Invalid config file'); }
-                } catch (err) { showStatus('导入失败，文件格式无效。', 'error'); }
+            // --- Utility Functions ---
+            const showStatus = (message, type, duration = 2500) => {
+                clearTimeout(statusTimeout);
+                statusMessage.textContent = message;
+                statusMessage.className = `status-message ${type} show`;
+                statusTimeout = setTimeout(() => statusMessage.classList.remove('show'), duration);
             };
-            reader.readAsText(event.target.files[0]);
-        });
-        
-        // --- App Initialization ---
-        const initializeApp = () => {
-            // Check for eink mode
-            if (new URLSearchParams(window.location.search).get('mode') === 'eink') {
-                document.documentElement.setAttribute('data-display-mode', 'eink');
-                // 在墨水屏模式下隐藏夜间模式按钮
-                themeToggle.style.display = 'none';
-                // 隐藏主题色设置
-                $$('.eink-hidden').forEach(el => el.style.display = 'none');
-            }
-            
-            loadState();
-            applyState();
-            
-            $('#maxButtons').textContent = MAX_BUTTONS;
 
-            // --- Bind Event Listeners ---
-            themeToggle.addEventListener('click', () => {
-                applyTheme(state.theme === 'dark' ? 'light' : 'dark');
-            });
-
-            modeToggleBtn.addEventListener('click', () => {
-                applyMode(state.mode === 'koreader' ? 'kobo' : 'koreader');
-                saveState();
-            });
-
-            editIpBtn.addEventListener('click', toggleIpForm);
-
-            ipForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ipInput.value.trim())) {
-                    state.ip = ipInput.value.trim();
-                    currentIp = state.ip;
-                    saveState();
-                    showStatus(`IP地址已保存: ${state.ip}`, 'info');
-                    // 保存后自动隐藏输入框
-                    ipDisplayText.textContent = state.ip;
-                    ipDisplay.style.display = 'flex';
-                    ipForm.style.display = 'none';
-                } else { showStatus('请输入有效的IP地址', 'error'); }
-            });
-
-            $$('.control-card').forEach(btn => btn.addEventListener('click', () => {
-                let action = btn.dataset.action;
-                const endpointMap = {
-                    koreader: { prev: '/koreader/event/GotoViewRel/-1', next: '/koreader/event/GotoViewRel/1' },
-                    kobo: { prev: '/left', next: '/right' }
+            const debounce = (func, delay) => {
+                let timeout;
+                return function(...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), delay);
                 };
-                sendRequest(endpointMap[state.mode][action], btn.dataset.successMsg);
-            }));
+            };
 
-            document.addEventListener('keydown', (e) => {
-                if (document.activeElement === ipInput || settingsModal.classList.contains('visible')) return;
-                if (e.key === 'ArrowLeft') $('.control-card[data-action="prev"]').click();
-                if (e.key === 'ArrowRight') $('.control-card[data-action="next"]').click();
-                if (e.key === 'Escape' && sliderPopup.classList.contains('visible')) sliderPopup.classList.remove('visible');
-            });
+            // --- Core Logic ---
+            const sendRequest = async (endpoint, successMsg) => {
+                if (!currentIp) { showStatus('请先输入并保存IP地址！', 'error'); ipInput.focus(); return; }
+                
+                let port = (currentMode === 'koreader') ? `:${userSettings.koreaderPort || 8080}` : ':80';
+                
+                try {
+                    // Send a dummy event to prevent auto-suspend in KOReader
+                    if (currentMode === 'koreader') {
+                        fetch(`http://${currentIp}${port}/koreader/broadcast/InputEvent`, { mode: 'no-cors', cache: 'no-cache' });
+                    }
+                    await fetch(`http://${currentIp}${port}${endpoint}`, { mode: 'no-cors', cache: 'no-cache' });
+                    if (successMsg) showStatus(successMsg, 'success');
+                } catch (error) {
+                    console.error('Request failed:', error);
+                    showStatus('请求失败！请检查IP、网络及设备服务。', 'error');
+                }
+            };
 
-            // Settings Modal Events
-            settingsBtn.addEventListener('click', () => { renderButtonCustomizer(); settingsModal.classList.add('visible'); });
-            closeSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('visible'));
-            settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.remove('visible'); });
+            const debouncedSendRequest = debounce(sendRequest, 200);
+
+            const saveIp = () => {
+                const ip = ipInput.value.trim();
+                if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+                    currentIp = ip; localStorage.setItem('reader_controller_ip', ip);
+                    showStatus(`IP地址已保存: ${currentIp}`, 'success');
+                } else { showStatus('请输入有效的IP地址', 'error'); }
+            };
+
+            const hexToHsl = (hex) => {
+                let r = 0, g = 0, b = 0;
+                if (hex.length == 4) { r = "0x" + hex[1] + hex[1]; g = "0x" + hex[2] + hex[2]; b = "0x" + hex[3] + hex[3]; } 
+                else if (hex.length == 7) { r = "0x" + hex[1] + hex[2]; g = "0x" + hex[3] + hex[4]; b = "0x" + hex[5] + hex[6]; }
+                r /= 255; g /= 255; b /= 255;
+                let cmin = Math.min(r,g,b), cmax = Math.max(r,g,b), delta = cmax - cmin, h = 0, s = 0, l = 0;
+                if (delta == 0) h = 0;
+                else if (cmax == r) h = ((g - b) / delta) % 6;
+                else if (cmax == g) h = (b - r) / delta + 2;
+                else h = (r - g) / delta + 4;
+                h = Math.round(h * 60);
+                if (h < 0) h += 360;
+                l = (cmax + cmin) / 2;
+                s = delta == 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+                s = +(s * 100).toFixed(1); l = +(l * 100).toFixed(1);
+                return `hsl(${h},${s}%,${l}%)`;
+            }
             
-            [koreaderPortInput, autoNightModeCheckbox, buttonSizeSlider, hideTabCheckbox].forEach(el => el.addEventListener('change', () => {
-                state.koreaderPort = koreaderPortInput.value;
-                state.autoNightMode = autoNightModeCheckbox.checked;
-                state.hideTab = hideTabCheckbox.checked;
-                state.buttonSize = parseInt(buttonSizeSlider.value);
-                // 不在夜间模式下修改按钮大小时切换主题
-                saveState();
-                applyState();
-            }));
+            const applyTraditionalColor = (themeIndex) => {
+                const theme = traditionalColors[themeIndex];
+                if (!theme) return;
+                
+                const accentColor = theme.colors[0].hex;
+                const accentHsl = hexToHsl(accentColor);
+                const accentGlow = accentHsl.replace('hsl(', 'hsla(').replace(')', `, 0.3)`);
+                document.documentElement.style.setProperty('--accent-color', accentColor);
+                document.documentElement.style.setProperty('--accent-glow', accentGlow);
+                
+                themeInfoName.textContent = theme.name;
+                const colorListing = theme.colors.map(c => c.name).join(' · ');
+                themeInfoDesc.textContent = `色彩: ${colorListing} | ${theme.description}`;
+                
+                currentThemeIndex = themeIndex;
+                if(!themeColorLocked) localStorage.setItem('reader_controller_theme_index', themeIndex);
+            };
             
-            // Theme color events
-            [hueSlider, saturationSlider, lightnessSlider].forEach(slider => {
-                slider.addEventListener('input', () => {
-                    state.themeHue = parseInt(hueSlider.value);
-                    state.themeSaturation = parseInt(saturationSlider.value);
-                    state.themeLightness = parseInt(lightnessSlider.value);
-                    updateThemeColor();
-                    saveState();
+            const setRandomTraditionalColor = () => {
+                if (themeColorLocked) return;
+                const randomIndex = Math.floor(Math.random() * traditionalColors.length);
+                applyTraditionalColor(randomIndex);
+            };
+
+            const toggleThemeLock = () => {
+                themeColorLocked = !themeColorLocked;
+                localStorage.setItem('reader_controller_theme_locked', themeColorLocked);
+                updateLockIcon();
+                if (themeColorLocked) {
+                    localStorage.setItem('reader_controller_locked_index', currentThemeIndex);
+                    showStatus('主题色已锁定', 'success', 1500);
+                } else {
+                    localStorage.removeItem('reader_controller_locked_index');
+                    showStatus('主题色已解锁', 'success', 1500);
+                    setRandomTraditionalColor();
+                }
+            };
+
+            const updateLockIcon = () => {
+                lockThemeBtn.classList.toggle('locked', themeColorLocked);
+                unlockIcon.style.display = themeColorLocked ? 'block' : 'none';
+                lockIcon.style.display = themeColorLocked ? 'none' : 'block';
+            };
+
+            const applyTheme = (theme) => {
+                document.documentElement.setAttribute('data-theme', theme);
+                themeToggleCheckbox.checked = theme === 'dark';
+                localStorage.setItem('reader_controller_theme_mode', theme);
+            };
+
+            const applyMode = (mode) => {
+                currentMode = mode; mainContent.setAttribute('data-mode', mode);
+                const isKoreader = mode === 'koreader';
+                modeBtnKoreader.classList.toggle('active', isKoreader);
+                modeBtnKobo.classList.toggle('active', !isKoreader);
+                glider.style.transform = isKoreader ? 'translateX(0)' : 'translateX(100px)';
+                footer.textContent = isKoreader 
+                    ? '提示：请确保KOReader已开启“HTTP调试服务器”。'
+                    : '提示：请确保Kobo已启动内置翻页HTTP服务器。';
+                localStorage.setItem('reader_controller_device_mode', mode);
+            };
+            
+            const applyClickEffect = (effect) => {
+                currentClickEffect = effect;
+                mainContent.setAttribute('data-click-effect', effect);
+                const btn = document.querySelector('[data-id="effect_toggle"] .btn-text');
+                if (btn) btn.textContent = `效果: ${effect === 'ripple' ? '涟漪' : '辉光'}`;
+                localStorage.setItem('reader_controller_click_effect', effect);
+            };
+
+            const handleSpecialAction = (actionId) => {
+                 if (actionId === 'local_toggle_effect') {
+                    applyClickEffect(currentClickEffect === 'glow' ? 'ripple' : 'glow');
+                    showStatus(`点击效果已切换为: ${currentClickEffect === 'ripple' ? '涟漪' : '辉光'}`, 'success', 1500);
+                } else if (actionId === 'local_open_settings') {
+                    openSettingsModal();
+                }
+            };
+            
+            const handleKoboExit = (btn) => {
+                 if (!koboExitConfirm) {
+                    koboExitConfirm = true;
+                    const originalText = btn.querySelector('.btn-text').textContent;
+                    btn.querySelector('.btn-text').textContent = "再次点击确认";
+                    btn.classList.add('confirm-state');
+                    clearTimeout(koboExitTimeout);
+                    koboExitTimeout = setTimeout(() => {
+                        btn.querySelector('.btn-text').textContent = originalText;
+                        btn.classList.remove('confirm-state');
+                        koboExitConfirm = false;
+                    }, 4000);
+                } else {
+                    clearTimeout(koboExitTimeout);
+                    sendRequest(btn.dataset.action, btn.dataset.successMsg);
+                    btn.querySelector('.btn-text').textContent = "关闭服务";
+                    btn.classList.remove('confirm-state');
+                    koboExitConfirm = false;
+                }
+            }
+            
+            const renderFunctionArea = () => {
+                functionArea.innerHTML = '';
+                sliderControls.innerHTML = '';
+
+                let activeFunctions = userSettings.activeFunctions || [];
+                
+                // KOReader specific functions
+                if(currentMode === 'koreader') {
+                    activeFunctions.forEach(funcId => {
+                        const func = ALL_FUNCTIONS[funcId];
+                        if(!func) return;
+
+                        if (func.type === 'slider') {
+                            const sliderContainer = document.createElement('div');
+                            sliderContainer.className = 'slider-container koreader-only';
+                            sliderContainer.innerHTML = `
+                                ${func.svg}
+                                <input type="range" min="0" max="100" value="50" data-action="${func.event}" aria-label="${func.name}">
+                            `;
+                            sliderControls.appendChild(sliderContainer);
+                            const sliderInput = sliderContainer.querySelector('input');
+                            sliderInput.addEventListener('input', (e) => {
+                                debouncedSendRequest(`${e.target.dataset.action}${e.target.value}`);
+                            });
+                        } else {
+                             const btn = document.createElement('button');
+                             btn.className = 'function-btn koreader-only';
+                             btn.dataset.id = func.id;
+                             btn.dataset.action = func.event;
+                             btn.dataset.successMsg = func.msg || '';
+                             btn.innerHTML = `${func.svg}<span class="btn-text">${func.name}</span>`;
+
+                             if (func.type === 'toggle') {
+                                btn.classList.toggle('toggled-on', !!userSettings.toggles[func.id]);
+                                btn.addEventListener('click', () => {
+                                    userSettings.toggles[func.id] = !userSettings.toggles[func.id];
+                                    btn.classList.toggle('toggled-on', userSettings.toggles[func.id]);
+                                    localStorage.setItem('reader_controller_settings', JSON.stringify(userSettings));
+                                    sendRequest(func.event, func.msg);
+                                });
+                             } else {
+                                btn.addEventListener('click', () => {
+                                    if (func.event.startsWith('local_')) handleSpecialAction(func.event);
+                                    else sendRequest(func.event, func.msg);
+                                });
+                             }
+                             functionArea.appendChild(btn);
+                        }
+                    });
+                }
+                
+                // Always add Settings button
+                const settingsFunc = ALL_FUNCTIONS['settings'];
+                const settingsBtn = document.createElement('button');
+                settingsBtn.className = 'function-btn';
+                settingsBtn.innerHTML = `${settingsFunc.svg}<span class="btn-text">${settingsFunc.name}</span>`;
+                settingsBtn.addEventListener('click', openSettingsModal);
+                functionArea.appendChild(settingsBtn);
+
+                // Add Kobo exit button only in Kobo mode
+                const koboExitFunc = ALL_FUNCTIONS['kobo_exit'];
+                const koboExitBtn = document.createElement('button');
+                koboExitBtn.className = 'function-btn kobo-only warn-btn';
+                koboExitBtn.dataset.action = koboExitFunc.event;
+                koboExitBtn.dataset.successMsg = koboExitFunc.msg;
+                koboExitBtn.innerHTML = `${koboExitFunc.svg}<span class="btn-text">${koboExitFunc.name}</span>`;
+                koboExitBtn.addEventListener('click', () => handleKoboExit(koboExitBtn));
+                functionArea.appendChild(koboExitBtn);
+            };
+
+            // --- Settings Modal Logic ---
+            const openSettingsModal = () => {
+                koreaderPortInput.value = userSettings.koreaderPort || '8080';
+                populateFunctionLists();
+                settingsModal.classList.add('show');
+            };
+
+            const closeSettingsModal = () => {
+                settingsModal.classList.remove('show');
+            };
+            
+            const saveSettings = () => {
+                userSettings.koreaderPort = koreaderPortInput.value || '8080';
+                const activeIds = Array.from(activeFuncList.querySelectorAll('li')).map(li => li.dataset.id);
+                userSettings.activeFunctions = activeIds;
+                
+                localStorage.setItem('reader_controller_settings', JSON.stringify(userSettings));
+                renderFunctionArea();
+                showStatus('设置已保存', 'success');
+                closeSettingsModal();
+            };
+            
+            const populateFunctionLists = () => {
+                availableFuncList.innerHTML = '';
+                activeFuncList.innerHTML = '';
+
+                const activeIds = new Set(userSettings.activeFunctions || []);
+                Object.values(ALL_FUNCTIONS).forEach(func => {
+                    if (['kobo_exit', 'settings'].includes(func.id)) return; // Exclude these from customization
+                    const li = document.createElement('li');
+                    li.dataset.id = func.id;
+                    li.innerHTML = `${func.svg} <span>${func.name}</span>`;
+                    if (activeIds.has(func.id)) {
+                        activeFuncList.appendChild(li);
+                    } else {
+                        availableFuncList.appendChild(li);
+                    }
                 });
-            });
-            
-            availableButtonsContainer.addEventListener('click', e => {
-                if (e.target.matches('.available-btn:not(:disabled)') || e.target.closest('.available-btn:not(:disabled)')) {
-                    const btn = e.target.matches('.available-btn') ? e.target : e.target.closest('.available-btn');
-                    state.koreaderButtons.push(btn.dataset.id);
-                    saveState(); renderMainFunctionButtons(); renderButtonCustomizer();
-                }
-            });
-            selectedButtonsContainer.addEventListener('click', e => {
-                if (e.target.matches('.remove-btn')) {
-                    state.koreaderButtons = state.koreaderButtons.filter(id => id !== e.target.dataset.id);
-                    saveState(); renderMainFunctionButtons(); renderButtonCustomizer();
-                }
-            });
+            };
 
-            // Slider Popup events
-            sliderControl.addEventListener('input', () => { if (sliderCommand) sendRequest(`${sliderCommand.endpoint}${sliderControl.value}`, null); });
-            sliderPopup.addEventListener('click', e => { if (e.target === sliderPopup) sliderPopup.classList.remove('visible'); });
-        };
-        
-        initializeApp();
-    });
+            // --- Initialization ---
+            const initializeApp = () => {
+                // Restore Light/Dark Theme
+                const savedTheme = localStorage.getItem('reader_controller_theme_mode') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                applyTheme(savedTheme);
+
+                // Restore IP
+                const savedIp = localStorage.getItem('reader_controller_ip');
+                if (savedIp) { ipInput.value = savedIp; currentIp = savedIp; setTimeout(() => showStatus(`已加载IP: ${savedIp}`, 'success', 2000), 800); }
+
+                // Restore Kobo/KOReader Mode
+                const savedMode = localStorage.getItem('reader_controller_device_mode') || 'koreader';
+                applyMode(savedMode);
+
+                // Restore Settings
+                const savedSettings = JSON.parse(localStorage.getItem('reader_controller_settings') || '{}');
+                userSettings = {
+                    koreaderPort: '8080',
+                    activeFunctions: ['brightness', 'warmth', 'toc', 'refresh', 'night_mode', 'goto_next_chapter'],
+                    toggles: {},
+                    ...savedSettings
+                };
+
+                // Restore Click Effect
+                const savedEffect = localStorage.getItem('reader_controller_click_effect') || 'glow';
+                applyClickEffect(savedEffect);
+                
+                // Restore Accent Color Theme
+                themeColorLocked = localStorage.getItem('reader_controller_theme_locked') === 'true';
+                updateLockIcon();
+                if (themeColorLocked) {
+                    const lockedIndex = localStorage.getItem('reader_controller_locked_index');
+                    if (lockedIndex) {
+                        applyTraditionalColor(parseInt(lockedIndex));
+                    } else {
+                        // This case handles if it's locked but no index was saved somehow
+                        setRandomTraditionalColor();
+                    }
+                } else {
+                    // If not locked, always pick a new random color on refresh.
+                    setRandomTraditionalColor();
+                }
+                
+                renderFunctionArea();
+
+                // BIND EVENT LISTENERS
+                themeToggleCheckbox.addEventListener('change', () => applyTheme(themeToggleCheckbox.checked ? 'dark' : 'light'));
+                lockThemeBtn.addEventListener('click', toggleThemeLock);
+                getEl('ipForm').addEventListener('submit', (e) => { e.preventDefault(); saveIp(); });
+                modeBtnKoreader.addEventListener('click', () => { applyMode('koreader'); renderFunctionArea(); });
+                modeBtnKobo.addEventListener('click', () => { applyMode('kobo'); renderFunctionArea(); });
+                
+                document.querySelectorAll('.control-card[data-action]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        let action = btn.dataset.action;
+                        let endpoint = '';
+                        if (currentMode === 'koreader') {
+                            if (action === 'prev') endpoint = '/koreader/event/GotoViewRel/-1';
+                            if (action === 'next') endpoint = '/koreader/event/GotoViewRel/1';
+                        } else if (currentMode === 'kobo') {
+                            if (action === 'prev') endpoint = '/left';
+                            if (action === 'next') endpoint = '/right';
+                        }
+                        sendRequest(endpoint, btn.dataset.successMsg);
+
+                        if (currentClickEffect === 'ripple') {
+                             const ripple = document.createElement("span");
+                             ripple.classList.add("ripple");
+                             const rect = btn.getBoundingClientRect();
+                             const size = Math.max(rect.width, rect.height);
+                             ripple.style.width = ripple.style.height = size + "px";
+                             ripple.style.left = (e.clientX - rect.left - size/2) + "px";
+                             ripple.style.top = (e.clientY - rect.top - size/2) + "px";
+                             btn.appendChild(ripple);
+                             setTimeout(() => ripple.remove(), 600);
+                        }
+                    });
+                });
+                
+                // Settings Modal Listeners
+                document.querySelector('.settings-close-btn').addEventListener('click', closeSettingsModal);
+                getEl('saveSettingsBtn').addEventListener('click', saveSettings);
+
+                new Sortable(availableFuncList, {
+                    group: 'shared-functions',
+                    animation: 150,
+                });
+                new Sortable(activeFuncList, {
+                    group: 'shared-functions',
+                    animation: 150,
+                    onAdd: function (evt) {
+                        if (activeFuncList.children.length > 6) {
+                            // Move the item back to the original list
+                            availableFuncList.appendChild(evt.item);
+                            showStatus('功能按钮最多只能添加6个', 'error');
+                        }
+                    }
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (document.activeElement === ipInput || document.activeElement === koreaderPortInput) return;
+                    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') document.querySelector('.control-card[data-action="prev"]').click();
+                    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') document.querySelector('.control-card[data-action="next"]').click();
+                });
+            };
+
+            initializeApp();
+        });
     </script>
 </body>
 </html>
