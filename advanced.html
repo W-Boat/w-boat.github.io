@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阅读控制器 Advanced</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+            --ease-in-out-cubic: cubic-bezier(0.65, 0, 0.35, 1);
+            --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --ease-in-out-quart: cubic-bezier(0.77, 0, 0.175, 1);
+            
+            --bg-color: #121212;
+            --card-color: #1e1e1e;
+            --primary-text-color: #e1e1e1;
+            --secondary-text-color: #8b8b8b;
+            --accent-color: #0b8392; /* 默认主题色 */
+            --accent-glow: rgba(11, 131, 146, 0.3);
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --success-color: #4CAF50;
+            --error-color: #F44336;
+            --warn-color: #e53935;
+            --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* 主题色变量 */
+            --theme-hue: 187; /* 默认青色 */
+            --theme-saturation: 80%;
+            --theme-lightness: 30%;
+            
+            /* 移动端适配 */
+            --control-card-width: 260px;
+            --control-card-height: 190px;
+        }
+
+        html[data-theme='light'] {
+            --bg-color: #f0f2f5;
+            --card-color: #ffffff;
+            --primary-text-color: #1f2937;
+            --secondary-text-color: #6b7280;
+            --accent-color: hsl(var(--theme-hue), var(--theme-saturation), var(--theme-lightness));
+            --accent-glow: hsla(var(--theme-hue), var(--theme-saturation), var(--theme-lightness), 0.2);
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* E-Ink Mode Overrides */
+        html[data-display-mode='eink'] {
+            --bg-color: #ffffff;
+            --card-color: #ffffff;
+            --primary-text-color: #000000;
+            --secondary-text-color: #000000;
+            --accent-color: #000000;
+            --accent-glow: rgba(0,0,0,0);
+            --shadow-color: rgba(0,0,0,0.2);
+            --success-color: #000000;
+            --error-color: #000000;
+            --border-color: #000000;
+        }
+        html[data-display-mode='eink'] * {
+            transition: none !important;
+            animation: none !important;
+            box-shadow: none !important;
+            border-width: 2px !important;
+        }
+        html[data-display-mode='eink'] .save-btn { background: #000 !important; color: #fff !important; }
+        html[data-display-mode='eink'] .status-message { background-color: #fff !important; color: #000 !important; border: 2px solid #000 !important; }
+        html[data-display-mode='eink'] .selected-btn-pill { background-color: #000 !important; color: #fff !important; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { font-family: 'Noto Sans SC', system-ui, sans-serif; }
+        
+        body {
+            display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh;
+            background-color: var(--bg-color); color: var(--primary-text-color);
+            transition: background-color 0.4s, color 0.4s; -webkit-tap-highlight-color: transparent; padding: 20px 0;
+        }
+
+        /* --- Global UI Components --- */
+        .svg-icon { width: 1em; height: 1em; vertical-align: -0.15em; margin-right: 4px; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+        @keyframes slideInLeft { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .animated { animation: fadeInUp 0.8s var(--ease-out-quint) both; }
+        .pulse { animation: pulse 0.5s var(--ease-out-quint); }
+        .float { animation: float 3s ease-in-out infinite; }
+        
+        /* --- Header & Toggles --- */
+        .header-controls { position: fixed; top: 20px; right: 20px; display: flex; gap: 12px; z-index: 100; }
+        .icon-toggle {
+            width: 44px; height: 44px; background-color: var(--card-color); border: none; border-radius: 50%;
+            cursor: pointer; display: flex; justify-content: center; align-items: center; color: var(--primary-text-color);
+            box-shadow: 0 4px 12px var(--shadow-color); transition: all 0.3s var(--ease-in-out-cubic);
+            position: relative; overflow: hidden;
+        }
+        .icon-toggle:active { transform: scale(0.9); }
+        .icon-toggle::before {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+            background: var(--accent-glow); border-radius: 50%; transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        .icon-toggle:active::before {
+            width: 200px; height: 200px;
+        }
+        .icon-toggle .svg-icon { margin-right: 0; }
+        
+        /* --- Main Content --- */
+        main { width: 100%; max-width: 800px; padding: 20px; text-align: center; }
+        main[data-mode="kobo"] #koreaderFunctions { display: none; }
+        main[data-mode="koreader"] .kobo-only { display: none; }
+        
+        h1 { font-weight: 700; font-size: 2.25rem; margin-bottom: 20px; animation-delay: 0.1s; }
+        h1::after {
+            content: ''; display: block; width: 60px; height: 4px; background: var(--accent-color);
+            margin: 10px auto 0; border-radius: 2px;
+            animation: fadeIn 0.5s 0.6s both, pulse 2s 1s infinite;
+        }
+
+        /* IP输入框相关样式 */
+        .ip-display { 
+            display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 35px; 
+            animation-delay: 0.3s; 
+        }
+        .ip-display span { 
+            background-color: var(--card-color); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 14px 18px; color: var(--primary-text-color); font-size: 1rem; width: 220px;
+            transition: all 0.3s var(--ease-in-out-cubic);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .ip-form { display: none; justify-content: center; align-items: center; gap: 10px; margin-bottom: 35px; animation-delay: 0.3s; }
+        .ip-input {
+            background-color: var(--card-color); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 14px 18px; color: var(--primary-text-color); font-size: 1rem; width: 220px;
+            transition: all 0.3s var(--ease-in-out-cubic);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .ip-input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px var(--accent-glow); }
+        .save-btn {
+            background: var(--accent-color); border: none; border-radius: 12px; padding: 14px 22px; color: #fff; font-size: 1rem; font-weight: 500;
+            cursor: pointer; transition: all 0.3s var(--ease-in-out-cubic);
+            box-shadow: 0 4px 12px var(--accent-glow);
+            position: relative; overflow: hidden;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .save-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px var(--accent-glow); }
+        .save-btn:active { transform: translateY(0); }
+        .save-btn::before {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+            background: rgba(255,255,255,0.2); border-radius: 50%; transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        .save-btn:active::before {
+            width: 300px; height: 300px;
+        }
+        .edit-ip-btn {
+            background: var(--card-color); border: 1px solid var(--border-color); border-radius: 12px; 
+            padding: 14px 22px; color: var(--primary-text-color); font-size: 1rem; font-weight: 500;
+            cursor: pointer; transition: all 0.3s var(--ease-in-out-cubic);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .edit-ip-btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+        .edit-ip-btn:active { transform: translateY(0); }
+
+        .controls { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; margin-bottom: 35px; animation-delay: 0.4s; }
+        .control-card {
+            width: var(--control-card-width); height: var(--control-card-height); background-color: var(--card-color); border-radius: 24px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; user-select: none;
+            box-shadow: 0 10px 30px -10px var(--shadow-color); position: relative; overflow: hidden;
+            transition: all 0.4s var(--ease-out-quint);
+            border: 1px solid var(--border-color);
+        }
+        .control-card:active { transform: translateY(-4px) scale(0.97); }
+        .control-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--accent-glow); opacity: 0; transition: opacity 0.3s;
+        }
+        .control-card:hover::before { opacity: 0.3; }
+        .card-icon { color: var(--accent-color); font-size: 64px; transition: transform 0.3s; }
+        .control-card:hover .card-icon { transform: scale(1.1); }
+        .card-text { font-size: 1.5rem; font-weight: 400; margin-top: 15px; }
+        
+        #functionArea {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
+            transition: opacity 0.4s, transform 0.4s;
+        }
+        .function-btn {
+            display: flex; align-items: center; gap: 8px; background-color: transparent;
+            border: 1px solid var(--border-color); color: var(--secondary-text-color); border-radius: 12px;
+            cursor: pointer; transition: all 0.3s var(--ease-in-out-cubic);
+            position: relative; overflow: hidden;
+        }
+        /* Button Size Styles */
+        #functionArea[data-size="small"] .function-btn { padding: 8px 14px; font-size: 0.8rem; }
+        #functionArea[data-size="medium"] .function-btn { padding: 10px 18px; font-size: 0.875rem; }
+        #functionArea[data-size="large"] .function-btn { padding: 12px 22px; font-size: 1rem; }
+
+        .function-btn:hover { 
+            color: var(--accent-color); border-color: var(--accent-color); background-color: var(--accent-glow); 
+            transform: translateY(-2px); 
+        }
+        .function-btn:active { transform: translateY(0) scale(0.98); }
+        .function-btn.warn-btn { border-color: color-mix(in srgb, var(--warn-color) 50%, transparent); color: var(--warn-color); }
+        .function-btn.warn-btn:hover { border-color: var(--warn-color); background-color: color-mix(in srgb, var(--warn-color) 15%, transparent); }
+        .function-btn::before {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+            background: var(--accent-glow); border-radius: 50%; transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        .function-btn:active::before {
+            width: 300px; height: 300px;
+        }
+        
+        /* Kobo关闭按钮优化 */
+        .kobo-close-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            background-color: var(--card-color); border: 1px solid var(--border-color);
+            color: var(--secondary-text-color); border-radius: 12px;
+            cursor: pointer; transition: all 0.3s var(--ease-in-out-cubic);
+            position: relative; overflow: hidden;
+            padding: 12px 24px; font-size: 1rem; font-weight: 500;
+            margin: 20px auto; max-width: 200px;
+        }
+        .kobo-close-btn:hover { 
+            color: var(--warn-color); border-color: var(--warn-color); 
+            background-color: color-mix(in srgb, var(--warn-color) 15%, transparent);
+            transform: translateY(-2px); 
+        }
+        .kobo-close-btn:active { transform: translateY(0) scale(0.98); }
+        .kobo-close-btn::before {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+            background: var(--accent-glow); border-radius: 50%; transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        .kobo-close-btn:active::before {
+            width: 300px; height: 300px;
+        }
+        
+        .status-message {
+            position: fixed; bottom: 30px; left: 50%; transform: translate(-50%, 150%);
+            padding: 12px 24px; border-radius: 12px;
+            font-size: 0.95rem; font-weight: 500; display: flex; align-items: center; gap: 10px;
+            background-color: var(--card-color); color: var(--primary-text-color); 
+            box-shadow: 0 5px 20px var(--shadow-color);
+            opacity: 0; visibility: hidden; transition: all 0.5s var(--ease-in-out-cubic); z-index: 2000;
+            border: 1px solid var(--border-color);
+        }
+        .status-message.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+        .status-message .svg-icon { color: var(--accent-color); }
+        .status-message.success .svg-icon { color: var(--success-color); }
+        .status-message.error .svg-icon { color: var(--error-color); }
+        
+        footer { margin-top: 20px; padding: 10px; font-size: 0.75rem; color: var(--secondary-text-color); text-align: center; }
+        #eink-mode-link { background: none; border: none; color: var(--secondary-text-color); text-decoration: underline; cursor: pointer; }
+        #normal-mode-link { background: none; border: none; color: var(--secondary-text-color); text-decoration: underline; cursor: pointer; }
+
+        /* --- Settings Modal --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6);
+            display: flex; justify-content: center; align-items: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: opacity 0.4s, visibility 0.4s;
+        }
+        .modal-overlay.visible { opacity: 1; visibility: visible; }
+        .modal-content {
+            background-color: var(--bg-color); color: var(--primary-text-color); width: 90%; max-width: 600px;
+            max-height: 85vh; border-radius: 20px; box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; transform: scale(0.95);
+            transition: transform 0.4s var(--ease-out-quint);
+        }
+        .modal-overlay.visible .modal-content { transform: scale(1); }
+        .modal-header { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { flex-grow: 1; overflow-y: auto; padding: 20px; }
+        .modal-body h3 { font-size: 1rem; font-weight: 500; color: var(--secondary-text-color); margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+        .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .setting-input { 
+            background-color: var(--card-color); border: 1px solid var(--border-color); border-radius: 8px; 
+            padding: 8px 12px; color: var(--primary-text-color); 
+        }
+
+        /* Custom Checkbox */
+        .custom-checkbox { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .custom-checkbox input { opacity: 0; width: 0; height: 0; }
+        .checkbox-slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--card-color); border: 1px solid var(--border-color);
+            border-radius: 24px; transition: background-color 0.3s;
+        }
+        .checkbox-slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 2px;
+            background-color: var(--secondary-text-color); border-radius: 50%;
+            transition: transform 0.3s var(--ease-in-out-cubic), background-color 0.3s;
+        }
+        input:checked + .checkbox-slider { background-color: var(--accent-color); }
+        input:checked + .checkbox-slider:before { background-color: white; transform: translateX(18px); }
+
+        /* Custom Range Slider */
+        input[type="range"] { 
+            -webkit-appearance: none; appearance: none; width: 100%; height: 8px; 
+            background: var(--card-color); border-radius: 5px; outline: none; border: 1px solid var(--border-color); 
+        }
+        input[type="range"]::-webkit-slider-thumb { 
+            -webkit-appearance: none; appearance: none; width: 20px; height: 20px; 
+            background: var(--accent-color); cursor: pointer; border-radius: 50%; 
+        }
+        input[type="range"]::-moz-range-thumb { 
+            width: 20px; height: 20px; background: var(--accent-color); cursor: pointer; 
+            border-radius: 50%; border: none; 
+        }
+
+        /* Button Customizer */
+        #selectedButtons { 
+            display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; border: 1px solid var(--border-color); 
+            border-radius: 12px; min-height: 50px; margin-bottom: 15px; 
+            background-color: var(--card-color);
+            margin-top: 10px;
+        }
+        .selected-btn-pill { 
+            display: flex; align-items: center; gap: 6px; background-color: var(--accent-color); color: white; 
+            padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: grab; user-select: none; 
+        }
+        .selected-btn-pill.dragging { opacity: 0.5; }
+        .remove-btn { background: none; border: none; color: white; cursor: pointer; font-weight: bold; }
+        #availableButtons .category-grid { 
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; 
+            margin-top: 10px;
+        }
+        .available-btn {
+            background-color: var(--card-color); border: 1px solid transparent; color: var(--primary-text-color);
+            width: 100%; text-align: left; padding: 10px; border-radius: 8px; cursor: pointer;
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .available-btn:hover { 
+            border-color: var(--accent-color); background-color: var(--accent-glow); 
+        }
+        .available-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .config-buttons button { 
+            background-color: var(--card-color); border: 1px solid var(--border-color); color: var(--primary-text-color); 
+            padding: 8px 16px; border-radius: 8px; cursor: pointer; 
+        }
+        #importConfigInput { display: none; }
+
+        /* Slider Popup */
+        #sliderPopup {
+            position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--card-color);
+            padding: 20px; border-top-left-radius: 20px; border-top-right-radius: 20px;
+            box-shadow: 0 -10px 40px var(--shadow-color); z-index: 1500;
+            transform: translateY(100%); transition: transform 0.4s var(--ease-in-out-cubic);
+        }
+        #sliderPopup.visible { transform: translateY(0); }
+        
+        /* Theme Color Picker */
+        .color-picker {
+            display: flex; align-items: center; gap: 10px;
+        }
+        .color-preview {
+            width: 30px; height: 30px; border-radius: 50%; background-color: var(--accent-color);
+            border: 2px solid var(--border-color);
+        }
+        .color-slider-container {
+            flex: 1;
+        }
+        .color-sliders {
+            display: flex; flex-direction: column; gap: 5px;
+        }
+        .color-slider-label {
+            display: flex; justify-content: space-between; font-size: 0.8rem;
+        }
+        
+        /* Animation Classes */
+        .bounce-in {
+            animation: bounceIn 0.6s var(--ease-out-back);
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Tab切换动画 */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* 拖拽优化 */
+        .drag-placeholder {
+            border: 2px dashed var(--accent-color);
+            border-radius: 20px;
+            width: 100px;
+            height: 30px;
+        }
+        
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .controls {
+                gap: 15px;
+            }
+            .control-card {
+                width: calc(50vw - 30px);
+                height: calc(35vw - 30px);
+                min-width: 140px;
+                min-height: 100px;
+            }
+            .card-icon {
+                font-size: 40px;
+            }
+            .card-text {
+                font-size: 1.2rem;
+            }
+            .ip-display span, .ip-input {
+                width: 100%;
+                max-width: 220px;
+            }
+            .ip-form {
+                width: 100%;
+                max-width: 300px;
+            }
+            #functionArea {
+                gap: 8px;
+            }
+            .function-btn {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+            .header-controls {
+                top: 10px;
+                right: 10px;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .control-card {
+                width: calc(50vw - 20px);
+                height: calc(35vw - 20px);
+                min-width: 120px;
+                min-height: 90px;
+            }
+            .card-icon {
+                font-size: 32px;
+            }
+            .card-text {
+                font-size: 1rem;
+            }
+            .function-btn {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+        }
+        
+        /* 大尺寸翻页键 */
+        @media (min-width: 1200px) {
+            :root {
+                --control-card-width: 300px;
+                --control-card-height: 220px;
+            }
+            .card-icon {
+                font-size: 72px;
+            }
+            .card-text {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-controls">
+        <button id="modeToggleBtn" class="icon-toggle" aria-label="切换模式">
+            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+            </svg>
+        </button>
+        <button id="settingsBtn" class="icon-toggle" aria-label="打开设置">
+            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.438.995s.145.755.438.995l1.003.827c.424.35.534.954.26 1.431l-1.296 2.247a1.125 1.125 0 01-1.37.49l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.313-.686-.645-.87a6.52 6.52 0 01-.22-.127c-.324-.196-.72-.257-1.075-.124l-1.217.456a1.125 1.125 0 01-1.37-.49l-1.296-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.437-.995s-.145-.755-.437-.995l-1.004-.827a1.125 1.125 0 01-.26-1.431l1.296-2.247a1.125 1.125 0 011.37-.49l1.217.456c.355.133.75.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.645-.869l.213-1.281z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+        </button>
+        <button id="themeToggle" class="icon-toggle" aria-label="切换主题">
+            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+            </svg>
+        </button>
+    </div>
+
+    <main id="mainContent">
+        <h1 class="animated">阅读控制器 Advanced</h1>
+        
+        <div id="ipSection">
+            <div class="ip-display animated" id="ipDisplay">
+                <span id="ipDisplayText">未设置IP地址</span>
+                <button id="editIpBtn" class="edit-ip-btn">
+                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                    </svg>
+                    编辑
+                </button>
+            </div>
+            <form id="ipForm" class="ip-form animated" onsubmit="event.preventDefault();">
+                <input type="text" id="ipInput" class="ip-input" placeholder="输入设备IP地址" autocomplete="off">
+                <button type="submit" id="saveBtn" class="save-btn">
+                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                    </svg>
+                    保存
+                </button>
+            </form>
+        </div>
+
+        <div class="controls animated">
+            <div class="control-card" data-action="prev" data-success-msg="‹ 上一页">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 64px; height: 64px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                    </svg>
+                </div>
+                <div class="card-text">上一页</div>
+            </div>
+            <div class="control-card" data-action="next" data-success-msg="下一页 ›">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 64px; height: 64px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                </div>
+                <div class="card-text">下一页</div>
+            </div>
+        </div>
+        
+        <div id="koreaderFunctions" class="animated" style="animation-delay: 0.5s;">
+            <div style="width: 80%; max-width: 400px; height: 1px; background-color: var(--border-color); margin: 0 auto 30px;"></div>
+            <div id="functionArea"></div>
+        </div>
+        
+        <div class="function-area kobo-only animated" style="animation-delay: 0.6s;">
+             <button class="kobo-close-btn" data-action="/exit" data-success-msg="已发送关闭服务器命令">
+                <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" />
+                </svg>
+                关闭服务器
+             </button>
+        </div>
+    </main>
+
+    <footer id="footer" class="animated"></footer>
+    
+    <div id="statusMessage" class="status-message"></div>
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>设置</h2>
+                <button id="closeSettingsBtn" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--secondary-text-color);">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3>通用</h3>
+                <div class="setting-item">
+                    <label for="koreaderPortInput">KOReader 端口</label>
+                    <input type="number" id="koreaderPortInput" class="setting-input" style="width: 80px;">
+                </div>
+                <div class="setting-item">
+                    <label for="autoNightMode">自动进入夜间模式</label>
+                    <label class="custom-checkbox">
+                        <input type="checkbox" id="autoNightMode">
+                        <span class="checkbox-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label for="hideTab">隐藏标签页</label>
+                    <label class="custom-checkbox">
+                        <input type="checkbox" id="hideTab">
+                        <span class="checkbox-slider"></span>
+                    </label>
+                </div>
+                
+                <h3>主题与外观</h3>
+                <div class="setting-item">
+                    <label>按钮大小</label>
+                    <input type="range" id="buttonSizeSlider" min="0" max="2" value="1" style="width: 120px;">
+                </div>
+                <div class="setting-item eink-hidden">
+                    <label>主题色</label>
+                    <div class="color-picker">
+                        <div class="color-preview" id="colorPreview"></div>
+                        <div class="color-slider-container">
+                            <div class="color-sliders">
+                                <div>
+                                    <div class="color-slider-label">
+                                        <span>色调</span>
+                                        <span id="hueValue">187</span>
+                                    </div>
+                                    <input type="range" id="hueSlider" min="0" max="360" value="187">
+                                </div>
+                                <div>
+                                    <div class="color-slider-label">
+                                        <span>饱和度</span>
+                                        <span id="saturationValue">80%</span>
+                                    </div>
+                                    <input type="range" id="saturationSlider" min="0" max="100" value="80">
+                                </div>
+                                <div>
+                                    <div class="color-slider-label">
+                                        <span>亮度</span>
+                                        <span id="lightnessValue">30%</span>
+                                    </div>
+                                    <input type="range" id="lightnessSlider" min="0" max="100" value="30">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3>KOReader</h3>
+                <div style="margin-top: 15px;"></div> <!-- 增加标题与按钮间距 -->
+                <h3>快捷按钮 (拖拽排序, 最多 <span id="maxButtons"></span> 个)</h3>
+                <div id="selectedButtons" class="koreader-only"></div>
+                <div id="availableButtons" class="koreader-only"></div>
+                
+                <h3>配置管理</h3>
+                <div class="setting-item config-buttons">
+                    <label>备份与恢复</label>
+                    <div>
+                        <button id="importConfigBtn">导入</button>
+                        <button id="exportConfigBtn" style="margin-left:10px;">导出</button>
+                        <input type="file" id="importConfigInput" accept=".json">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="sliderPopup">
+        <h4 id="sliderTitle"></h4>
+        <input type="range" id="sliderControl" min="0" max="100" value="50">
+    </div>
+
+    <script>
+    const MAX_BUTTONS = 8;
+    const ALL_COMMANDS = { /* same command list as before */ };
+    // --- Data & Constants --- (Shortened for brevity, full list is in the script)
+    const ALL_COMMANDS_FULL = {
+        "文件与历史": [ 
+            { id: 'home', name: '文件管理器', endpoint: '/koreader/event/Home', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z M9 5a2 2 0 012-2h2a2 2 0 012 2v2H9V5z' }, 
+            { id: 'open_last', name: '打开之前文档', endpoint: '/koreader/event/OpenLastDoc', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' }, 
+            { id: 'history', name: '历史记录', endpoint: '/koreader/event/ShowHist', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' }, 
+            { id: 'collections', name: '收藏', endpoint: '/koreader/event/ShowColl', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z' } 
+        ],
+        "阅读与导航": [ 
+            { id: 'toc', name: '目录', endpoint: '/koreader/event/ShowToc', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' }, 
+            { id: 'bookmarks', name: '书签', endpoint: '/koreader/event/ShowBookmark', icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z' }, 
+            { id: 'book_status', name: '书籍状态', endpoint: '/koreader/event/ShowBookStatus', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' }, 
+            { id: 'dictionary', name: '查询词典', endpoint: '/koreader/event/ShowDictionaryLookup', icon: 'M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9' }, 
+            { id: 'open_next_file', name: '下一册', endpoint: '/koreader/event/OpenNextOrPreviousFileInFolder', icon: 'M14 5l7 7m0 0l-7 7m7-7H3' }, 
+            { id: 'open_prev_file', name: '上一册', endpoint: '/koreader/event/OpenNextOrPreviousFileInFolder/true', icon: 'M10 19l-7-7m0 0l7-7m-7 7h18' } 
+        ],
+        "屏幕与灯光": [ 
+            { id: 'show_fl', name: '调节前光', endpoint: '/koreader/event/ShowFlDialog', icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z' }, 
+            { id: 'toggle_fl', name: '开关前光', endpoint: '/koreader/event/ToggleFrontlight', icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z' }, 
+            { id: 'set_fl_intensity', name: '亮度', endpoint: '/koreader/event/SetFlIntensity/', type: 'slider', min: 0, max: 100, icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z' }, 
+            { id: 'set_fl_warmth', name: '色温', endpoint: '/koreader/event/SetFlWarmth/', type: 'slider', min: 0, max: 100, icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z' }, 
+            { id: 'toggle_night_mode', name: '夜间模式', endpoint: '/koreader/event/ToggleNightMode', icon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z' }, 
+            { id: 'full_refresh', name: '全屏刷新', endpoint: '/koreader/event/FullRefresh', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' }, 
+            { id: 'screenshot', name: '截图', endpoint: '/koreader/event/Screenshot', icon: 'M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z' } 
+        ],
+        "设备控制": [ 
+            { id: 'toggle_wifi', name: '开关 Wi-Fi', endpoint: '/koreader/event/ToggleWifi', icon: 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0' }, 
+            { id: 'exit_screensaver', name: '退出屏保', endpoint: '/koreader/event/ExitScreensaver', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' }, 
+            { id: 'suspend', name: '睡眠', endpoint: '/koreader/event/RequestSuspend', icon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z' }, 
+            { id: 'restart_koreader', name: '重启 KOReader', endpoint: '/koreader/event/Restart', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' }, 
+            { id: 'power_off', name: '关机', endpoint: '/koreader/event/RequestPowerOff', icon: 'M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-4.586-4.586A2 2 0 0013.586 2H6zm10 11a1 1 0 10-2 0v3a1 1 0 102 0v-3z' }, 
+            { id: 'exit_koreader', name: '退出 KOReader', endpoint: '/koreader/event/Exit', icon: 'M6 18L18 6M6 6l12 12' } 
+        ]
+    };
+    const ALL_COMMANDS_FLAT = Object.values(ALL_COMMANDS_FULL).flat();
+    const BUTTON_SIZES = ['small', 'medium', 'large'];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const $ = (selector) => document.querySelector(selector);
+        const $$ = (selector) => document.querySelectorAll(selector);
+
+        // --- DOM Elements ---
+        const mainContent = $('#mainContent'), ipForm = $('#ipForm'), ipInput = $('#ipInput'), statusMessage = $('#statusMessage');
+        const themeToggle = $('#themeToggle'), modeToggleBtn = $('#modeToggleBtn'), ipDisplay = $('#ipDisplay'), ipDisplayText = $('#ipDisplayText');
+        const ipSection = $('#ipSection'), editIpBtn = $('#editIpBtn'), saveBtn = $('#saveBtn');
+        const footer = $('#footer'), functionArea = $('#functionArea');
+        const settingsBtn = $('#settingsBtn'), settingsModal = $('#settingsModal'), closeSettingsBtn = $('#closeSettingsBtn');
+        const koreaderPortInput = $('#koreaderPortInput'), autoNightModeCheckbox = $('#autoNightMode'), buttonSizeSlider = $('#buttonSizeSlider');
+        const selectedButtonsContainer = $('#selectedButtons'), availableButtonsContainer = $('#availableButtons');
+        const importConfigBtn = $('#importConfigBtn'), exportConfigBtn = $('#exportConfigBtn'), importConfigInput = $('#importConfigInput');
+        const sliderPopup = $('#sliderPopup'), sliderTitle = $('#sliderTitle'), sliderControl = $('#sliderControl');
+        const hideTabCheckbox = $('#hideTab');
+        // Theme color elements
+        const colorPreview = $('#colorPreview');
+        const hueSlider = $('#hueSlider'), saturationSlider = $('#saturationSlider'), lightnessSlider = $('#lightnessSlider');
+        const hueValue = $('#hueValue'), saturationValue = $('#saturationValue'), lightnessValue = $('#lightnessValue');
+
+        // --- App State ---
+        let currentIp = '', statusTimeout, sliderCommand = null, draggedItem = null;
+        let state = {
+            ip: '',
+            koreaderPort: '8080',
+            mode: 'koreader',
+            theme: 'dark',
+            autoNightMode: true,
+            hideTab: false,
+            buttonSize: 1, // 0: small, 1: medium, 2: large
+            koreaderButtons: ['home', 'open_last', 'history', 'toc', 'show_fl', 'toggle_wifi', 'full_refresh', 'suspend'],
+            themeHue: 187,
+            themeSaturation: 80,
+            themeLightness: 30
+        };
+
+        // --- State Management ---
+        const saveState = () => localStorage.setItem('controller_state', JSON.stringify(state));
+        
+        const loadState = () => {
+            const savedState = localStorage.getItem('controller_state');
+            if (savedState) state = { ...state, ...JSON.parse(savedState) };
+        };
+
+        const applyState = () => {
+            // Apply IP
+            ipInput.value = state.ip;
+            currentIp = state.ip;
+            if (state.ip) {
+                ipDisplayText.textContent = state.ip;
+                ipDisplay.style.display = 'flex';
+                ipForm.style.display = 'none';
+            } else {
+                ipDisplay.style.display = 'none';
+                ipForm.style.display = 'flex';
+            }
+            
+            // Apply other settings
+            koreaderPortInput.value = state.koreaderPort;
+            autoNightModeCheckbox.checked = state.autoNightMode;
+            hideTabCheckbox.checked = state.hideTab;
+            buttonSizeSlider.value = state.buttonSize;
+            functionArea.dataset.size = BUTTON_SIZES[state.buttonSize];
+            
+            // Apply theme color
+            hueSlider.value = state.themeHue;
+            saturationSlider.value = state.themeSaturation;
+            lightnessSlider.value = state.themeLightness;
+            updateThemeColor();
+            
+            // Apply theme (but not in eink mode)
+            if (document.documentElement.getAttribute('data-display-mode') !== 'eink') {
+                document.documentElement.setAttribute('data-theme', state.theme);
+                updateThemeToggleIcon();
+            }
+            
+            // 隐藏标签页
+            if (state.hideTab) {
+                // 标签页已移至右上角按钮，此处无操作
+            }
+            
+            applyMode(state.mode);
+            renderMainFunctionButtons();
+        };
+
+        const showStatus = (message, type, duration = 2500) => {
+            clearTimeout(statusTimeout);
+            const icons = { 
+                success: 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 
+                error: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z', 
+                info: 'M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.852l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0z' 
+            };
+            const iconType = type === 'success' ? 'success' : (type === 'error' ? 'error' : 'info');
+            statusMessage.innerHTML = `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="${icons[iconType]}" /></svg><span>${message}</span>`;
+            statusMessage.className = `status-message ${type} show`;
+            statusTimeout = setTimeout(() => statusMessage.classList.remove('show'), duration);
+        };
+
+        const sendRequest = async (endpoint, successMsg) => {
+            if (!state.ip) { showStatus('请先输入并保存IP地址！', 'error'); toggleIpForm(); return; }
+            const port = state.mode === 'koreader' ? `:${state.koreaderPort}` : ':80';
+            const url = `http://${state.ip}${port}${endpoint}`;
+            try {
+                await fetch(url, { mode: 'no-cors' });
+                if (successMsg) showStatus(successMsg, 'success');
+            } catch (error) { showStatus('请求失败！请检查IP、网络及设备服务。', 'error'); }
+        };
+
+        const updateThemeToggleIcon = () => {
+            const isDark = state.theme === 'dark';
+            themeToggle.innerHTML = isDark
+                ? `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>`
+                : `<svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" /></svg>`;
+        };
+
+        const applyTheme = (theme) => {
+            state.theme = theme;
+            document.documentElement.setAttribute('data-theme', theme);
+            updateThemeToggleIcon();
+            saveState();
+        };
+
+        const applyMode = (mode) => {
+            state.mode = mode;
+            mainContent.setAttribute('data-mode', mode);
+            footer.innerHTML = (mode === 'koreader' ? '提示：请确保 KOReader 的"开发者选项"中开启了"HTTP 调试服务器"。' : '提示：请确保 Kobo 上已启动翻页 HTTP 服务器。') + 
+                (document.documentElement.getAttribute('data-display-mode') === 'eink' 
+                    ? ` | <button id="normal-mode-link">进入正常模式</button>` 
+                    : ` | <button id="eink-mode-link">墨水屏模式</button>`);
+            
+            // 绑定模式切换按钮事件
+            if (document.documentElement.getAttribute('data-display-mode') === 'eink') {
+                $('#normal-mode-link')?.addEventListener('click', () => {
+                    document.documentElement.removeAttribute('data-display-mode');
+                    window.location.href = window.location.href.split('?')[0]; // 移除查询参数
+                });
+            } else {
+                $('#eink-mode-link')?.addEventListener('click', () => window.location.href = '?mode=eink');
+            }
+        };
+
+        // --- Theme Color Functions ---
+        const updateThemeColor = () => {
+            document.documentElement.style.setProperty('--theme-hue', state.themeHue);
+            document.documentElement.style.setProperty('--theme-saturation', state.themeSaturation + '%');
+            document.documentElement.style.setProperty('--theme-lightness', state.themeLightness + '%');
+            colorPreview.style.backgroundColor = `hsl(${state.themeHue}, ${state.themeSaturation}%, ${state.themeLightness}%)`;
+            hueValue.textContent = state.themeHue;
+            saturationValue.textContent = state.themeSaturation + '%';
+            lightnessValue.textContent = state.themeLightness + '%';
+        };
+
+        // --- Dynamic Button & Customization Logic ---
+        const renderMainFunctionButtons = () => {
+            functionArea.innerHTML = '';
+            state.koreaderButtons.forEach(id => {
+                const command = ALL_COMMANDS_FLAT.find(c => c.id === id);
+                if (!command) return;
+                const btn = document.createElement('button');
+                btn.className = 'function-btn bounce-in';
+                btn.dataset.id = command.id;
+                btn.innerHTML = `
+                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="${command.icon}" />
+                    </svg>
+                    <span>${command.name}</span>
+                `;
+                btn.addEventListener('click', () => command.type === 'slider' ? openSliderPopup(command) : sendRequest(command.endpoint, `已发送 "${command.name}" 命令`));
+                functionArea.appendChild(btn);
+            });
+        };
+
+        const renderButtonCustomizer = () => {
+            selectedButtonsContainer.innerHTML = '';
+            state.koreaderButtons.forEach(id => {
+                const command = ALL_COMMANDS_FLAT.find(c => c.id === id);
+                if (!command) return;
+                const pill = document.createElement('div');
+                pill.className = 'selected-btn-pill';
+                pill.dataset.id = id;
+                pill.draggable = true;
+                pill.innerHTML = `
+                    <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="${command.icon}" />
+                    </svg>
+                    ${command.name} 
+                    <button class="remove-btn" data-id="${id}">&times;</button>
+                `;
+                selectedButtonsContainer.appendChild(pill);
+            });
+            availableButtonsContainer.innerHTML = '';
+            Object.entries(ALL_COMMANDS_FULL).forEach(([category, commands]) => {
+                const categoryTitle = document.createElement('h4');
+                categoryTitle.textContent = category;
+                const grid = document.createElement('div');
+                grid.className = 'category-grid';
+                commands.forEach(command => {
+                    const btn = document.createElement('button');
+                    btn.className = 'available-btn';
+                    btn.innerHTML = `
+                        <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="${command.icon}" />
+                        </svg>
+                        <span>${command.name}</span>
+                    `;
+                    btn.dataset.id = command.id;
+                    btn.disabled = state.koreaderButtons.includes(command.id) || state.koreaderButtons.length >= MAX_BUTTONS;
+                    grid.appendChild(btn);
+                });
+                availableButtonsContainer.appendChild(categoryTitle);
+                availableButtonsContainer.appendChild(grid);
+            });
+        };
+
+        const openSliderPopup = (command) => {
+            sliderCommand = command;
+            sliderTitle.textContent = command.name;
+            sliderControl.min = command.min || 0;
+            sliderControl.max = command.max || 100;
+            sliderControl.value = 50; // Default value
+            sliderPopup.classList.add('visible');
+        };
+
+        // --- IP Form Functions ---
+        const toggleIpForm = () => {
+            if (ipDisplay.style.display !== 'none') {
+                ipDisplay.style.display = 'none';
+                ipForm.style.display = 'flex';
+                ipInput.focus();
+            } else {
+                ipDisplay.style.display = 'flex';
+                ipForm.style.display = 'none';
+            }
+        };
+
+        // --- Drag and Drop Logic ---
+        selectedButtonsContainer.addEventListener('dragstart', e => {
+            if(e.target.classList.contains('selected-btn-pill')) {
+                draggedItem = e.target;
+                setTimeout(() => e.target.classList.add('dragging'), 0);
+            }
+        });
+        selectedButtonsContainer.addEventListener('dragend', e => {
+            if (draggedItem) {
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+            }
+        });
+        selectedButtonsContainer.addEventListener('dragover', e => {
+            e.preventDefault();
+            const afterElement = [...selectedButtonsContainer.querySelectorAll('.selected-btn-pill:not(.dragging)')].reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = e.clientX - box.left - box.width / 2;
+                return offset < 0 && offset > closest.offset ? { offset: offset, element: child } : closest;
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+            
+            if (afterElement == null) {
+                selectedButtonsContainer.appendChild(draggedItem);
+            } else {
+                selectedButtonsContainer.insertBefore(draggedItem, afterElement);
+            }
+        });
+        selectedButtonsContainer.addEventListener('drop', () => {
+            const newOrder = [...selectedButtonsContainer.querySelectorAll('.selected-btn-pill')].map(pill => pill.dataset.id);
+            state.koreaderButtons = newOrder;
+            saveState();
+            renderMainFunctionButtons();
+            renderButtonCustomizer();
+        });
+
+        // --- Import/Export Logic ---
+        exportConfigBtn.addEventListener('click', () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "reading_controller_config.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            showStatus('配置已导出', 'info');
+        });
+        importConfigBtn.addEventListener('click', () => importConfigInput.click());
+        importConfigInput.addEventListener('change', (event) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedState = JSON.parse(e.target.result);
+                    if (importedState && importedState.koreaderButtons) {
+                        state = { ...state, ...importedState };
+                        saveState();
+                        applyState();
+                        showStatus('配置已成功导入！', 'success');
+                    } else { throw new Error('Invalid config file'); }
+                } catch (err) { showStatus('导入失败，文件格式无效。', 'error'); }
+            };
+            reader.readAsText(event.target.files[0]);
+        });
+        
+        // --- App Initialization ---
+        const initializeApp = () => {
+            // Check for eink mode
+            if (new URLSearchParams(window.location.search).get('mode') === 'eink') {
+                document.documentElement.setAttribute('data-display-mode', 'eink');
+                // 在墨水屏模式下隐藏夜间模式按钮
+                themeToggle.style.display = 'none';
+                // 隐藏主题色设置
+                $$('.eink-hidden').forEach(el => el.style.display = 'none');
+            }
+            
+            loadState();
+            applyState();
+            
+            $('#maxButtons').textContent = MAX_BUTTONS;
+
+            // --- Bind Event Listeners ---
+            themeToggle.addEventListener('click', () => {
+                applyTheme(state.theme === 'dark' ? 'light' : 'dark');
+            });
+
+            modeToggleBtn.addEventListener('click', () => {
+                applyMode(state.mode === 'koreader' ? 'kobo' : 'koreader');
+                saveState();
+            });
+
+            editIpBtn.addEventListener('click', toggleIpForm);
+
+            ipForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ipInput.value.trim())) {
+                    state.ip = ipInput.value.trim();
+                    currentIp = state.ip;
+                    saveState();
+                    showStatus(`IP地址已保存: ${state.ip}`, 'info');
+                    // 保存后自动隐藏输入框
+                    ipDisplayText.textContent = state.ip;
+                    ipDisplay.style.display = 'flex';
+                    ipForm.style.display = 'none';
+                } else { showStatus('请输入有效的IP地址', 'error'); }
+            });
+
+            $$('.control-card').forEach(btn => btn.addEventListener('click', () => {
+                let action = btn.dataset.action;
+                const endpointMap = {
+                    koreader: { prev: '/koreader/event/GotoViewRel/-1', next: '/koreader/event/GotoViewRel/1' },
+                    kobo: { prev: '/left', next: '/right' }
+                };
+                sendRequest(endpointMap[state.mode][action], btn.dataset.successMsg);
+            }));
+
+            document.addEventListener('keydown', (e) => {
+                if (document.activeElement === ipInput || settingsModal.classList.contains('visible')) return;
+                if (e.key === 'ArrowLeft') $('.control-card[data-action="prev"]').click();
+                if (e.key === 'ArrowRight') $('.control-card[data-action="next"]').click();
+                if (e.key === 'Escape' && sliderPopup.classList.contains('visible')) sliderPopup.classList.remove('visible');
+            });
+
+            // Settings Modal Events
+            settingsBtn.addEventListener('click', () => { renderButtonCustomizer(); settingsModal.classList.add('visible'); });
+            closeSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('visible'));
+            settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.remove('visible'); });
+            
+            [koreaderPortInput, autoNightModeCheckbox, buttonSizeSlider, hideTabCheckbox].forEach(el => el.addEventListener('change', () => {
+                state.koreaderPort = koreaderPortInput.value;
+                state.autoNightMode = autoNightModeCheckbox.checked;
+                state.hideTab = hideTabCheckbox.checked;
+                state.buttonSize = parseInt(buttonSizeSlider.value);
+                // 不在夜间模式下修改按钮大小时切换主题
+                saveState();
+                applyState();
+            }));
+            
+            // Theme color events
+            [hueSlider, saturationSlider, lightnessSlider].forEach(slider => {
+                slider.addEventListener('input', () => {
+                    state.themeHue = parseInt(hueSlider.value);
+                    state.themeSaturation = parseInt(saturationSlider.value);
+                    state.themeLightness = parseInt(lightnessSlider.value);
+                    updateThemeColor();
+                    saveState();
+                });
+            });
+            
+            availableButtonsContainer.addEventListener('click', e => {
+                if (e.target.matches('.available-btn:not(:disabled)') || e.target.closest('.available-btn:not(:disabled)')) {
+                    const btn = e.target.matches('.available-btn') ? e.target : e.target.closest('.available-btn');
+                    state.koreaderButtons.push(btn.dataset.id);
+                    saveState(); renderMainFunctionButtons(); renderButtonCustomizer();
+                }
+            });
+            selectedButtonsContainer.addEventListener('click', e => {
+                if (e.target.matches('.remove-btn')) {
+                    state.koreaderButtons = state.koreaderButtons.filter(id => id !== e.target.dataset.id);
+                    saveState(); renderMainFunctionButtons(); renderButtonCustomizer();
+                }
+            });
+
+            // Slider Popup events
+            sliderControl.addEventListener('input', () => { if (sliderCommand) sendRequest(`${sliderCommand.endpoint}${sliderControl.value}`, null); });
+            sliderPopup.addEventListener('click', e => { if (e.target === sliderPopup) sliderPopup.classList.remove('visible'); });
+        };
+        
+        initializeApp();
+    });
+    </script>
+</body>
+</html>
