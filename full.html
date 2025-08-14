@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Fullscreen Reader</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📖</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+--bg-color-light: #f0f2f5;
+--text-color-light: #1f2937;
+--accent-color-light: #0097a7;
+--divider-color-light: rgba(0, 0, 0, 0.2);
+--bg-color-dark: #121212;
+        --text-color-dark: #e1e1e1;
+        --accent-color-dark: #00bcd4;
+        --divider-color-dark: rgba(255, 255, 255, 0.2);
+        
+        --bg-color: var(--bg-color-light);
+        --text-color: var(--text-color-light);
+        --accent-color: var(--accent-color-light);
+        --divider-color: var(--divider-color-light);
+        
+        --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    html[data-theme='dark'] {
+        --bg-color: var(--bg-color-dark);
+        --text-color: var(--text-color-dark);
+        --accent-color: var(--accent-color-dark);
+        --divider-color: var(--divider-color-dark);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Noto Serif SC', serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        transition: background-color 0.4s, color 0.4s;
+        -webkit-tap-highlight-color: transparent;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .fullscreen-reader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        cursor: pointer;
+    }
+
+    .page-area {
+        flex-grow: 1;
+        height: 100%;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+    }
+    
+    .page-area .icon {
+        color: var(--accent-color);
+        width: 64px;
+        height: 64px;
+        opacity: 0;
+        transition: opacity 0.3s, transform 0.3s;
+        transform: scale(0.8);
+    }
+    
+    .page-area:hover .icon {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .divider-container {
+        width: 2px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        opacity: 0;
+        animation: fadeIn 2s var(--ease-out-quint) 0.5s forwards;
+    }
+
+    @keyframes fadeIn {
+        to { opacity: 1; }
+    }
+
+    .divider {
+        width: 2px;
+        height: 80%;
+        background-image: linear-gradient(to bottom, transparent, var(--divider-color) 20%, var(--divider-color) 80%, transparent);
+        position: relative;
+    }
+    
+    .divider::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: var(--divider-color);
+        animation: draw-line 2.5s var(--ease-out-quint) 0.8s forwards;
+        transform: scaleY(0);
+        transform-origin: center;
+    }
+
+    @keyframes draw-line {
+        to { transform: scaleY(1); }
+    }
+
+    /* --- Click Effects --- */
+
+    /* Glow Effect */
+    .page-area.effect-glow::after {
+        content: '';
+        position: absolute;
+        top: var(--y);
+        left: var(--x);
+        transform: translate(-50%, -50%) scale(0);
+        width: 300px;
+        height: 300px;
+        background-image: radial-gradient(circle, var(--accent-color) 0%, transparent 70%);
+        border-radius: 50%;
+        opacity: 0;
+        transition: transform 0.8s, opacity 0.8s;
+        pointer-events: none;
+    }
+    .page-area.effect-glow.active::after {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.3;
+    }
+
+    /* Spotlight Effect */
+    .page-area.effect-spotlight {
+        background: transparent; /* No background for the area itself */
+    }
+    body.spotlight-active .fullscreen-reader::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0,0,0,0.8);
+        pointer-events: none;
+        z-index: 10;
+        --grad-x: 50%;
+        --grad-y: 50%;
+        mask: radial-gradient(
+            circle 200px at var(--grad-x) var(--grad-y),
+            transparent 40%,
+            black 80%
+        );
+        transition: mask-size 0.3s;
+    }
+    body.spotlight-active .page-area.active .icon {
+        z-index: 11;
+    }
+    
+
+    /* Ripple Effect */
+    .ripple {
+        position: absolute;
+        border-radius: 50%;
+        background-color: var(--accent-color);
+        transform: scale(0);
+        animation: ripple-effect 0.6s linear;
+        pointer-events: none;
+        opacity: 0.5;
+    }
+
+    @keyframes ripple-effect {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+</style>
+</head>
+<body data-effect="glow">
+
+<div class="fullscreen-reader" id="fullscreenReader">
+    <div class="page-area" id="prevArea">
+        <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </div>
+    <div class="divider-container">
+        <div class="divider"></div>
+    </div>
+    <div class="page-area" id="nextArea">
+         <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const prevArea = document.getElementById('prevArea');
+        const nextArea = document.getElementById('nextArea');
+        const body = document.body;
+        let currentIp = '';
+        let currentMode = 'koreader'; // Default mode
+        let currentEffect = 'glow'; // Default effect
+
+        function initializeSettings() {
+            // Inherit settings from the main controller via localStorage
+            const savedIp = localStorage.getItem('reader_controller_ip');
+            const savedTheme = localStorage.getItem('reader_controller_theme_mode') || 'light';
+            const savedMode = localStorage.getItem('reader_controller_device_mode') || 'koreader';
+            const savedEffect = localStorage.getItem('reader_controller_click_effect') || 'glow';
+            const lockedThemeIndex = localStorage.getItem('reader_controller_locked_index');
+
+            if (savedIp) {
+                currentIp = savedIp;
+                console.log(`Inherited IP: ${currentIp}`);
+            } else {
+                console.warn('IP address not found in localStorage. Please configure the main controller.');
+            }
+
+            currentMode = savedMode;
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            // Set the accent color based on locked theme if available
+            if (lockedThemeIndex) {
+                 // Assuming 'traditionalColors' is available or a default is set
+                const accentColor = `hsl(${lockedThemeIndex * 60}, 70%, 60%)`; // Placeholder logic
+                document.documentElement.style.setProperty('--accent-color', accentColor);
+            }
+
+            setClickEffect(savedEffect);
+        }
+        
+        function setClickEffect(effect) {
+            currentEffect = effect;
+            body.setAttribute('data-effect', effect);
+
+            prevArea.classList.remove('effect-glow', 'effect-spotlight');
+            nextArea.classList.remove('effect-glow', 'effect-spotlight');
+
+            if (effect === 'glow' || effect === 'spotlight') {
+                prevArea.classList.add(`effect-${effect}`);
+                nextArea.classList.add(`effect-${effect}`);
+            }
+        }
+
+        function triggerVibration() {
+            if ('vibrate' in navigator) {
+                navigator.vibrate(50); // 50ms vibration for a tactile click
+            }
+        }
+        
+        async function sendRequest(action) {
+            if (!currentIp) {
+                console.error('IP address is not set. Cannot send command.');
+                return;
+            }
+            
+            let endpoint = '';
+            if (currentMode === 'koreader') {
+                endpoint = (action === 'prev') ? '/koreader/event/GotoViewRel/-1' : '/koreader/event/GotoViewRel/1';
+            } else if (currentMode === 'kobo') {
+                endpoint = (action === 'prev') ? '/left' : '/right';
+            } else {
+                return; 
+            }
+            
+            const port = (currentMode === 'koreader') ? ':8080' : ':80';
+
+            try {
+                await fetch(`http://${currentIp}${port}${endpoint}`, { mode: 'no-cors', cache: 'no-cache' });
+                console.log(`Sent command: ${action}`);
+            } catch (error) {
+                console.error('Failed to send request:', error);
+            }
+        }
+
+
+        function handlePageTurn(area, action, event) {
+            triggerVibration();
+            sendRequest(action);
+
+            if (currentEffect === 'glow') {
+                const rect = area.getBoundingClientRect();
+                area.style.setProperty('--x', (event.clientX - rect.left) + 'px');
+                area.style.setProperty('--y', (event.clientY - rect.top) + 'px');
+                
+                area.classList.add('active');
+                setTimeout(() => area.classList.remove('active'), 800);
+            }
+            else if (currentEffect === 'spotlight') {
+                body.classList.add('spotlight-active');
+                
+                const updateSpotlight = (e) => {
+                    body.style.setProperty('--grad-x', e.clientX + 'px');
+                    body.style.setProperty('--grad-y', e.clientY + 'px');
+                };
+                updateSpotlight(event);
+                document.addEventListener('mousemove', updateSpotlight);
+
+                area.classList.add('active');
+                setTimeout(() => {
+                    area.classList.remove('active');
+                    body.classList.remove('spotlight-active');
+                    document.removeEventListener('mousemove', updateSpotlight);
+                }, 800);
+            }
+            else if (currentEffect === 'ripple') {
+                const ripple = document.createElement("span");
+                ripple.classList.add("ripple");
+                area.appendChild(ripple);
+
+                const rect = area.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                ripple.style.width = ripple.style.height = size + "px";
+                ripple.style.left = (event.clientX - rect.left - size / 2) + "px";
+                ripple.style.top = (event.clientY - rect.top - size / 2) + "px";
+
+                setTimeout(() => ripple.remove(), 600);
+            }
+        }
+        
+        prevArea.addEventListener('click', (e) => handlePageTurn(prevArea, 'prev', e));
+        nextArea.addEventListener('click', (e) => handlePageTurn(nextArea, 'next', e));
+
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowLeft':
+                case 'ArrowUp':
+                case 'PageUp':
+                    // We need a fake event object for the animation position
+                    handlePageTurn(prevArea, 'prev', { clientX: window.innerWidth / 4, clientY: window.innerHeight / 2 });
+                    break;
+                case 'ArrowRight':
+                case 'ArrowDown':
+                case 'PageDown':
+                     handlePageTurn(nextArea, 'next', { clientX: window.innerWidth * 0.75, clientY: window.innerHeight / 2 });
+                    break;
+            }
+        });
+
+        // Listen for changes from the main controller
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'reader_controller_ip' || e.key === 'reader_controller_theme_mode' || e.key === 'reader_controller_device_mode' || e.key === 'reader_controller_click_effect') {
+                initializeSettings();
+            }
+        });
+
+        initializeSettings();
+    });
+</script>
+</body>
+</html>
