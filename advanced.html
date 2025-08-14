@@ -898,7 +898,7 @@
                 getEl('ipForm').addEventListener('submit', (e) => { e.preventDefault(); saveIp(); });
                 modeBtnKoreader.addEventListener('click', () => { applyMode('koreader'); renderFunctionArea(); });
                 modeBtnKobo.addEventListener('click', () => { applyMode('kobo'); renderFunctionArea(); });
-                ModeLink.addEventListener('click', () => window.location.href = window.location.pathname + '/full');
+                ModeLink.addEventListener('click', () => window.location.href = 'full');
                 document.querySelectorAll('.control-card[data-action]').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         let action = btn.dataset.action;
