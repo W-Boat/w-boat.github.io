@@ -665,7 +665,7 @@
                     showStatus('主题色已锁定', 'success', 1500);
                 } else {
                     localStorage.removeItem('reader_controller_locked_index');
-                    showStatus('主题色已解锁', 'success', 1500);
+                    showStatus('主题色已切换', 'success', 1500);
                     setRandomTraditionalColor();
                 }
             };
@@ -689,8 +689,8 @@
                 modeBtnKobo.classList.toggle('active', !isKoreader);
                 glider.style.transform = isKoreader ? 'translateX(0)' : 'translateX(100px)';
                 footer.textContent = isKoreader 
-                    ? '提示：请确保KOReader已开启“HTTP调试服务器”。'
-                    : '提示：请确保Kobo已启动内置翻页HTTP服务器。';
+                    ? '提示：请确保KOReader已开启“HTTP调试服务器”。 可点击 <a href="/full.html">全屏模式</a> 获得沉浸式体验。</p>'
+                    : '提示：请确保Kobo已启动内置翻页HTTP服务器。可点击 <a href="/full.html">全屏模式</a> 获得沉浸式体验。</p>';
                 localStorage.setItem('reader_controller_device_mode', mode);
             };
             
