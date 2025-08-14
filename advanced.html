@@ -238,6 +238,7 @@
         }
         .function-list li.sortable-ghost { opacity: 0.4; background: var(--accent-glow); }
         .function-list .svg-icon { color: var(--secondary-text-color); }
+        .mode-link { background: none; border: none; color: var(--secondary-text-color); cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -331,6 +332,10 @@
     </div>
 
     <footer id="footer" class="animated"></footer>
+    <footer id="footerContainer" class="animated">
+        <p id="footerText"></p>
+        <button id="ModeLink" class="mode-link">进入全屏模式</button>
+    </footer>
     <div id="statusMessage" class="status-message"></div>
 
     <script>
@@ -689,8 +694,8 @@
                 modeBtnKobo.classList.toggle('active', !isKoreader);
                 glider.style.transform = isKoreader ? 'translateX(0)' : 'translateX(100px)';
                 footer.textContent = isKoreader 
-                    ? '提示：请确保KOReader已开启“HTTP调试服务器”。 可点击 <a href="/full.html">全屏模式</a> 获得沉浸式体验。</p>'
-                    : '提示：请确保Kobo已启动内置翻页HTTP服务器。可点击 <a href="/full.html">全屏模式</a> 获得沉浸式体验。</p>';
+                    ? '提示：请确保KOReader已开启“HTTP调试服务器”。 '
+                    : '提示：请确保Kobo已启动内置翻页HTTP服务器。';
                 localStorage.setItem('reader_controller_device_mode', mode);
             };
             
@@ -893,7 +898,7 @@
                 getEl('ipForm').addEventListener('submit', (e) => { e.preventDefault(); saveIp(); });
                 modeBtnKoreader.addEventListener('click', () => { applyMode('koreader'); renderFunctionArea(); });
                 modeBtnKobo.addEventListener('click', () => { applyMode('kobo'); renderFunctionArea(); });
-                
+                ModeLink.addEventListener('click', () => window.location.href = window.location.pathname + '/full');
                 document.querySelectorAll('.control-card[data-action]').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         let action = btn.dataset.action;
