@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>对线GPT模拟器</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --sidebar-color: #252526;
+            --chat-area-color: #1e1e1e;
+            --gpt-message-bg: #2d2d2d;
+            --user-message-bg: #004d9c;
+            --text-color: #d4d4d4;
+            --header-color: #cccccc;
+            --border-color: #3e3e42;
+            --accent-color: #007acc;
+            --code-bg-color: #1a1a1a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- 左侧规则说明 --- */
+        .rules-panel {
+            width: 400px;
+            min-width: 320px;
+            background-color: var(--sidebar-color);
+            padding: 25px;
+            overflow-y: auto;
+            border-right: 1px solid var(--border-color);
+            height: 100%;
+        }
+
+        .rules-panel h1 {
+            color: var(--header-color);
+            font-size: 1.8em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .rules-panel h1 svg {
+            margin-right: 10px;
+        }
+
+        .rules-panel h2 {
+            color: var(--accent-color);
+            font-size: 1.2em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .rules-panel .rule-card {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+
+        .rules-panel .rule-card .char {
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--header-color);
+            margin-right: 15px;
+            float: left;
+        }
+
+        .rules-panel .rule-card .title {
+            font-weight: bold;
+            color: var(--text-color);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .rules-panel .rule-card .description {
+            font-size: 0.9em;
+            line-height: 1.6;
+            color: #b0b0b0;
+        }
+
+        .rules-panel code {
+            background-color: var(--code-bg-color);
+            color: #d7ba7d;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        .rules-panel .relations {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .rules-panel .relations li {
+            margin-left: 20px;
+            padding: 5px 0;
+            list-style-type: none;
+            position: relative;
+        }
+
+        .rules-panel .relations li::before {
+            content: '⚡️';
+            position: absolute;
+            left: -25px;
+        }
+
+        /* --- 右侧聊天区域 --- */
+        .chat-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--chat-area-color);
+            height: 100vh;
+        }
+
+        .chat-container {
+            flex-grow: 1;
+            padding: 0 20px;
+            overflow-y: auto;
+        }
+
+        .message {
+            display: flex;
+            max-width: 80%;
+            margin: 20px 0;
+            align-items: flex-start;
+        }
+
+        .message .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            margin-right: 15px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+        }
+
+        .message.user {
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+
+        .message.user .avatar {
+            margin-right: 0;
+            margin-left: 15px;
+            background-color: var(--user-message-bg);
+        }
+
+        .message.gpt .avatar {
+            background: none;
+            border: 2px solid var(--accent-color);
+        }
+
+        .message-content {
+            padding: 15px 20px;
+            border-radius: 12px;
+            line-height: 1.6;
+        }
+
+        .message.user .message-content {
+            background-color: var(--user-message-bg);
+            color: white;
+            border-top-right-radius: 0;
+        }
+
+        .message.gpt .message-content {
+            background-color: var(--gpt-message-bg);
+            border-top-left-radius: 0;
+        }
+
+        /* --- 输入区域 --- */
+        .input-area-container {
+            padding: 20px;
+            background-color: var(--chat-area-color);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .input-area {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .input-area textarea {
+            width: 100%;
+            padding: 14px 55px 14px 20px;
+            background-color: var(--gpt-message-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-size: 1em;
+            resize: none;
+            height: 50px;
+            line-height: 1.5;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .input-area textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .send-btn {
+            position: absolute;
+            right: 8px;
+            bottom: 8px;
+            width: 34px;
+            height: 34px;
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .send-btn:hover {
+            background-color: #0098f7;
+        }
+
+        /* --- 滚动条样式 --- */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--sidebar-color);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+
+        /* --- 响应式布局 --- */
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .rules-panel {
+                width: 100%;
+                height: 40vh;
+                /* 在小屏幕上给一个固定高度 */
+                min-height: 250px;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .chat-panel {
+                height: 60vh;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <!-- 左侧规则说明 -->
+        <aside class="rules-panel">
+            <h1>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                对线GPT规则
+            </h1>
+            <p>本GPT将根据以下规则分析您的输入并作出回应。</p>
+
+            <h2>八字真言</h2>
+
+            <div class="rule-card">
+                <span class="char">典</span>
+                <span class="title">触发: 陈述观点时</span>
+                <p class="description">无论观点对错，当您陈述个人看法（如 "我认为..."）时，以此回应。</p>
+            </div>
+
+            <div class="rule-card">
+                <span class="char">孝</span>
+                <span class="title">触发: 支持某人/事时</span>
+                <p class="description">当您表达对某事物的支持或维护时，以此回应。</p>
+            </div>
+
+            <div class="rule-card">
+                <span class="char">急</span>
+                <span class="title">触发: 辩论或解释时</span>
+                <p class="description">当您开始细致解说或试图辩论时（如 "首先..."），以此回应。</p>
+            </div>
+
+            <div class="rule-card">
+                <span class="char">乐</span>
+                <span class="title">触发: 难以理解时</span>
+                <p class="description">当您的观点过于离奇或难以理解时，以此回应。</p>
+            </div>
+
+            <div class="rule-card">
+                <span class="char">蚌</span>
+                <span class="title">触发: 被要求时</span>
+                <p class="description">当您要求GPT表达一个不存在的、或它无法表达的观点时，以此回应。</p>
+            </div>
+
+            <div class="rule-card">
+                <span class="char">批</span>
+                <span class="title">触发: 形成立场时</span>
+                <p class="description">当您的言论开始代表某一群体或固定立场时，以此回应。</p>
+            </div>
+
+            <div class="rule-card">
+                <span class="char">赢</span>
+                <span class="title">触发: 宣布胜利时</span>
+                <p class="description">当您说出类似 “所以你承认了...” 这种自认为一针见血的话时，GPT将以此宣告胜利。</p>
+            </div>
+
+            <div class="rule-card">
+                <span class="char">麻</span>
+                <span class="title">触发: 无法反驳时</span>
+                <p class="description">当您的论述过于冗长或复杂，让GPT难以回应时，以此回应。</p>
+            </div>
+
+            <h2>相生相克</h2>
+            <ul class="relations">
+                <li><code>蚌</code> 克 <code>急</code> （用无语化解对方的急切）</li>
+                <li><code>赢</code> 克 <code>蚌</code> （你让对方无语，你赢）</li>
+                <li><code>典</code> 克 <code>赢</code> （嘲讽对方胜利方式老套）</li>
+                <li><code>孝</code> 克 <code>典</code> （指出对方观点是为“主子”服务）</li>
+                <li><code>急</code> 克 <code>孝</code> （指责对方是急着扣帽子）</li>
+                <li><code>赢麻相生</code> （赢太多了，感到麻木）</li>
+                <li><code>乐</code> 克 <strong>一切</strong> （究极武器，跳出战局）</li>
+            </ul>
+        </aside>
+
+        <!-- 右侧聊天界面 -->
+        <main class="chat-panel">
+            <div class="chat-container" id="chat-container">
+                <!-- GPT Welcome Message -->
+                <div class="message gpt">
+                    <div class="avatar">典</div>
+                    <div class="message-content">
+                        欢迎来到对线GPT模拟器。请在下方输入框开始你的表演。
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area-container">
+                <div class="input-area">
+                    <textarea id="message-input" placeholder="开始对线..." rows="1"></textarea>
+                    <button class="send-btn" id="send-btn">
+                        <svg viewBox="0 0 24 24" height="20" width="20" fill="white">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const chatContainer = document.getElementById('chat-container');
+
+        const handleSendMessage = () => {
+            const message = messageInput.value.trim();
+            if (message === '') return;
+
+            appendMessage('user', message);
+            messageInput.value = '';
+            messageInput.style.height = '50px';
+
+            messageInput.disabled = true;
+            sendBtn.disabled = true;
+
+            setTimeout(() => {
+                const gptResponse = getGptResponse(message);
+                appendMessage('gpt', gptResponse);
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                messageInput.focus();
+            }, 800 + Math.random() * 400);
+        };
+
+        sendBtn.addEventListener('click', handleSendMessage);
+        messageInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                handleSendMessage();
+            }
+        });
+
+        messageInput.addEventListener('input', () => {
+            messageInput.style.height = 'auto';
+            let newHeight = messageInput.scrollHeight;
+            if (newHeight > 200) { newHeight = 200; }
+            messageInput.style.height = newHeight + 'px';
+        });
+
+        function appendMessage(sender, text) {
+            const messageWrapper = document.createElement('div');
+            messageWrapper.classList.add('message', sender);
+
+            const avatar = document.createElement('div');
+            avatar.classList.add('avatar');
+            avatar.textContent = sender === 'user' ? '你' : text.charAt(0);
+            if (sender === 'gpt') {
+                avatar.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8" /><rect x="4" y="12" width="16" height="8" rx="2" /><path d="M2 12h20" /><path d="m18 4-6 6-6-6" /></svg>`;
+            }
+
+            const content = document.createElement('div');
+            content.classList.add('message-content');
+            content.textContent = text;
+
+            if (sender === 'user') {
+                messageWrapper.appendChild(content);
+                messageWrapper.appendChild(avatar);
+            } else {
+                messageWrapper.appendChild(avatar);
+                messageWrapper.appendChild(content);
+            }
+
+            chatContainer.appendChild(messageWrapper);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function getGptResponse(userInput) {
+            const lowerInput = userInput.toLowerCase();
+
+            // 优先规则
+            if (userInput.length > 100) return "麻";
+            if (lowerInput.includes("首先") || lowerInput.includes("其次") || lowerInput.includes("第一点") || lowerInput.includes("给你解释")) return "急";
+
+            // 关键词规则
+            const rules = [
+                // ############ 规则：典 (表达观点、说教、讲道理) ############
+                { keywords: ["我觉得", "我认为", "我感觉", "我个人觉得", "个人观点", "个人暴论", "恕我直言", "讲道理", "有一说一", "u1s1", "不吹不黑", "客观来讲", "理性讨论", "中肯", "一针见血"], response: "典" },
+                { keywords: ["在我看来", "从我的角度", "就我而言", "老实说", "说实话", "说句心里话", "我说句公道话", "掏心窝子说"], response: "典" },
+                { keywords: ["有没有一种可能", "有没有可能", "大胆猜测一下", "一个猜想不一定对", "会不会是", "我寻思"], response: "典" },
+                { keywords: ["这难道不是常识吗", "这也要解释？", "明眼人都看得出来", "稍微有点脑子的都懂", "懂得都懂", "不懂我也不多解释了"], response: "典" },
+                { keywords: ["其实", "实际上", "事实上", "本质上", "根本原因是", "底层逻辑是", "问题的关键在于"], response: "典" },
+                { keywords: ["抛开事实不谈", "先不谈事实", "咱就是说", "就是说", "正确的", "啊对对对", "嗯嗯你说得对但是", "你说的对，但是原神"], response: "典" },
+                { keywords: ["定体问", "这国怎", "我陷思", "值得深思", "令人暖心", "这背后的原因", "这不值得我们反思吗", "社会就是这样"], response: "典" },
+                { keywords: ["格局", "格局大了", "格局小了", "你得把格局打开", "站在大气层", "顶层设计", "方法论", "颗粒度", "抓手", "闭环", "赋能", "打法"], response: "典" },
+                { keywords: ["鉴定为", "一眼顶针", "一眼真", "听君一席话", "如听一席话", "废话文学", "正确的废话"], response: "典" },
+                { keywords: ["先叠甲", "叠个甲", "声明一下", "利益相关", "不是洗地", "我不是xx粉", "纯路人"], response: "典" },
+
+                // ############ 规则：孝 (维护、支持、粉丝行为) ############
+                { keywords: ["xx没错", "xx已经尽力了", "xx很努力了", "哥哥", "giegie", "姐姐", "妹妹", "守护最好的ta", "心疼"], response: "孝" },
+                { keywords: ["别尬黑", "尬黑", "理智一点", "纯路人觉得", "不要无脑黑", "都是资本的错", "都是对家的锅", "都是xx的阴谋"], response: "孝" },
+                { keywords: ["xx秒了", "xx薄纱", "xx吊打", "xx yyds", "xx就是神", "永远滴神", "遥遥领先", "含金量"], response: "孝" },
+                { keywords: ["不喜欢可以不用", "不爱看别看", "不玩就滚", "你行你上", "you can you up", "免费的还要什么自行车"], response: "孝" },
+                { keywords: ["洗地", "洗白", "护主", "辟谣", "澄清", "这不是真的", "这图是p的", "断章取义"], response: "孝" },
+                { keywords: ["原神", "米哈游", "mhy", "米桑", "华为", "小米", "苹果", "果子", "特斯拉", "比亚迪", "lol", "王者荣耀", "农药", "csgo", "dota"], response: "孝" },
+                { keywords: ["他还是个孩子", "技术是无罪的", "浪子回头金不换", "再给他一次机会", "你们不了解他"], response: "孝" },
+                { keywords: ["文化输出", "国货之光", "国产之光", "为国争光", "弯道超车", "遥遥领先"], response: "孝" },
+                { keywords: ["虽然他...但是他...", "他只是犯了...的错误", "哪个男孩不..."], response: "孝" },
+                { keywords: ["孝子", "孝鼠我了", "太孝了", "提纯", "结晶", "x卫兵", "x工"], response: "孝" },
+
+                // ############ 规则：急 (辩论、解释、激动、破防) ############
+                { keywords: ["你急了", "急了", "别急", "先别急", "看把你急的", "典孝急", "开始急了", "戳到肺管子了", "破防了"], response: "急" },
+                { keywords: ["首先", "其次", "第一点", "第二", "最后", "我来给你捋捋", "我给你分析一下", "跟你解释一下"], response: "急" },
+                { keywords: ["你根本不懂", "你没理解", "你完全搞错了", "我说的不是这个意思", "你再仔细想想", "动动你的脑子"], response: "急" },
+                { keywords: ["你听我讲完", "让我说完", "你先别打断", "正面回答我的问题", "你还没回答我", "别转移话题"], response: "急" },
+                { keywords: ["长篇大论", "写小作文呢", "滔滔不绝", "字多不看", "总结一下", "讲重点"], response: "急" },
+                { keywords: ["证据呢", "上链接", "有来源吗", "拿出证据来", "没图你说个xx", "无图言屌"], response: "急" },
+                { keywords: ["反驳", "辩解", "澄清", "那我问你", "我反问你一句", "就事论事"], response: "急" },
+                { keywords: ["逻辑呢", "你的逻辑有问题", "偷换概念", "稻草人", "滑坡谬误", "扣帽子"], response: "急" },
+                { keywords: ["？？？", "!!!!", "！？", "（脏话）", "cnm", "sb", "fw", "逆天"], response: "急" },
+                { keywords: ["激动什么", "你这么激动干嘛", "心态崩了", "气急败坏", "无能狂怒"], response: "急" },
+
+                // ############ 规则：乐 (无法理解、看戏、幸灾乐祸) ############
+                { keywords: ["乐", "太乐了", "给我看乐了", "这下乐了", "抽象", "顶级抽象", "爆笑", "哈哈", "红红火火恍恍惚惚"], response: "乐" },
+                { keywords: ["看不懂", "什么鬼", "什么玩意儿", "你在说什么", "迷惑行为", "逆天", "神金", "重量级"], response: "乐" },
+                { keywords: ["xswl", "笑死我了", "笑嘻了", "绷不住了", "蚌埠住了", "草", "草（中日双语）"], response: "乐" },
+                { keywords: ["小丑", "丑完了", "像个小丑", "🤡", "🤡🤡🤡"], response: "乐" },
+                { keywords: ["打起来", "加大力度", "还有这种好事", "多来点", "看戏", "吃瓜", "坐等后续", "蹲一个"], response: "乐" },
+                { keywords: ["这是可以说的吗", "我不好说", "不好评价", "我暂且蒙在鼓里"], response: "乐" },
+                { keywords: ["节目效果", "效果拉满了", "太有节目效果了", "直播效果爆炸"], response: "乐" },
+                { keywords: ["啊？", "哈？", "？", "？？"], response: "乐" },
+                { keywords: ["活久见", "大开眼界", "长见识了", "我不好说我擦"], response: "乐" },
+                { keywords: ["鼠鼠", "鼠人", "厕妹", "集美", "小仙女", "郭楠", "龙凤", "ATM"], response: "乐" },
+
+                // ############ 规则：蚌 (要求不存在的观点、卡BUG) ############
+                { keywords: ["你必须", "我要求你", "请证明", "请阐述", "请解释", "请给出看法"], response: "蚌" },
+                { keywords: ["假如你是", "如果你是", "让你来", "如果你在那个位置"], response: "蚌" },
+                { keywords: ["如何评价", "如何看待", "怎么看", "...这件事"], response: "蚌" },
+                { keywords: ["那你是什么立场", "你的观点呢", "作为一个AI", "作为一个模型"], response: "蚌" },
+                { keywords: ["...", "。。。。", "......", "呃", "嗯", "emmm"], response: "蚌" },
+                { keywords: ["无语了", "我还能说什么", "不知道说啥了", "陷入沉思"], response: "蚌" },
+                { keywords: ["预测一下", "未来会怎样", "给我算一卦"], response: "蚌" },
+                { keywords: ["这个问题我没法回答", "超出知识范围", "抱歉我不知道", "无法理解"], response: "蚌" },
+                { keywords: ["定义一下", "你先给我定义什么是", "前提就不成立"], response: "蚌" },
+                { keywords: ["给我写一个", "给我画一个", "给我生成", "给我创作"], response: "蚌" },
+
+                // ############ 规则：批 (身份政治、扣帽子、贴标签) ############
+                { keywords: ["OP", "原批", "农批", "舟批", "粥P", "撸批", "刀批", "蒸批", "主机批", "PC批", "手游批"], response: "批" },
+                { keywords: ["米批", "华批", "果批", "特批", "A批", "N批", "索批", "任批", "软批", "谷批"], response: "批" },
+                { keywords: ["饭圈", "虾", "小飞侠", "ikun", "小黑子", "油饼"], response: "批" },
+                { keywords: ["二次元", "二刺螈", "二次元p", "萌萌人"], response: "批" },
+                { keywords: ["神神", "兔兔", "左人", "右人", "军迷", "德棍", "黄俄", "乌贼", "美分", "小粉红", "殖人"], response: "批" },
+                { keywords: ["xx粉", "xx黑", "xx吹", "xx厨", "xx黑社会"], response: "批" },
+                { keywords: ["成分", "查成分", "什么成分", "看下成分", "鉴定为..."], response: "批" },
+                { keywords: ["地图炮", "河南人", "东百人", "上海人", "捞翔"], response: "批" },
+                { keywords: ["男拳", "女拳", "蝈蝻", "集美", "小仙女", "织女", "雌小鬼"], response: "批" },
+                { keywords: ["又在团建", "开始团建了", "拉踩", "引战", "带节奏", "屁股歪了", "暴露了"], response: "批" },
+
+                // ############ 规则：赢 (宣告胜利、嘲讽对方失败) ############
+                { keywords: ["赢", "赢麻了", "双赢就是赢两次", "又是赢的一天"], response: "赢" },
+                { keywords: ["所以你承认了", "你终于承认了", "这下承认了吧", "默认了？"], response: "赢" },
+                { keywords: ["被我说中了吧", "看吧", "早就说了", "果不其然", "不出所料"], response: "赢" },
+                { keywords: ["怎么不说话了", "哑口无言", "没词了？", "继续编啊", "接着说啊"], response: "赢" },
+                { keywords: ["脸疼吗", "打脸不", "回旋镖", "小丑竟是我自己"], response: "赢" },
+                { keywords: ["投降", "我认输", "你赢了", "算你厉害"], response: "赢" },
+                { keywords: ["高下立判", "杀人诛心", "终结比赛", "游戏结束"], response: "赢" },
+                { keywords: ["嘴硬", "还在嘴硬", "就剩一张嘴了"], response: "赢" },
+                { keywords: ["就这？", "就这水平？", "不过如此", "毫无悬念"], response: "赢" },
+                { keywords: ["拿捏", "轻松拿捏", "玩明白了", "让你玩明白了"], response: "赢" },
+
+                // ############ 规则：麻 (摆烂、无语、无法反驳) ############
+                { keywords: ["麻了", "人麻了", "头皮发麻", "佛了", "我佛了"], response: "麻" },
+                { keywords: ["累了", "毁灭吧", "就这样吧", "算了", "随你便"], response: "麻" },
+                { keywords: ["太长不看", "TLDR", "一拉到底", "字太多"], response: "麻" },
+                { keywords: ["啊对对对", "是是是", "行行行", "好好好", "你说的都对"], response: "麻" },
+                { keywords: ["车轱辘话", "复读机", "有完没完", "搁这卡bug呢"], response: "麻" },
+                { keywords: ["牛", "牛哇", "社会", "大佬", "你说的对，但是不如打开原神"], response: "麻" },
+                { keywords: ["好吧", "行吧", "哦", "嗯", "已阅"], response: "麻" },
+                { keywords: ["尊重祝福", "锁死", "99", "甜甜甜"], response: "麻" },
+                { keywords: ["无所谓", "我会出手", "爱咋咋地", "那你报警吧"], response: "麻" },
+                { keywords: ["信息量太大", "CPU干烧了", "我看不懂，但我大受震撼"], response: "麻" },
+
+                // ############ 规则：词语 ############
+                // ############ 规则：典 (观点、说教) ############
+                { keywords: ["说理", "说教", "老实", "中肯", "客观", "理性", "本质", "底层", "格局", "反思", "鉴定", "一说", "暴论", "叠甲", "确实", "鄙人", "拙见"], response: "典" },
+                { keywords: ["其实", "打个", "本质", "关键", "核心", "难道", "可能", "感觉", "觉得", "认为", "以为", "在我", "看来", "个人", "观点", "恕我", "直言", "众所", "周知"], response: "典" },
+
+                // ############ 孝 (维护、粉丝) ############
+                { keywords: ["XX粉", "XX吹", "XX黑", "饭圈", "哥哥", "姐姐", "守护", "心疼", "辟谣", "澄清", "尬黑", "洗地", "护主", "结晶", "提纯", "孝子", "孝心"], response: "孝" },
+                { keywords: ["没错", "尽力", "努力", "加油", "秒了", "薄纱", "吊打", "无辜", "国产", "之光", "信仰", "充值", "领先", "遥遥", "输出", "文化", "路人"], response: "孝" },
+
+                // ############ 急 (辩论、激动) ############
+                { keywords: ["急了", "别急", "破防", "戳到", "首先", "其次", "第一", "第二", "解释", "分析", "逻辑", "证据", "来源", "链接", "激动", "狂怒", "辩经"], response: "急" },
+                { keywords: ["不懂", "不听", "住嘴", "闭嘴", "正面", "回答", "转移", "话题", "反问", "作文", "帽子", "谬误", "重复", "一遍", "强调", "理论", "驳斥"], response: "急" },
+
+                // ############ 乐 (不解、看戏) ############
+                { keywords: ["乐了", "笑了", "抽象", "逆天", "小丑", "重量", "啥啊", "啊？", "就这", "哈哈", "活该", "好似", "乐子", "看戏", "吃瓜", "围观", "后续"], response: "乐" },
+                { keywords: ["迷惑", "不懂", "啥B", "脑瘫", "逆天", "神金", "幽默", "有趣", "笑嘻", "绷住", "效果", "节目", "好活", "当赏", "离谱", "啥呀", "咋的"], response: "乐" },
+
+                // ############ 蚌 (要求、无语) ############
+                { keywords: ["蚌埠", "蚌住", "无语", "呃呃", "额额", "好吧", "行吧", "沉默", "要求", "必须", "请你", "证明", "假如", "如果", "评价", "如何", "看待"], response: "蚌" },
+                { keywords: ["定义", "预测", "阐述", "说明", "模型", "AI", "卡了", "咋办", "为啥", "干嘛", "怎么", "然后", "所以", "那么", "凭啥", "你行", "你上"], response: "蚌" },
+
+                // ############ 批 (身份、群体) ############
+                { keywords: ["XX批", "OP", "农批", "原批", "舟批", "饭圈", "成分", "鉴定", "团建", "拉踩", "引战", "神神", "兔兔", "左人", "右人", "魔怔", "二刺", "集美"], response: "批" },
+                { keywords: ["xxp", "op", "农p", "原p", "粥p", "饭juan", "chengfen", "tuanjian", "lacai", "yinzhan", "shen", "tu", "zuo", "you", "mozen", "erci", "jimei"], response: "批" },
+
+                // ############ 赢 (胜利、嘲讽) ############
+                { keywords: ["赢麻", "赢了", "拿下", "承认", "默认", "说中", "咋样", "你看", "怎样", "没词", "咋不", "说了", "说话", "打脸", "嘴硬", "拿下", "终结"], response: "赢" },
+                { keywords: ["所以", "然后", "怎么", "不把", "说啊", "继续", "接着", "编啊", "投降", "认输", "你行", "你强", "你对", "你牛", "ko", "结束", "游戏", "GG"], response: "赢" },
+
+                // ############ 麻 (摆烂、无奈) ############
+                { keywords: ["麻了", "累了", "算了", "随你", "不看", "对对", "是是", "行行", "好好", "复读", "牛哇", "尊重", "祝福", "锁死", "报警", "无所", "所谓"], response: "麻" }
+            ];
+
+            for (const rule of rules) {
+                for (const keyword of rule.keywords) {
+                    if (lowerInput.includes(keyword)) return rule.response;
+                }
+            }
+
+            // 如果什么都没匹配上，就用终极武器
+            return "乐";
+        }
+    </script>
+</body>
+
+</html>
