@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>白舟的状态</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        :root {
+            --bg-gradient-start: #e0eafc;
+            --bg-gradient-end: #cfdef3;
+            --card-bg-color: rgba(255, 255, 255, 0.6);
+            --text-color: #1a202c;
+            --secondary-text-color: #4a5568;
+            --accent-color-online: #2ecc71;
+            --accent-color-offline: #e74c3c;
+            --card-border-color: rgba(255, 255, 255, 0.8);
+            --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            --glow-color: rgba(119, 172, 241, 0.5);
+            --loader-overlay-bg: rgba(255, 255, 255, 0.5);
+            --loader-spinner-color: rgba(0, 0, 0, 0.2);
+            --loader-spinner-accent: #3498db;
+            --border-radius: 16px;
+        }
+
+        [data-theme="dark"] {
+            --bg-gradient-start: #0f2027;
+            --bg-gradient-end: #203a43;
+            --card-bg-color: rgba(28, 37, 44, 0.55);
+            --text-color: #e2e8f0;
+            --secondary-text-color: #a0aec0;
+            --accent-color-online: #27ae60;
+            --accent-color-offline: #c0392b;
+            --card-border-color: rgba(255, 255, 255, 0.1);
+            --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            --glow-color: rgba(45, 156, 219, 0.3);
+            --loader-overlay-bg: rgba(28, 37, 44, 0.6);
+            --loader-spinner-color: rgba(255, 255, 255, 0.2);
+            --loader-spinner-accent: #5dade2;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            background-size: 200% 200%;
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 4rem 2rem;
+            transition: background 0.5s ease;
+            animation: gradient-animation 15s ease infinite;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .aurora-glow {
+            position: fixed;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, var(--glow-color) 0%, rgba(255, 255, 255, 0) 60%);
+            border-radius: 50%;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+            filter: blur(80px);
+            z-index: 0;
+            opacity: 0;
+            animation: fadeIn 2s forwards;
+            animation-delay: 0.5s;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 520px;
+            z-index: 1;
+        }
+
+        .main-title {
+            font-size: 3rem;
+            font-weight: 700;
+            text-align: left;
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUpFadeIn 0.8s 0.2s forwards cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        
+        .pinyin {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 400;
+            color: var(--secondary-text-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .card {
+            background-color: var(--card-bg-color);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--card-border-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUpFadeIn 0.8s forwards cubic-bezier(0.25, 1, 0.5, 1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative; /* Needed for the overlay */
+            overflow: hidden;   /* Ensures overlay corners match card corners */
+        }
+        
+        .card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .card:last-of-type {
+            margin-bottom: 0;
+        }
+        
+        .card:nth-of-type(1) { animation-delay: 0.4s; }
+        .card:nth-of-type(2) { animation-delay: 0.6s; }
+
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .status-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #fff;
+            transition: background-color 0.3s;
+        }
+        
+        .status-indicator.online { background-color: var(--accent-color-online); }
+        .status-indicator.offline { background-color: var(--accent-color-offline); }
+
+        .status-body {
+            font-size: 1rem;
+            color: var(--secondary-text-color);
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-footer {
+            font-size: 0.8rem;
+            color: var(--secondary-text-color);
+            text-align: center;
+            opacity: 0.8;
+        }
+        
+        .info-card .content { display: flex; flex-direction: column; }
+        .info-card .primary-text { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem; }
+        .info-card .secondary-text { font-size: 0.95rem; color: var(--secondary-text-color); margin-bottom: 1.5rem; }
+        
+        .info-card .link-widget {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            background-color: rgba(0, 0, 0, 0.05);
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 500;
+            transition: transform 0.2s ease-out, background-color 0.3s ease;
+        }
+        
+        .info-card .link-widget:hover { background-color: rgba(0, 0, 0, 0.1); transform: scale(1.05); }
+        .info-card .link-widget svg { width: 20px; height: 20px; margin-right: 8px; fill: currentColor; }
+
+        #usage-info {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--card-border-color);
+            transition: border-color 0.3s;
+        }
+        
+        #usage-info p { font-size: 1rem; color: var(--secondary-text-color); line-height: 1.8; }
+        #usage-info strong { font-weight: 500; color: var(--text-color); }
+
+        /* --- New Loader Styles --- */
+        .loader-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--loader-overlay-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .loader-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .loader-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--loader-spinner-color);
+            border-top-color: var(--loader-spinner-accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes gradient-animation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes fadeIn { to { opacity: 1; } }
+        
+        @keyframes slideUpFadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 2rem 1rem; }
+            .main-title { font-size: 2.2rem; margin-bottom: 1.5rem; }
+            .card { padding: 1.5rem; }
+            .status-title { font-size: 1.1rem; }
+            .aurora-glow { width: 500px; height: 500px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="aurora-glow"></div>
+
+    <div class="container">
+        <h1 class="main-title">
+            <span class="pinyin">bái zhōu</span>
+            白舟 的状态
+        </h1>
+
+        <div class="card status-card">
+            <div class="status-header">
+                <h2 class="status-title">当前状态</h2>
+                <span id="status-indicator" class="status-indicator">私了</span>
+            </div>
+            <p class="status-body" id="status-text">正在初始化状态...</p>
+            <div class="status-footer">
+                <span id="last-updated">最后更新: --</span>
+                <span> | </span>
+                <span id="visit-count">被窥探次数: --</span>
+            </div>
+            <!-- --- New Loader HTML --- -->
+            <div class="loader-overlay" id="loader-overlay">
+                <div class="loader-spinner"></div>
+            </div>
+        </div>
+
+        <div class="card info-card">
+            <div class="content">
+                <p class="primary-text">你可以通过这个页面视奸白舟</p>
+                <p class="secondary-text">补药视奸我......Σ(っ °Д °;)っ</p>
+                 <a href="https://www.aevume.icu" target="_blank" class="link-widget">
+                    <span>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 6v2H5v11h11v-5h2v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6zm11-3v8h-2V6.413l-7.793 7.794-1.414-1.414L17.585 5H13V3h8z"/></svg>
+                        引导链接
+                    </span>
+                    <span>aevume.icu</span>
+                </a>
+            </div>
+            <div id="usage-info" style="display: none;">
+                <p><strong><span id="device-icon"></span> <span id="current-app"></span></strong></p>
+                <p>开始使用: <strong id="start-time">--</strong></p>
+                <p>已使用时长: <strong id="usage-duration">--</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const appList = [
+            "微信", "QQ", "Telegram", "Discord", "Twitter", "Instagram", "Bilibili", "YouTube", "VS Code",
+            "Obsidian", "Notion", "Figma", "Spotify", "网易云音乐", "Apple Music", "Chrome", "Safari",
+            "Firefox", "Edge", "Arc Browser", "小红书", "微博", "知乎", "豆瓣", "淘宝", "京东", "支付宝",
+            "米游社", "原神", "崩坏：星穹铁道", "绝区零", "英雄联盟", "Steam", "Epic Games", "Photoshop",
+            "Illustrator", "After Effects", "Premiere Pro", "Final Cut Pro", "Lightroom", "剪映", "Netflix",
+            "Disney+", "Amazon Prime Video", "iQIYI", "Tencent Video", "Youku", "酷安", "GitHub Desktop",
+            "iTerm2", "Terminal", "Microsoft Word", "Excel", "PowerPoint", "WPS Office", "百度网盘",
+            "阿里云盘", "Google Drive", "Dropbox", "Mega", "1Password", "Bitwarden", "Todoist", "TickTick",
+            "Things 3", "Craft", "Ulysses", "iA Writer", "GoodNotes", "Notability", "Procreate", "Flomo",
+            "XMind", "MindNode", "Sublime Text", "JetBrains Rider", "Xcode", "Android Studio", "Docker Desktop",
+            "Postman", "Affinity Designer", "Affinity Photo", "Blender", "Cinema 4D", "ZBrush", "Unity",
+            "Unreal Engine", "VMware Fusion", "Parallels Desktop", "CleanMyMac X", "Alfred", "Raycast",
+            "Setapp", "Sketch", "Zeplin", "InVision", "Miro", "Trello", "Asana", "Slack", "Zoom", "Microsoft Teams"
+        ];
+        
+        const storagePrefix = 'baizhou_status_v3';
+
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const lastUpdated = document.getElementById('last-updated');
+        const visitCountEl = document.getElementById('visit-count');
+        const usageInfo = document.getElementById('usage-info');
+        const currentAppEl = document.getElementById('current-app');
+        const startTimeEl = document.getElementById('start-time');
+        const usageDurationEl = document.getElementById('usage-duration');
+        const deviceIconEl = document.getElementById('device-icon');
+        const glow = document.querySelector('.aurora-glow');
+        const loaderOverlay = document.getElementById('loader-overlay'); // Get the loader overlay element
+
+        let usageIntervalId;
+        let nextRefreshTimeoutId;
+
+        document.addEventListener('mousemove', (e) => {
+            glow.style.left = e.clientX - glow.offsetWidth / 2 + 'px';
+            glow.style.top = e.clientY - glow.offsetHeight / 2 + 'px';
+        });
+
+        function applyTheme() {
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+        applyTheme();
+
+        function updateVisitCount() {
+            let count = localStorage.getItem(`${storagePrefix}_visitCount`);
+            if (count === null) {
+                count = Math.floor(Math.random() * 10000) + 10001;
+            } else {
+                count = parseInt(count) + 1;
+            }
+            localStorage.setItem(`${storagePrefix}_visitCount`, count);
+            visitCountEl.textContent = `被窥探次数: ${count.toLocaleString()}`;
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        
+        function formatDateTime(date) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            const time = formatTime(date);
+            return `${year}-${month}-${day} ${time}`;
+        }
+
+        function updateUsageDuration() {
+            const startTime = localStorage.getItem(`${storagePrefix}_usageStartTime`);
+            if (!startTime) return;
+            const start = new Date(parseInt(startTime));
+            const now = new Date();
+            const diff = now - start;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            usageDurationEl.textContent = 
+                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+        
+        // --- New Function to only update the timestamp ---
+        function updateTimestamp() {
+            const now = new Date();
+            const lastUpdateTime = formatDateTime(now);
+            lastUpdated.textContent = `最后更新: ${lastUpdateTime}`;
+            localStorage.setItem(`${storagePrefix}_lastUpdateTime`, lastUpdateTime);
+        }
+
+        function updateStatus() {
+            const params = new URLSearchParams(window.location.search);
+            const mode = params.get('mode');
+            
+            let isOnline;
+            if (mode === 'on') {
+                isOnline = true;
+                localStorage.setItem(`${storagePrefix}_lastStatus`, 'online');
+            } else if (mode === 'off') {
+                isOnline = false;
+                localStorage.setItem(`${storagePrefix}_lastStatus`, 'offline');
+            } else {
+                const lastStatus = localStorage.getItem(`${storagePrefix}_lastStatus`);
+                isOnline = lastStatus ? lastStatus === 'online' : false;
+            }
+            
+            statusIndicator.classList.toggle('online', isOnline);
+            statusIndicator.classList.toggle('offline', !isOnline);
+            statusIndicator.textContent = isOnline ? '活着' : '私了';
+            statusText.textContent = isOnline 
+                ? '目前在线，可以通过任何可用的联系方式联系本人。当然回复具备一定随机性和延迟性，非常抱歉。' 
+                : '不在，请留言。看到了会回复。要么这个人大抵就是私了。';
+
+            updateTimestamp(); // Use the dedicated function
+            
+            if (usageIntervalId) clearInterval(usageIntervalId);
+
+            if (isOnline) {
+                const lastApp = localStorage.getItem(`${storagePrefix}_currentApp`);
+                const lastDevice = localStorage.getItem(`${storagePrefix}_currentDevice`);
+                const lastStartTime = localStorage.getItem(`${storagePrefix}_usageStartTime`);
+
+                const app = lastApp || appList[Math.floor(Math.random() * appList.length)];
+                const device = lastDevice || (Math.random() > 0.5 ? '电脑' : '手机');
+                const deviceIcon = device === '电脑' ? '💻' : '📱';
+                
+                if (!lastStartTime) {
+                    const nowForStartTime = new Date();
+                    const randomOffset = Math.random() * (3 * 60 * 60 * 1000); 
+                    const startTime = new Date(nowForStartTime.getTime() - randomOffset);
+                    localStorage.setItem(`${storagePrefix}_usageStartTime`, startTime.getTime());
+                    startTimeEl.textContent = formatTime(startTime);
+                } else {
+                    startTimeEl.textContent = formatTime(new Date(parseInt(lastStartTime)));
+                }
+
+                currentAppEl.textContent = app;
+                deviceIconEl.textContent = deviceIcon;
+                localStorage.setItem(`${storagePrefix}_currentApp`, app);
+                localStorage.setItem(`${storagePrefix}_currentDevice`, device);
+
+                usageInfo.style.display = 'block';
+                updateUsageDuration();
+                usageIntervalId = setInterval(updateUsageDuration, 1000);
+            } else {
+                usageInfo.style.display = 'none';
+                localStorage.removeItem(`${storagePrefix}_currentApp`);
+                localStorage.removeItem(`${storagePrefix}_currentDevice`);
+                localStorage.removeItem(`${storagePrefix}_usageStartTime`);
+            }
+            
+            scheduleNextUpdate();
+        }
+
+        function scheduleNextUpdate() {
+            if (nextRefreshTimeoutId) clearTimeout(nextRefreshTimeoutId);
+            const maxInterval = 10 * 60 * 1000;
+            const randomFactor = Math.random() * Math.random();
+            const interval = maxInterval * randomFactor;
+            
+            nextRefreshTimeoutId = setTimeout(() => {
+                localStorage.removeItem(`${storagePrefix}_currentApp`);
+                localStorage.removeItem(`${storagePrefix}_currentDevice`);
+                localStorage.removeItem(`${storagePrefix}_usageStartTime`);
+                updateStatus();
+            }, interval);
+        }
+
+        // --- New Function for the 5-second periodic update ---
+        function startPeriodicUpdate() {
+            setInterval(() => {
+                loaderOverlay.classList.add('visible');
+
+                setTimeout(() => {
+                    updateTimestamp();
+                    loaderOverlay.classList.remove('visible');
+                }, 800); // Simulate loading for 800ms
+            }, 5000); // Trigger every 5 seconds
+        }
+
+        function init() {
+            const lastStatus = localStorage.getItem(`${storagePrefix}_lastStatus`);
+            const lastUpdateTime = localStorage.getItem(`${storagePrefix}_lastUpdateTime`);
+            
+            if (lastStatus && lastUpdateTime) {
+                const isOnline = lastStatus === 'online';
+                statusIndicator.classList.toggle('online', isOnline);
+                statusIndicator.classList.toggle('offline', !isOnline);
+                statusIndicator.textContent = isOnline ? '活着' : '私了';
+                statusText.textContent = isOnline 
+                    ? '目前在线，可以通过任何可用的联系方式联系本人。当然回复具备一定随机性和延迟性，非常抱歉。' 
+                    : '不在，请留言。看到了会回复。要么这个人大抵就是私了。';
+                lastUpdated.textContent = `最后更新: ${lastUpdateTime}`;
+
+                if (isOnline) {
+                    const app = localStorage.getItem(`${storagePrefix}_currentApp`);
+                    const device = localStorage.getItem(`${storagePrefix}_currentDevice`);
+                    const startTime = localStorage.getItem(`${storagePrefix}_usageStartTime`);
+                    
+                    if (app && device && startTime) {
+                        currentAppEl.textContent = app;
+                        deviceIconEl.textContent = device === '电脑' ? '💻' : '📱';
+                        startTimeEl.textContent = formatTime(new Date(parseInt(startTime)));
+                        usageInfo.style.display = 'block';
+                        updateUsageDuration();
+                        usageIntervalId = setInterval(updateUsageDuration, 1000);
+                    }
+                }
+            } else {
+                 updateStatus();
+            }
+
+            setTimeout(updateStatus, 5000);
+            updateVisitCount();
+            startPeriodicUpdate(); // Start the new periodic update
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
