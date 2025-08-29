@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Time</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400&display=swap" rel="stylesheet">
+
+    <style>
+        :root { --text-color: rgba(255, 255, 255, 0.9); --text-color-secondary: #aaa; --bg-color: #000; --btn-bg-color: rgba(255, 255, 255, 0.1); --btn-border-color: #fff; --transition-speed: 0.3s; --animation-speed: 0.5s; }
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Manrope', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; flex-direction: column; overflow: hidden; -webkit-user-select: none; user-select: none; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: var(--bg-color); z-index: 1000; transition: opacity var(--animation-speed) ease; }
+        .spinner { width: 50px; height: 50px; border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top-color: var(--btn-border-color); animation: spin 1s ease-in-out infinite; }
+        #start-screen h1 { font-weight: 300; font-size: 2.5rem; margin-bottom: 2rem; }
+        .start-btn { background: transparent; border: 1px solid var(--text-color-secondary); color: var(--text-color-secondary); padding: 1rem 2rem; border-radius: 50px; font-size: 1rem; cursor: pointer; transition: all var(--transition-speed) ease; }
+        .start-btn:hover { background: var(--btn-border-color); color: var(--bg-color); border-color: var(--btn-border-color); }
+        .container { display: none; width: 100%; height: 100%; flex-direction: column; animation: fadeIn var(--animation-speed) ease-in-out; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .timer { font-size: 8rem; font-weight: 300; letter-spacing: -2px; animation: pulse 8s ease-in-out infinite; }
+        .tagline { font-size: 1.1rem; color: var(--text-color-secondary); margin-top: -10px; line-height: 1.6; min-height: 50px; padding: 0 20px; }
+        .location { background-color: var(--btn-bg-color); padding: 10px 20px; border-radius: 20px; margin-top: 50px; backdrop-filter: blur(5px); }
+        .location-date { font-size: 0.9rem; }
+        .sound-selector { padding: 20px 0; flex-shrink: 0; }
+        .sound-btn { background-color: var(--btn-bg-color); border: 2px solid transparent; border-radius: 50%; width: 60px; height: 60px; margin: 0 10px; cursor: pointer; color: white; font-size: 0.8rem; transition: transform var(--transition-speed) ease, border-color var(--transition-speed) ease; }
+        .sound-btn:hover { transform: scale(1.1); }
+        .sound-btn.active { border-color: var(--btn-border-color); transform: scale(1.1); }
+        #player-container { position: absolute; top: -9999px; left: -9999px; width: 0; height: 0; opacity: 0; pointer-events: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+        .hidden { display: none; }
+        .fade-out { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div class="overlay" id="preloader"><div class="spinner"></div></div>
+    <div class="overlay hidden" id="start-screen"><h1>Zen Time</h1><button class="start-btn" id="start-btn">Begin</button></div>
+    <div class="container" id="container"><div class="main-content"><div class="timer" id="timer"></div><p class="tagline" id="tagline"></p><div class="location"><div class="location-date" id="location-date"></div></div></div><div class="sound-selector"></div></div>
+    <div id="player-container"></div>
+
+    <script>
+        document.addEventListener('copy', (e) => { e.preventDefault(); alert('请闭眼'); });
+
+        const themes = [
+            { name: "春涧", youtubeId: "eSKH2g2y_dY", bilibiliUrl: "//player.bilibili.com/player.html?aid=885873919&bvid=BV18z4y1d7kS&cid=232247161&page=1", time: 180, tagline: "溪流潺潺，万物复苏...<br>在自然的节奏中找到平静" },
+            { name: "极光", youtubeId: "n5n2bg5JqM8", bilibiliUrl: "//player.bilibili.com/player.html?aid=628287841&bvid=BV15T4y1a7kM&cid=242250160&page=1", time: 300, tagline: "仰望星空，光之舞动...<br>感受宇宙的浩瀚与神秘" },
+            { name: "雪舞", youtubeId: "vHDkfiPn_gE", bilibiliUrl: "//player.bilibili.com/player.html?aid=845348325&bvid=BV1fy4y1a7oE&cid=452668512&page=1", time: 120, tagline: "万籁俱寂，雪落无声...<br>世界在你我心中纯净如初" },
+            { name: "焰响", youtubeId: "KqJ_H_g_c4A", bilibiliUrl: "//player.bilibili.com/player.html?aid=883151834&bvid=BV1jV411W7Ss&cid=272895696&page=1", time: 90, tagline: "围炉夜话，温暖跳动...<br>让思绪在火光中得到沉淀" },
+            { name: "流云", youtubeId: "2O4_zLi3fNA", bilibiliUrl: "//player.bilibili.com/player.html?aid=458872221&bvid=BV1gM4y1A7ML&cid=314470394&page=1", time: 60, tagline: "云卷云舒，随风而动...<br>短暂的休憩是为了更好的出发" }
+        ];
+        
+        const timerElement = document.getElementById('timer');
+        const taglineElement = document.getElementById('tagline');
+        const soundSelector = document.querySelector('.sound-selector');
+        const playerContainer = document.getElementById('player-container');
+        const locationDateElement = document.getElementById('location-date');
+        
+        let countdown, player, currentPlatform, isYouTubeApiReady = false, hasStarted = false;
+
+        function startCountdown(duration) { clearInterval(countdown); let timeLeft = parseInt(duration); timerElement.textContent = timeLeft; timerElement.style.animation = 'pulse 8s ease-in-out infinite'; countdown = setInterval(() => { if (timeLeft <= 1) { clearInterval(countdown); timerElement.textContent = "Done"; timerElement.style.animation = 'none'; } else { timeLeft--; timerElement.textContent = timeLeft; } }, 1000); }
+        function updateContent(button) { const theme = themes[button.dataset.index]; taglineElement.innerHTML = theme.tagline; startCountdown(theme.time); soundSelector.querySelectorAll('.sound-btn').forEach(btn => btn.classList.remove('active')); button.classList.add('active'); }
+        
+        function playVideo(theme) {
+            playerContainer.innerHTML = '';
+            if (currentPlatform === 'bilibili') {
+                const fullUrl = `${theme.bilibiliUrl}&autoplay=true&high_quality=1&danmaku=0&loop=true`;
+                playerContainer.innerHTML = `<iframe src="${fullUrl}" scrolling="no" border="0" frameborder="no" framespacing="0" allow="autoplay"></iframe>`;
+            } else {
+                const videoId = theme.youtubeId;
+                if (!isYouTubeApiReady) return;
+                if (player && typeof player.loadVideoById === 'function') {
+                    player.loadVideoById(videoId);
+                } else {
+                    playerContainer.innerHTML = `<div id="yt-player"></div>`;
+                    player = new YT.Player('yt-player', {
+                        height: '190', width: '320', videoId: videoId,
+                        playerVars: { 'autoplay': 1, 'loop': 1, 'playlist': videoId, 'controls': 0, 'fs': 0 },
+                        events: { 'onReady': (event) => { event.target.mute(); event.target.playVideo(); } }
+                    });
+                }
+            }
+        }
+
+        function createButtons() { themes.forEach((theme, index) => { const button = document.createElement('button'); button.className = 'sound-btn'; button.textContent = theme.name; button.dataset.index = index; if (index === 2) button.classList.add('active'); button.addEventListener('click', () => { updateContent(button); playVideo(themes[button.dataset.index]); }); soundSelector.appendChild(button); }); }
+        
+        function detectPlatform() { try { const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone; if (timeZone.startsWith('Asia/Shanghai') || timeZone.startsWith('Asia/Chongqing') || timeZone.startsWith('Asia/Urumqi')) return 'bilibili'; } catch (e) { console.warn("Could not determine timezone."); } return 'youtube'; }
+
+        function startApp() {
+            if (hasStarted) return; hasStarted = true;
+            const startScreen = document.getElementById('start-screen');
+            startScreen.classList.add('fade-out');
+            setTimeout(() => {
+                startScreen.classList.add('hidden');
+                document.getElementById('container').style.display = 'flex';
+                const activeButton = soundSelector.querySelector('.sound-btn.active');
+                updateContent(activeButton);
+                playVideo(themes[activeButton.dataset.index]);
+            }, 500);
+        }
+        
+        function setupApp() {
+            const preloader = document.getElementById('preloader');
+            preloader.classList.add('fade-out');
+            setTimeout(() => {
+                preloader.classList.add('hidden');
+                document.getElementById('start-screen').classList.remove('hidden');
+            }, 500);
+            currentPlatform = detectPlatform();
+            locationDateElement.textContent = new Date().toLocaleString('zh-CN', { dateStyle: 'long', timeStyle: 'short' });
+            createButtons();
+            document.getElementById('start-btn').addEventListener('click', startApp);
+            if (currentPlatform === 'youtube') {
+                const tag = document.createElement('script');
+                tag.src = "https://www.youtube.com/iframe_api";
+                document.head.appendChild(tag);
+            }
+        }
+
+        window.onYouTubeIframeAPIReady = () => { isYouTubeApiReady = true; };
+        document.addEventListener('DOMContentLoaded', setupApp);
+    </script>
+</body>
+</html>
