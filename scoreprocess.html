@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分数统计处理器 (支持MD和Excel)</title>
+    <!-- 引入 SheetJS 库用于解析 Excel 文件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        h1, h2, h3 {
+            color: #0056b3;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 10px;
+        }
+        h3 {
+             border-bottom: 1px solid #dee2e6;
+        }
+        #drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            background-color: #fff;
+            transition: all 0.3s ease;
+        }
+        #drop-zone.dragover {
+            border-color: #007bff;
+            color: #007bff;
+            background-color: #e9ecef;
+        }
+        .controls, .export-buttons {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        label {
+            font-weight: bold;
+        }
+        input[type="file"], input[type="date"], button {
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        #results {
+            padding-top: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        .result-section {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>分数统计处理器 (支持MD和Excel)</h1>
+
+    <div id="drop-zone">
+        <p>将Markdown或Excel文件拖拽到此处，或</p>
+        <input type="file" id="files-input" multiple accept=".md,.txt,.xlsx,.xls">
+    </div>
+
+    <div class="controls">
+        <label for="start-date">开始日期:</label>
+        <input type="date" id="start-date">
+        <label for="end-date">结束日期:</label>
+        <input type="date" id="end-date">
+        <button onclick="processFiles()">处理数据</button>
+    </div>
+
+    <div id="results" class="hidden">
+        <div class="export-buttons">
+            <button onclick="exportData('md')">导出为 MD</button>
+            <button onclick="exportData('csv')">导出为 CSV</button>
+        </div>
+
+        <div id="personal-ranking" class="result-section">
+            <h2>个人得分总排行</h2>
+            <table id="personal-ranking-table"></table>
+        </div>
+
+        <div id="group-ranking" class="result-section">
+            <h2>小组得分排行</h2>
+            <table id="group-ranking-table"></table>
+        </div>
+
+        <div id="group-internal-ranking" class="result-section">
+            <h2>各组组内排行</h2>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('files-input');
+        
+        // 存储处理后的数据，用于导出
+        let processedData = {};
+
+        // --- 拖拽事件处理 ---
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, e => e.preventDefault(), false);
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+        });
+        dropZone.addEventListener('drop', (e) => {
+            fileInput.files = e.dataTransfer.files;
+        });
+
+        // --- 核心处理函数 ---
+        async function processFiles() {
+            const files = fileInput.files;
+            if (files.length === 0) {
+                alert("请先选择或拖拽文件！");
+                return;
+            }
+            
+            let combinedData = {};
+
+            for (const file of files) {
+                const fileName = file.name.toLowerCase();
+                if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                    await parseExcelFile(file, combinedData);
+                } else { // 默认为Markdown
+                    await parseMarkdownFile(file, combinedData);
+                }
+            }
+            
+            // 为没有明确分组信息的行，填充上方最近的有效分组信息
+            let lastGroupCategory = '';
+            let lastGroupName = '';
+            Object.values(combinedData).forEach(person => {
+                if (person['分组类别']) lastGroupCategory = person['分组类别'];
+                else person['分组类别'] = lastGroupCategory;
+                
+                if (person['小组名称']) lastGroupName = person['小组名称'];
+                else person['小组名称'] = lastGroupName;
+            });
+
+            renderTables(combinedData);
+            document.getElementById('results').classList.remove('hidden');
+        }
+
+        function parseExcelFile(file, dataStore) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+
+                    json.forEach(row => {
+                        const name = row['姓名'];
+                        if (!name) return;
+
+                        if (!dataStore[name]) {
+                            dataStore[name] = { '分组类别': '', '小组名称': '', scores: {} };
+                        }
+
+                        dataStore[name]['分组类别'] = row['分组类别'] || dataStore[name]['分组类别'];
+                        dataStore[name]['小组名称'] = row['小组名称'] || dataStore[name]['小组名称'];
+
+                        Object.keys(row).forEach(header => {
+                            // 检查header是否为日期格式（如 7.14, 07.14, 8.2）
+                            if (/^(\d{1,2})\.(\d{1,2})$/.test(header)) {
+                                const score = parseInt(row[header], 10);
+                                if (!isNaN(score)) {
+                                    dataStore[name].scores[header] = score;
+                                }
+                            }
+                        });
+                    });
+                    resolve();
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function parseMarkdownFile(file, dataStore) {
+             return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const text = e.target.result;
+                    const lines = text.split('\n');
+                    let headers = [];
+                    let headerLineIndex = -1;
+
+                    // 找到表头行
+                    for (let i = 0; i < lines.length; i++) {
+                        if (lines[i].includes('|') && lines[i].includes('---')) {
+                            headerLineIndex = i;
+                            break;
+                        }
+                    }
+                    if (headerLineIndex === -1 || headerLineIndex === 0) {
+                        console.warn(`File ${file.name} does not contain a valid markdown table header.`);
+                        resolve();
+                        return;
+                    }
+                    
+                    headers = lines[headerLineIndex-1].split('|').map(h => h.trim()).filter(Boolean);
+
+                    // 解析数据行
+                    for(let i = headerLineIndex + 1; i < lines.length; i++) {
+                        const line = lines[i];
+                        if (!line.trim().startsWith('|')) continue;
+                        
+                        const cols = line.split('|').map(c => c.trim()).filter((c, i, arr) => i > 0 && i < arr.length -1);
+
+                        const rowData = {};
+                        headers.forEach((header, index) => {
+                            rowData[header] = cols[index] || '';
+                        });
+
+                        const name = rowData['姓名'];
+                        if (!name) continue;
+
+                        if (!dataStore[name]) {
+                            dataStore[name] = { '分组类别': '', '小组名称': '', scores: {} };
+                        }
+                        
+                        if(rowData['分组类别']) dataStore[name]['分组类别'] = rowData['分组类别'];
+                        if(rowData['小组名称']) dataStore[name]['小组名称'] = rowData['小组名称'];
+
+                        headers.forEach(header => {
+                            if (/^(\d{1,2})\.(\d{1,2})$/.test(header)) {
+                                const score = parseInt(rowData[header], 10);
+                                if (!isNaN(score)) {
+                                    dataStore[name].scores[header] = score;
+                                }
+                            }
+                        });
+                    }
+                    resolve();
+                };
+                 reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        function parseDate(dateStr) {
+            const parts = dateStr.split('.');
+            if (parts.length !== 2) return null;
+            const [month, day] = parts.map(Number);
+            const year = new Date().getFullYear(); // 假设是当年
+            // 月份在Date对象中是0-11
+            return new Date(Date.UTC(year, month - 1, day));
+        }
+
+        function renderTables(data) {
+            // 注意: input[type=date].valueAsDate 返回的是相对于本地时区的日期
+            // 为了避免时区问题，我们手动构造UTC日期进行比较
+            const startDateInput = document.getElementById('start-date').value;
+            const endDateInput = document.getElementById('end-date').value;
+            const startDate = startDateInput ? new Date(startDateInput + 'T00:00:00Z') : null;
+            const endDate = endDateInput ? new Date(endDateInput + 'T00:00:00Z') : null;
+
+            // 1. 个人排行
+            const personalScores = Object.entries(data).map(([name, details]) => {
+                const totalScore = Object.entries(details.scores).reduce((sum, [dateStr, score]) => {
+                     const currentDate = parseDate(dateStr);
+                     if (currentDate && (!startDate || currentDate >= startDate) && (!endDate || currentDate <= endDate)) {
+                        return sum + score;
+                     }
+                     return sum;
+                }, 0);
+                return { name, groupCategory: details['分组类别'], groupName: details['小组名称'], totalScore };
+            });
+            personalScores.sort((a, b) => b.totalScore - a.totalScore);
+            processedData.personal = personalScores; 
+            
+            const personalTable = document.getElementById('personal-ranking-table');
+            personalTable.innerHTML = `<thead><tr><th>排名</th><th>姓名</th><th>分组类别</th><th>小组名称</th><th>总分</th></tr></thead><tbody>
+                ${personalScores.map((p, i) => `<tr><td>${i+1}</td><td>${p.name}</td><td>${p.groupCategory}</td><td>${p.groupName}</td><td>${p.totalScore}</td></tr>`).join('')}
+            </tbody>`;
+
+            // 2. 小组排行
+            const groupScores = personalScores.reduce((acc, person) => {
+                if (!acc[person.groupName]) {
+                    acc[person.groupName] = { score: 0, category: person.groupCategory, members: [] };
+                }
+                acc[person.groupName].score += person.totalScore;
+                acc[person.groupName].members.push(person);
+                return acc;
+            }, {});
+
+            const groupRanking = Object.entries(groupScores).map(([groupName, data]) => ({
+                groupName, groupCategory: data.category, totalScore: data.score
+            }));
+            groupRanking.sort((a, b) => b.totalScore - a.totalScore);
+            processedData.group = groupRanking;
+            
+            const groupTable = document.getElementById('group-ranking-table');
+            groupTable.innerHTML = `<thead><tr><th>排名</th><th>分组类别</th><th>小组名称</th><th>总分</th></tr></thead><tbody>
+                ${groupRanking.map((g, i) => `<tr><td>${i+1}</td><td>${g.groupCategory}</td><td>${g.groupName}</td><td>${g.totalScore}</td></tr>`).join('')}
+            </tbody>`;
+            
+            // 3. 组内排行
+            const internalRankingDiv = document.getElementById('group-internal-ranking');
+            internalRankingDiv.innerHTML = '<h2>各组组内排行</h2>'; // 清空旧结果
+            processedData.internal = {};
+            
+            // 使用小组排行的顺序来展示组内排行
+            groupRanking.forEach(({groupName}) => {
+                const data = groupScores[groupName];
+                data.members.sort((a,b) => b.totalScore - a.totalScore);
+                processedData.internal[groupName] = data.members;
+                
+                let tableHtml = `<h3>${data.category} - ${groupName} (总分: ${data.score})</h3><table><thead><tr><th>组内排名</th><th>姓名</th><th>总分</th></tr></thead><tbody>`;
+                tableHtml += data.members.map((m, i) => `<tr><td>${i+1}</td><td>${m.name}</td><td>${m.totalScore}</td></tr>`).join('');
+                tableHtml += `</tbody></table>`;
+                internalRankingDiv.innerHTML += tableHtml;
+            });
+        }
+
+        function exportData(format) {
+            if (!processedData.personal) {
+                alert("请先处理数据！");
+                return;
+            }
+
+            let content = '';
+            const fileName = `score-ranking-${new Date().toISOString().slice(0,10)}.${format}`;
+
+            if (format === 'md') {
+                content += '# 个人得分总排行\n\n';
+                content += '| 排名 | 姓名 | 分组类别 | 小组名称 | 总分 |\n';
+                content += '| :-- | :-- | :-- | :-- | :-- |\n';
+                processedData.personal.forEach((p, i) => {
+                    content += `| ${i+1} | ${p.name} | ${p.groupCategory} | ${p.groupName} | ${p.totalScore} |\n`;
+                });
+
+                content += '\n# 小组得分排行\n\n';
+                content += '| 排名 | 分组类别 | 小组名称 | 总分 |\n';
+                content += '| :-- | :-- | :-- | :-- |\n';
+                processedData.group.forEach((g, i) => {
+                    content += `| ${i+1} | ${g.groupCategory} | ${g.groupName} | ${g.totalScore} |\n`;
+                });
+
+                content += '\n# 各组组内排行\n';
+                processedData.group.forEach(({ groupName }) => {
+                    const members = processedData.internal[groupName];
+                    content += `\n## ${members[0].groupCategory} - ${groupName}\n\n`;
+                    content += '| 组内排名 | 姓名 | 总分 |\n';
+                    content += '| :-- | :-- | :-- |\n';
+                    members.forEach((m, i) => {
+                        content += `| ${i+1} | ${m.name} | ${m.totalScore} |\n`;
+                    });
+                });
+            } else if (format === 'csv') {
+                 // 添加 BOM 头，防止Excel打开CSV文件时出现中文乱码
+                content = '\uFEFF';
+                content += '个人得分总排行\n';
+                content += '排名,姓名,分组类别,小组名称,总分\n';
+                processedData.personal.forEach((p, i) => {
+                    content += `${i+1},"${p.name}","${p.groupCategory}","${p.groupName}",${p.totalScore}\n`;
+                });
+
+                content += '\n小组得分排行\n';
+                content += '排名,分组类别,小组名称,总分\n';
+                 processedData.group.forEach((g, i) => {
+                    content += `${i+1},"${g.groupCategory}","${g.groupName}",${g.totalScore}\n`;
+                });
+
+                content += '\n各组组内排行\n';
+                 processedData.group.forEach(({ groupName }) => {
+                    const members = processedData.internal[groupName];
+                    content += `\n"${members[0].groupCategory} - ${groupName}"\n`;
+                    content += '组内排名,姓名,总分\n';
+                    members.forEach((m, i) => {
+                        content += `${i+1},"${m.name}",${m.totalScore}\n`;
+                    });
+                });
+            }
+
+            const blob = new Blob([content], { type: `text/${format};charset=utf-8,` });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }
+
+    </script>
+</body>
+</html>
